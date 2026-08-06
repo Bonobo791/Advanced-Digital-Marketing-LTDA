@@ -1,15 +1,25 @@
 <script lang="ts">
   import { onMount } from 'svelte'
 
-  export let text: string
-  let className = ''
-  export { className as class }
+  let {
+    text,
+    class: className = '',
+  }: {
+    text: string
+    class?: string
+  } = $props()
 
   const GLYPHS = '!<>-_/[]{}=+*^?#010101'
 
-  let display = text
-  let frame: number | null = null
-  let reduced = false
+  let display = $state('')
+  let frame = $state<number | null>(null)
+  let reduced = $state(false)
+
+  display = text
+
+  $effect(() => {
+    display = text
+  })
 
   onMount(() => {
     reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -38,4 +48,4 @@
   }
 </script>
 
-<span class={className} onmouseenter={run}>{display}</span>
+<span class={className} onmouseenter={run} role="presentation">{display}</span>

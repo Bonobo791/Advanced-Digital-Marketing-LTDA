@@ -3,17 +3,22 @@
 
   type Line = { prompt?: string; text: string }
 
-  export let lines: Line[]
-  export let title = 'adm.core'
-  let className = ''
-  export { className as class }
+  let {
+    lines,
+    title = 'adm.core',
+    class: className = '',
+  }: {
+    lines: Line[]
+    title?: string
+    class?: string
+  } = $props()
 
-  let typed: Line[] = []
-  let current = ''
-  let lineIdx = 0
+  let typed = $state<Line[]>([])
+  let current = $state('')
+  let lineIdx = $state(0)
 
-  $: done = lineIdx >= lines.length
-  $: active = lines[lineIdx]
+  let done = $derived(lineIdx >= lines.length)
+  let active = $derived(lines[lineIdx])
 
   onMount(() => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches

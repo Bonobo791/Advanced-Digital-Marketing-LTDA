@@ -3,7 +3,7 @@
 
   const BLINDS = 12
 
-  let phase: 'run' | 'out' | 'done' = 'done'
+  let phase = $state<'run' | 'out' | 'done'>('done')
 
   onMount(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return

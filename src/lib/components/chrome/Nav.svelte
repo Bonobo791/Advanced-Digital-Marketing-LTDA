@@ -1,16 +1,19 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import { fly } from 'svelte/transition'
   import { expoOut } from 'svelte/easing'
   import { LINKS, MAILTO } from '$lib/constants'
   import Scramble from '../cyber/Scramble.svelte'
 
-  let open = false
-  let reduced = false
+  let open = $state(false)
+  let reduced = $state(false)
 
-  $: pathname = $page.url.pathname.replace(/\/+$/, '') || '/'
-  $: if (pathname) open = false
+  let pathname = $derived(page.url.pathname.replace(/\/+$/, '') || '/')
+
+  $effect(() => {
+    if (pathname) open = false
+  })
 
   onMount(() => {
     reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches

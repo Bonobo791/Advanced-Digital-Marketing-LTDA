@@ -1,13 +1,21 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import type { Snippet } from 'svelte'
 
-  export let delay = 0
-  export let y = 24
-  let className = ''
-  export { className as class }
+  let {
+    delay = 0,
+    y = 24,
+    class: className = '',
+    children,
+  }: {
+    delay?: number
+    y?: number
+    class?: string
+    children: Snippet
+  } = $props()
 
   let el: HTMLDivElement
-  let inView = false
+  let inView = $state(false)
 
   onMount(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -34,5 +42,5 @@
   class:reveal-in={inView}
   style="--reveal-y: {y}px; transition-delay: {delay * 1000}ms"
 >
-  <slot />
+  {@render children()}
 </div>

@@ -1,11 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte'
 
-  let className = ''
-  export { className as class }
+  let { class: className = '' }: { class?: string } = $props()
 
   let el: HTMLDivElement
-  let inView = false
+  let inView = $state(false)
 
   onMount(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
