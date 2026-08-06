@@ -4,7 +4,7 @@ Cyberpunk-themed marketing agency website. SvelteKit 2 + Svelte 5 + Tailwind CSS
 
 **Owner / operator:** Andrew Philip Weilbacher
 **Services:** SEO & GEO, Paid Search, Paid Social, Web Design
-**Registered office:** AV PAULISTA 777, ANDAR 15 CONJ 15 SALA 3408, SAO PAULO, SP, 01311-914
+**Registered office:** SAO PAULO, SP
 **Contact:** contact@marketingprowess.simplelogin.com
 
 ## Develop
