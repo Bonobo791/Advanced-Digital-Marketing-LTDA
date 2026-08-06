@@ -2,5 +2,7 @@ node_modules
 reports
 dist
 .svelte-kit
+.netlify
+build
 .DS_Store
 vite.config.ts.timestamp-*

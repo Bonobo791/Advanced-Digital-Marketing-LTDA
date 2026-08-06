@@ -42,7 +42,7 @@ Database integration is intentionally deferred. When it is introduced, developme
 
 ## Image assets
 
-The two AI-generated images (`andrew-portrait.jpg`, `data-city.jpg`) are not committed as binaries. `npm run dev` and `npm run build` fetch them automatically via `scripts/sync-assets.mjs` (wired as `predev` / `prebuild`).
+The two AI-generated images (`andrew-portrait.jpg`, `data-city.jpg`) are committed so production builds do not depend on remote asset URLs. `scripts/sync-assets.mjs` (wired as `predev` / `prebuild`) only downloads them when they are absent.
 
 If those URLs ever expire, place the two `.jpg` files manually in `src/lib/assets/` with the exact filenames above. The sync script skips any file that already exists.
 

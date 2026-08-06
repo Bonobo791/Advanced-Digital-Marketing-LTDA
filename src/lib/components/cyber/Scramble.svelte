@@ -11,11 +11,10 @@
 
   const GLYPHS = '!<>-_/[]{}=+*^?#010101'
 
-  let display = $state('')
+  const initialText = text
+  let display = $state(initialText)
   let frame = $state<number | null>(null)
   let reduced = $state(false)
-
-  display = text
 
   $effect(() => {
     display = text
