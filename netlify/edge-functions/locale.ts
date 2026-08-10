@@ -1,4 +1,4 @@
-import { decideLocaleRequest } from '../../src/lib/locale'
+import { decideLocaleRequest } from '../../src/lib/locale.ts'
 
 type EdgeContext = {
   cookies: {
@@ -41,5 +41,5 @@ export default function locale(request: Request, context: EdgeContext) {
 
 export const config = {
   path: ['/', '/about', '/about/', '/contact', '/contact/'],
-  method: ['GET', 'HEAD'],
+  method: ['GET'],
 }
