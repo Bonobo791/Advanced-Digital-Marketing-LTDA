@@ -3,5 +3,5 @@
   import AboutPage from '$lib/components/pages/AboutPage.svelte'
 </script>
 
-<LocalizedHead locale="en-US" page="about" />
-<AboutPage locale="en-US" />
+<LocalizedHead locale="pt-BR" page="about" />
+<AboutPage locale="pt-BR" />

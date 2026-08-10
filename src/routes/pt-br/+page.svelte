@@ -3,5 +3,5 @@
   import HomePage from '$lib/components/pages/HomePage.svelte'
 </script>
 
-<LocalizedHead locale="en-US" page="home" />
-<HomePage locale="en-US" />
+<LocalizedHead locale="pt-BR" page="home" />
+<HomePage locale="pt-BR" />
