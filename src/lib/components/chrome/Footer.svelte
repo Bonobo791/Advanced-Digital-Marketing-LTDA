@@ -1,11 +1,12 @@
 <script lang="ts">
   import { page } from '$app/state'
-  import { EMAIL, JP, MAILTO } from '$lib/constants'
+  import { JP, PT_MAILTO, MAILTO } from '$lib/constants'
   import { CHROME_COPY, homeSectionsForLocale, localeForPath } from '$lib/locale'
 
   let locale = $derived(localeForPath(page.url.pathname))
   let copy = $derived(CHROME_COPY[locale])
   let links = $derived(homeSectionsForLocale(locale).slice(0, 4))
+  let localeMailto = $derived(locale === 'pt-BR' ? PT_MAILTO : MAILTO)
 </script>
 
 <footer class="editorial-footer">
@@ -20,7 +21,7 @@
     </div>
 
     <div class="editorial-footer__cta">
-      <a href={MAILTO}>{copy.bookCall}</a>
+      <a href={localeMailto}>{copy.bookCall}</a>
     </div>
   </div>
   <div class="editorial-footer__base"><span>© 2026 Advanced Digital Marketing LTDA</span><span class="font-jp">検索の未来を、設計する。</span></div>

@@ -35,16 +35,16 @@ export const PAGE_META: Record<Locale, Record<PageId, { title: string; descripti
   },
   'pt-BR': {
     home: {
-      title: 'Advanced Digital Marketing LTDA | Engenharia de SEO e GEO',
-      description: 'SEO, GEO, mídia de busca e engenharia web para empresas dos EUA, a partir de São Paulo.',
+      title: 'Advanced Digital Marketing LTDA | SEO local e visibilidade em respostas de IA',
+      description: 'Engenharia de busca para empresas brasileiras que precisam ser encontradas no Google, no Maps e nas respostas de IA.',
     },
     about: {
-      title: 'Sobre Andrew Philip Weilbacher | Advanced Digital Marketing LTDA',
-      description: 'Conheça Andrew Weilbacher, fundador e engenheiro-chefe da Advanced Digital Marketing LTDA.',
+      title: 'Sobre Andrew Philip Weilbacher | Engenharia de busca em São Paulo',
+      description: 'Conheça o fundador e engenheiro-chefe por trás de SEO local, sites, GEO e mídia paga para empresas brasileiras.',
     },
     contact: {
-      title: 'Contato | Advanced Digital Marketing LTDA',
-      description: 'Fale com a Advanced Digital Marketing LTDA sobre SEO, GEO, mídia paga ou engenharia web.',
+      title: 'Contato | SEO local e visibilidade em IA',
+      description: 'Fale sobre como sua empresa pode aparecer no Google, no Maps e nas respostas de IA.',
     },
   },
 }
@@ -81,7 +81,7 @@ export const CHROME_COPY: Record<Locale, {
     bookCall: 'Agende uma conversa',
     menu: 'Menu',
     close: 'Fechar',
-    footerSummary: 'SEO, mídia paga e engenharia web para empresas que precisam ser encontradas por pessoas e mecanismos de resposta.',
+    footerSummary: 'SEO, mídia paga e engenharia web para empresas que precisam ser encontradas por pessoas e respostas de IA.',
     footerNavigate: 'Navegue',
     footerContact: 'Contato',
     footerBase: 'CNPJ 68.425.709/0001-72 · São Paulo, Brasil',

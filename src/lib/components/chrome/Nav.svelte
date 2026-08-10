@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import { browser } from '$app/environment'
   import { page } from '$app/state'
-  import { EMAIL, JP, MAILTO } from '$lib/constants'
+  import { EMAIL, JP, PORTUGUESE_EMAIL, PT_MAILTO, MAILTO } from '$lib/constants'
   import { CHROME_COPY, homeSectionsForLocale, localeForPath, LOCALE_ROUTES, navigationForLocale, normalizePath } from '$lib/locale'
   import LanguageSwitcher from './LanguageSwitcher.svelte'
 
@@ -11,6 +11,8 @@
   let pathname = $derived(normalizePath(page.url.pathname))
   let locale = $derived(localeForPath(page.url.pathname))
   let copy = $derived(CHROME_COPY[locale])
+  let localeMailto = $derived(locale === 'pt-BR' ? PT_MAILTO : MAILTO)
+  let localeEmail = $derived(locale === 'pt-BR' ? PORTUGUESE_EMAIL : EMAIL)
   let isHome = $derived(pathname === normalizePath(LOCALE_ROUTES.home[locale]))
   let links = $derived(isHome ? homeSectionsForLocale(locale) : navigationForLocale(locale))
 
@@ -82,8 +84,8 @@
 
     <div class="editorial-mobile-menu__footer">
       <LanguageSwitcher />
-      <a class="button button--solid" href={MAILTO} onclick={() => (open = false)}>{copy.bookCall}</a>
-      <div>{EMAIL}</div><div>{copy.footerTagline}</div>
+      <a class="button button--solid" href={localeMailto} onclick={() => (open = false)}>{copy.bookCall}</a>
+      <div>{localeEmail}</div><div>{copy.footerTagline}</div>
     </div>
   </div>
 {/if}

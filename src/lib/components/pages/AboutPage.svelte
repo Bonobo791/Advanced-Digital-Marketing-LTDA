@@ -1,8 +1,8 @@
 <script lang="ts">
-  import portrait from '$lib/assets/andrew.png'
+  import portrait from '$lib/assets/andrew-new.jpg'
   import Kanji from '$lib/components/chrome/Kanji.svelte'
   import MotionHeading from '$lib/components/chrome/MotionHeading.svelte'
-  import { JP, MAILTO } from '$lib/constants'
+  import { JP, MAILTO, PT_MAILTO, WHATSAPP_URL } from '$lib/constants'
   import type { Locale } from '$lib/locale'
 
   let { locale }: { locale: Locale } = $props()
@@ -27,33 +27,34 @@
     ],
     facts: [['Base', 'São Paulo, BR'], ['Markets', 'US + Brazil'], ['Structure', 'Owner-operated'], ['Entity', 'LTDA, CNPJ-registered']],
     contactHeading: 'Work with the person who does the work.',
-    bookCall: 'Book a strategy call',
+    bookCall: 'Book a strategy call', whatsapp: 'Book via WhatsApp',
   }
 
   const portuguese = {
     operator: 'O operador',
-    hero: 'Fundador e operador da Advanced Digital Marketing LTDA. Engenheiro de SEO, desenvolvedor web e especialista em mídia paga.',
+    hero: 'Fundador e operador da Advanced Digital Marketing LTDA. Engenheiro de SEO técnico e local, desenvolvedor web, especialista em GEO e mídia paga.',
     portraitAlt: 'Retrato de Andrew Philip Weilbacher',
     background: 'Trajetória',
-    heading: 'Uma pessoa, full stack, dois mercados.',
+    heading: 'Uma operação brasileira, da estratégia ao código.',
     story: [
-      'Andrew nasceu nos Estados Unidos, construiu o início da carreira entre a Pensilvânia e a Flórida e hoje dirige sua agência a partir de São Paulo, Brasil. A Advanced Digital Marketing LTDA é uma empresa brasileira registrada no CNPJ que atende clientes dos dois lados da fronteira.',
-      'Sua base é técnica: infraestrutura de busca, pesquisa de ranking assistida por aprendizado de máquina e desenvolvimento web assistido por agentes. Estratégia, implementação e medição vêm da mesma mesa.',
-      'O diferencial da agência é GEO: otimizar não apenas para os resultados clássicos do Google, mas também para os mecanismos de resposta de IA que decidem cada vez mais quais empresas serão mencionadas.',
+      'Andrew é fundador e engenheiro-chefe da Advanced Digital Marketing LTDA, empresa brasileira registrada no CNPJ e operada a partir de São Paulo.',
+      'Sua atuação combina SEO técnico e local, sites, GEO e aquisição paga — com estratégia, implementação e medição na mesma mesa.',
+      'Você fala diretamente com quem analisa e executa o trabalho. Sem repasse para gerente de contas e sem separar busca, site e mídia em planos desconectados.',
     ],
     capabilities: 'Capacidades',
     capabilitiesHeading: 'O trabalho permanece conectado.',
     capabilityGroups: [
-      ['Busca', 'SEO técnico', 'GEO e otimização para respostas de IA', 'Mapeamento de autoridade temática', 'Dados estruturados'],
-      ['Mídia', 'Google Ads', 'Meta e LinkedIn', 'Sistemas de testes criativos'],
-      ['Desenvolvimento', 'Design e desenvolvimento web', 'Stacks headless modernas', 'Core Web Vitals', 'Analytics e medição'],
+      ['Busca', 'SEO técnico e local', 'Visibilidade em respostas de IA (GEO)', 'Google Perfil da Empresa', 'Dados estruturados e páginas de serviço'],
+      ['Mídia', 'Google Ads', 'Meta', 'Aquisição alinhada a conversões'],
+      ['Desenvolvimento', 'Sites e landing pages', 'Performance mobile-first', 'Core Web Vitals', 'Analytics e medição'],
     ],
-    facts: [['Base', 'São Paulo, BR'], ['Mercados', 'EUA + Brasil'], ['Estrutura', 'Operação direta'], ['Empresa', 'LTDA, registrada no CNPJ']],
-    contactHeading: 'Trabalhe com quem realmente executa o trabalho.',
-    bookCall: 'Agende uma conversa estratégica',
+    facts: [['Base', 'São Paulo, BR'], ['Mercado', 'Empresas brasileiras'], ['Estrutura', 'Operação direta'], ['Empresa', 'LTDA, registrada no CNPJ']],
+    contactHeading: 'Trabalhe com quem executa o trabalho.',
+    bookCall: 'Agende uma conversa', whatsapp: 'Falar pelo WhatsApp',
   }
 
   let content = $derived(locale === 'pt-BR' ? portuguese : english)
+  let showWhatsapp = $derived(locale === 'pt-BR' && Boolean(WHATSAPP_URL))
 </script>
 
 <section class="editorial-subhero">
@@ -64,7 +65,7 @@
       <h1 class="motion-subhero-heading"><span>Andrew</span><span>Philip</span><span>Weilbacher</span></h1>
       <p class="motion-rise">{content.hero}</p>
     </div>
-    <figure class="subhero-portrait"><img src={portrait} alt={content.portraitAlt} width="529" height="744" fetchpriority="high" /></figure>
+      <figure class="subhero-portrait"><img src={portrait} alt={content.portraitAlt} width="1024" height="1440" fetchpriority="high" /></figure>
   </div>
 </section>
 
@@ -96,6 +97,6 @@
   <Kanji char={JP.seal} onRed class="section-kanji section-kanji--right" />
   <div class="section-inner">
     <MotionHeading class="section-heading" text={content.contactHeading} />
-    <a class="hanko-cta" href={MAILTO}><span class="hanko-cta__seal font-jp-serif">{JP.seal}</span><span>{content.bookCall} <span aria-hidden="true">→</span></span></a>
+    <a class="hanko-cta" href={showWhatsapp ? WHATSAPP_URL : locale === 'pt-BR' ? PT_MAILTO : MAILTO}><span class="hanko-cta__seal font-jp-serif">{JP.seal}</span><span>{showWhatsapp ? content.whatsapp : content.bookCall} <span aria-hidden="true">→</span></span></a>
   </div>
 </section>

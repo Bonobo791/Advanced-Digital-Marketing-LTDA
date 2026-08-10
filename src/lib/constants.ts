@@ -1,5 +1,10 @@
-export const EMAIL = 'contact@marketingprowess.simplelogin.com'
-export const MAILTO = `mailto:${EMAIL}?subject=Project%20inquiry%20-%20Advanced%20Digital%20Marketing%20LTDA`
+import { env } from '$env/dynamic/public'
+
+export const EMAIL = 'contact@AdvancedDigitalMarketingLTDA.com'
+export const PORTUGUESE_EMAIL = 'contato@AdvancedDigitalMarketingLTDA.com'
+export const MAILTO = `mailto:${EMAIL}?subject=Strategy%20call%20request`
+export const PT_MAILTO = `mailto:${PORTUGUESE_EMAIL}?subject=Conversa%20estrat%C3%A9gica`
+export const WHATSAPP_URL = env.PUBLIC_WHATSAPP_URL?.trim() || ''
 
 export const LINKS = [
   { to: '/', label: 'Home', jp: 'ホーム' },

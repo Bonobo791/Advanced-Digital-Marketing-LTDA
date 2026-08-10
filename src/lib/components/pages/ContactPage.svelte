@@ -1,7 +1,7 @@
 <script lang="ts">
   import Kanji from '$lib/components/chrome/Kanji.svelte'
   import MotionHeading from '$lib/components/chrome/MotionHeading.svelte'
-  import { EMAIL, JP, MAILTO } from '$lib/constants'
+  import { EMAIL, JP, PORTUGUESE_EMAIL, PT_MAILTO, MAILTO, WHATSAPP_URL } from '$lib/constants'
   import type { Locale } from '$lib/locale'
 
   let { locale }: { locale: Locale } = $props()
@@ -9,7 +9,7 @@
   const english = {
     label: 'Contact', hero: 'Open a', heroAccent: 'channel.',
     intro: 'One inbox, no intake form, no account manager. Every message lands directly with the owner.',
-    bookCall: 'Book a strategy call', office: 'Registered office', status: 'Channel: open',
+    bookCall: 'Book a strategy call', whatsapp: 'Book via WhatsApp', emailCta: EMAIL, office: 'Registered office', status: 'Channel: open',
     notesLabel: 'Before you write', notesHeading: 'Three things that make the first reply useful.',
     notes: [
       ['Goal', JP.goal, 'What outcome you want: more qualified traffic, better conversion, a site that ranks, or all three.'],
@@ -23,18 +23,24 @@
   const portuguese = {
     label: 'Contato', hero: 'Abra um', heroAccent: 'canal.',
     intro: 'Uma caixa de entrada, sem formulário e sem gerente de contas. Toda mensagem chega diretamente ao proprietário.',
-    bookCall: 'Agende uma conversa estratégica', office: 'Sede registrada', status: 'Canal: aberto',
-    notesLabel: 'Antes de escrever', notesHeading: 'Três informações que tornam a primeira resposta útil.',
+    bookCall: 'Agendar uma conversa por e-mail', office: 'Sede registrada', status: 'Canal: aberto',
+    notesLabel: 'Antes de escrever', notesHeading: 'Cinco informações que tornam a primeira resposta útil.',
     notes: [
-      ['Objetivo', JP.goal, 'O resultado que você busca: mais tráfego qualificado, melhor conversão, um site que ranqueia ou tudo isso.'],
-      ['URL', JP.site, 'Seu site atual, se tiver um. A auditoria começa por ele.'],
-      ['Prazo', JP.deadline, 'Quando você precisa de resultados e como será uma vitória para o seu negócio.'],
+      ['O que você vende?', JP.goal, 'Conte qual é sua oferta principal e o que você quer que mais pessoas encontrem.'],
+      ['Em quais cidades atende?', JP.site, 'Liste as cidades e regiões onde você quer gerar contatos.'],
+      ['Qual serviço precisa gerar mais contatos?', JP.deadline, 'Aponte o serviço que deve receber mais procura qualificada.'],
+      ['Você já usa Google Perfil da Empresa, anúncios ou uma landing page?', JP.goal, 'Conte quais canais já estão ativos e o que está funcionando hoje.'],
+      ['Quando precisa começar a ver evolução?', JP.site, 'Indique o prazo que orienta sua prioridade de implementação.'],
     ],
     closeLabel: 'Contato', closeHeading: 'O canal está aberto.',
-    closeLead: 'Traga o problema de visibilidade que está à sua frente. A primeira resposta vem diretamente de quem fará o trabalho.',
+    closeLead: 'Conte o que você vende, onde atende e o que precisa melhorar. A primeira resposta vem diretamente de quem vai analisar o trabalho.',
+    whatsapp: 'Falar pelo WhatsApp', emailCta: 'Enviar um e-mail',
   }
 
   let content = $derived(locale === 'pt-BR' ? portuguese : english)
+  let showWhatsapp = $derived(locale === 'pt-BR' && Boolean(WHATSAPP_URL))
+  let localeMailto = $derived(locale === 'pt-BR' ? PT_MAILTO : MAILTO)
+  let localeEmail = $derived(locale === 'pt-BR' ? PORTUGUESE_EMAIL : EMAIL)
 </script>
 
 <section class="editorial-subhero contact-subhero">
@@ -44,8 +50,8 @@
       <p class="section-label motion-rise"><span class="font-jp">{JP.contact}</span> {content.label}</p>
       <h1 class="motion-subhero-heading"><span>{content.hero}</span><span>{content.heroAccent}</span></h1>
       <p class="motion-rise">{content.intro}</p>
-      <a class="button button--solid" href={MAILTO}>{content.bookCall} <span aria-hidden="true">→</span></a>
-      <a class="subhero-copy__mail" href={MAILTO}>{EMAIL}</a>
+      <a class="button button--solid" href={showWhatsapp ? WHATSAPP_URL : localeMailto}>{showWhatsapp ? content.whatsapp : content.bookCall} <span aria-hidden="true">→</span></a>
+      <a class="subhero-copy__mail" href={localeMailto}>{showWhatsapp ? content.emailCta : localeEmail}</a>
     </div>
     <aside class="office-card">
       <p class="office-card__label"><span class="font-jp">{JP.office}</span> {content.office}</p>
@@ -70,6 +76,6 @@
   <div class="section-inner">
     <p class="section-label motion-rise"><span class="font-jp">連絡</span> {content.closeLabel}</p>
     <MotionHeading class="section-heading" text={content.closeHeading} /><p class="contact-section__sub motion-rise">{content.closeLead}</p>
-    <a class="hanko-cta" href={MAILTO}><span class="hanko-cta__seal font-jp-serif">{JP.seal}</span><span>{content.bookCall} <span aria-hidden="true">→</span></span></a>
+    <a class="hanko-cta" href={showWhatsapp ? WHATSAPP_URL : localeMailto}><span class="hanko-cta__seal font-jp-serif">{JP.seal}</span><span>{showWhatsapp ? content.whatsapp : content.bookCall} <span aria-hidden="true">→</span></span></a>
   </div>
 </section>
