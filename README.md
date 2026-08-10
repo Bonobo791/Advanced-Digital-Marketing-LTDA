@@ -52,3 +52,7 @@ The supplied Andrew portrait (`src/lib/assets/andrew.png`) is committed with the
 - `src/lib/components/cyber/` — boot blinds, CRT overlay, terminal typing, hover scramble, glitch word, scroll reveals
 - `src/lib/components/chrome/` — nav and footer
 - `src/app.css` — design tokens, chamfer clips, glitch/CRT/ledger styles, reduced-motion rules
+
+## License
+
+This website is under the PolyForm Shield 1.0.0 license.
