@@ -125,6 +125,24 @@ export function navigationForLocale(locale: Locale) {
   }))
 }
 
+export function homeSectionsForLocale(locale: Locale) {
+  return locale === 'pt-BR'
+    ? [
+        { to: '/pt-br/#services', label: 'Serviços', jp: 'サービス' },
+        { to: '/pt-br/#process', label: 'Processo', jp: '工程' },
+        { to: '/pt-br/#why', label: 'Por que nós', jp: '強み' },
+        { to: '/pt-br/#people', label: 'Pessoas', jp: '人' },
+        { to: '/pt-br/#contact', label: 'Contato', jp: '連絡' },
+      ]
+    : [
+        { to: '/#services', label: 'Services', jp: 'サービス' },
+        { to: '/#process', label: 'Process', jp: '工程' },
+        { to: '/#why', label: 'Why us', jp: '強み' },
+        { to: '/#people', label: 'People', jp: '人' },
+        { to: '/#contact', label: 'Contact', jp: '連絡' },
+      ]
+}
+
 export function browserPrefersPortuguese(languages: readonly string[]) {
   return languages.some((language) => language.toLowerCase().startsWith('pt'))
 }
@@ -147,13 +165,13 @@ export function decideLocaleRequest({ method, pathname, search, language, countr
 
   const page = pageForPath(pathname)
   if (page && page !== 'home') {
-    return { type: 'next', geoBr: country?.toUpperCase() === 'BR' }
+    return { type: 'next', geoBr: language !== 'en-US' && country?.toUpperCase() === 'BR' }
   }
 
   if (normalizePath(pathname) !== '/') return { type: 'next' }
-  if (language === 'pt-BR' || (!language && country?.toUpperCase() === 'BR')) {
+  if (language === 'pt-BR') {
     return { type: 'redirect', location: `${LOCALE_ROUTES.home['pt-BR']}${search}` }
   }
 
-  return { type: 'next' }
+  return { type: 'next', geoBr: language !== 'en-US' && country?.toUpperCase() === 'BR' }
 }

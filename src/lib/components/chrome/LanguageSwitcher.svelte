@@ -11,7 +11,7 @@
 </script>
 
 <nav class="language-switcher" aria-label={copy.languageLabel}>
-  <a href={englishPath} aria-current={locale === 'en-US' ? 'true' : undefined} onclick={() => saveLanguagePreference('en-US')}>EN</a>
+  <a href={englishPath} hreflang="en-US" aria-current={locale === 'en-US' ? 'true' : undefined} onclick={() => saveLanguagePreference('en-US')}>EN</a>
   <span aria-hidden="true">/</span>
-  <a href={portuguesePath} aria-current={locale === 'pt-BR' ? 'true' : undefined} onclick={() => saveLanguagePreference('pt-BR')}>PT</a>
+  <a href={portuguesePath} hreflang="pt-BR" aria-current={locale === 'pt-BR' ? 'true' : undefined} onclick={() => saveLanguagePreference('pt-BR')}>PT</a>
 </nav>

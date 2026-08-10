@@ -15,7 +15,7 @@
 
     visible = false
     const pageId = pageForPath(page.url.pathname)
-    if (localeForPath(page.url.pathname) === 'pt-BR' || !pageId || pageId === 'home' || !destination) return
+    if (localeForPath(page.url.pathname) === 'pt-BR' || !pageId || !destination) return
     if (sessionStorage.getItem(dismissedKey)) return
 
     const language = document.cookie.match(/(?:^|; )language=([^;]+)/)?.[1]

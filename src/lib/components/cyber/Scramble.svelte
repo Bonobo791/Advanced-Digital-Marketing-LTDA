@@ -14,6 +14,7 @@
   let display = $state('')
   let frame = $state<number | null>(null)
   let reduced = $state(false)
+  let el: HTMLSpanElement
 
   $effect(() => {
     display = text
@@ -21,6 +22,22 @@
 
   onMount(() => {
     reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (!reduced) {
+      const io = new IntersectionObserver(
+        (entries) => {
+          if (entries[0]?.isIntersecting) {
+            run()
+            io.disconnect()
+          }
+        },
+        { threshold: 0.8 },
+      )
+      io.observe(el)
+      return () => {
+        io.disconnect()
+        if (frame !== null) cancelAnimationFrame(frame)
+      }
+    }
     return () => {
       if (frame !== null) cancelAnimationFrame(frame)
     }
@@ -46,4 +63,4 @@
   }
 </script>
 
-<span class={className} onmouseenter={run} role="presentation">{display || text}</span>
+<span bind:this={el} class={className} onmouseenter={run} onclick={run} onfocus={run} role="presentation">{display || text}</span>

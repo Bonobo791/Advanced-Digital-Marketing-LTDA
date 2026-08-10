@@ -25,7 +25,7 @@
   <div aria-hidden="true" class="pointer-events-none fixed inset-0 z-[80] flex">
     {#each Array(BLINDS) as _, i}
       <div
-        class="boot-blind h-full flex-1 bg-[#151a20]"
+        class="boot-blind h-full flex-1 bg-[#101a2e]"
         class:boot-out={phase === 'out'}
         style="transition-delay: {i * 45}ms"
       ></div>

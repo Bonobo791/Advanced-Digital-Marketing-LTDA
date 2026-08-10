@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { decideLocaleRequest, localeForPath, localizedPath } from './locale'
+import { absoluteUrl, decideLocaleRequest, LOCALE_ROUTES, localeForPath, localizedPath } from './locale'
 
 describe('locale routes', () => {
   it('maps every existing public page to its Brazilian Portuguese counterpart', () => {
@@ -7,6 +7,8 @@ describe('locale routes', () => {
     expect(localizedPath('/about/', 'pt-BR')).toBe('/pt-br/sobre/')
     expect(localizedPath('/pt-br/contato/', 'en-US')).toBe('/contact/')
     expect(localeForPath('/pt-br/sobre/')).toBe('pt-BR')
+    expect(absoluteUrl(LOCALE_ROUTES.home['en-US'])).toBe('https://advanceddigitalmarketingltda.com/')
+    expect(absoluteUrl(LOCALE_ROUTES.home['pt-BR'])).toBe('https://advanceddigitalmarketingltda.com/pt-br/')
   })
 })
 
@@ -23,10 +25,10 @@ describe('homepage locale decisions', () => {
     ).toEqual({ type: 'redirect', location: '/pt-br/?utm_source=campaign' })
   })
 
-  it('redirects a first-time Brazilian homepage visitor temporarily', () => {
+  it('keeps a first-time Brazilian homepage visit on the canonical English URL and enables the suggestion', () => {
     expect(
       decideLocaleRequest({ method: 'GET', pathname: '/', search: '', country: 'BR' }),
-    ).toEqual({ type: 'redirect', location: '/pt-br/' })
+    ).toEqual({ type: 'next', geoBr: true })
   })
 
   it('keeps explicit localized URLs, English preferences, and non-navigation requests untouched', () => {
@@ -35,7 +37,7 @@ describe('homepage locale decisions', () => {
     ).toEqual({ type: 'next' })
     expect(
       decideLocaleRequest({ method: 'GET', pathname: '/', search: '', language: 'en-US', country: 'BR' }),
-    ).toEqual({ type: 'next' })
+    ).toEqual({ type: 'next', geoBr: false })
     expect(
       decideLocaleRequest({ method: 'POST', pathname: '/', search: '', country: 'BR' }),
     ).toEqual({ type: 'next' })

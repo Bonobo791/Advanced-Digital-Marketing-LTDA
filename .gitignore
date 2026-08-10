@@ -7,3 +7,8 @@ build
 .DS_Store
 vite.config.ts.timestamp-*
 new-assets
+reasonix.toml
+.env
+.playwright-cli
+.impeccable
+.codex

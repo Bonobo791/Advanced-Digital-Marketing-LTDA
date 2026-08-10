@@ -1,4 +1,4 @@
-export const EMAIL = 'contact@AdvancedDigitalMarketingLTDA.com'
+export const EMAIL = 'contact@marketingprowess.simplelogin.com'
 export const MAILTO = `mailto:${EMAIL}?subject=Project%20inquiry%20-%20Advanced%20Digital%20Marketing%20LTDA`
 
 export const LINKS = [
@@ -9,7 +9,7 @@ export const LINKS = [
 
 export const JP = {
   brand: '先進デジタルマーケティング',
-  heroRail: 'アドバンスト・デジタル・マーケティング — 答',
+  heroRail: 'アドバンスト・デジタル・マーケティング / 答',
   seal: '答',
   platforms: '基盤',
   services: '業務',

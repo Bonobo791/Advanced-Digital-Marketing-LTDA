@@ -3,7 +3,7 @@
   import { browser } from '$app/environment'
   import { page } from '$app/state'
   import { EMAIL, JP, MAILTO } from '$lib/constants'
-  import { CHROME_COPY, localeForPath, LOCALE_ROUTES, navigationForLocale, normalizePath } from '$lib/locale'
+  import { CHROME_COPY, homeSectionsForLocale, localeForPath, LOCALE_ROUTES, navigationForLocale, normalizePath } from '$lib/locale'
   import LanguageSwitcher from './LanguageSwitcher.svelte'
 
   let open = $state(false)
@@ -11,7 +11,8 @@
   let pathname = $derived(normalizePath(page.url.pathname))
   let locale = $derived(localeForPath(page.url.pathname))
   let copy = $derived(CHROME_COPY[locale])
-  let links = $derived(navigationForLocale(locale))
+  let isHome = $derived(pathname === normalizePath(LOCALE_ROUTES.home[locale]))
+  let links = $derived(isHome ? homeSectionsForLocale(locale) : navigationForLocale(locale))
 
   $effect(() => {
     if (pathname) open = false
@@ -33,8 +34,8 @@
       frame = requestAnimationFrame(() => {
         const y = window.scrollY
         const delta = y - lastY
-        hidden = y > 96 && delta > 4
-        if (delta < -4 || y <= 96) hidden = false
+        hidden = y > 140 && delta > 4
+        if (delta < -4 || y <= 140) hidden = false
         lastY = y
         frame = 0
       })
@@ -52,18 +53,17 @@
 <header class="editorial-nav" class:editorial-nav--hidden={hidden && !open}>
   <div class="editorial-nav__inner">
     <a class="editorial-brand" href={LOCALE_ROUTES.home[locale]} aria-label={`Advanced Digital Marketing LTDA ${copy.navigation.home}`}>
-      <span class="editorial-brand__seal font-jp-serif" aria-hidden="true">{JP.seal}</span><span>ADM//LTDA</span>
+      <span class="editorial-brand__seal font-jp" aria-hidden="true">{JP.seal}</span><span>ADM</span>
     </a>
 
     <nav class="editorial-nav__links" aria-label={copy.navigationLabel}>
       {#each links as link (link.to)}
-        <a href={link.to} aria-current={pathname === normalizePath(link.to) ? 'page' : undefined}>{link.label}</a>
+        <a href={link.to} aria-current={!isHome && pathname === normalizePath(link.to) ? 'page' : undefined}>{link.label}</a>
       {/each}
     </nav>
 
     <div class="editorial-nav__actions">
       <LanguageSwitcher />
-      <a class="editorial-nav__cta" href={MAILTO}>{copy.bookCall}</a>
     </div>
 
     <button type="button" class="editorial-menu-button" aria-expanded={open} aria-controls="mobile-city-menu" onclick={() => (open = !open)}>
@@ -76,7 +76,7 @@
   <div id="mobile-city-menu" class="editorial-mobile-menu">
     <nav aria-label={copy.navigationLabel}>
       {#each links as link (link.to)}
-        <a href={link.to} aria-current={pathname === normalizePath(link.to) ? 'page' : undefined}><span>{link.label}</span><small class="font-jp">{link.jp}</small></a>
+        <a href={link.to} aria-current={!isHome && pathname === normalizePath(link.to) ? 'page' : undefined}><span>{link.label}</span><small class="font-jp">{link.jp}</small></a>
       {/each}
     </nav>
 
