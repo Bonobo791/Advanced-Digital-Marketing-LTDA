@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getContext, onMount } from 'svelte'
   import cityInk from '$lib/assets/city-ink.jpg'
-  import portraitInk from '$lib/assets/portrait-ink.jpg'
+  import andrewPortrait from '$lib/assets/andrew.png'
   import Kanji from '$lib/components/chrome/Kanji.svelte'
   import MotionHeading from '$lib/components/chrome/MotionHeading.svelte'
   import { SITE_MOTION, type SiteMotion } from '$lib/client/site-motion'
@@ -192,7 +192,7 @@
     <p class="section-label motion-rise"><span class="font-jp">人</span></p>
     <MotionHeading class="section-heading" text={content.peopleHeading} />
     <div class="people-grid">
-      <figure class="people-portrait"><img class="motion-image" src={portraitInk} alt={content.portraitAlt} width="629" height="1430" loading="lazy" /></figure>
+      <figure class="people-portrait"><img class="motion-image" src={andrewPortrait} alt={content.portraitAlt} width="529" height="744" loading="lazy" /></figure>
       <p class="people-pullquote font-jp-serif motion-rise">「検索の未来を、設計する。」</p>
       <div class="people-bio motion-rise">
         <p class="people-bio__heading">Andrew Weilbacher</p><p class="people-bio__role">{content.role}</p>

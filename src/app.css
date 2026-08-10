@@ -26,13 +26,13 @@
 
 @font-face {
   font-family: 'ADM Body';
-  src: url('../new-assets/Archivo-Regular-sub.woff2') format('woff2');
+  src: url('/fonts/Archivo-Regular-sub.woff2') format('woff2');
   font-display: swap;
 }
 
 @font-face {
   font-family: 'ADM Semi';
-  src: url('../new-assets/Archivo-SemiBold-sub.woff2') format('woff2');
+  src: url('/fonts/Archivo-SemiBold-sub.woff2') format('woff2');
   font-display: swap;
 }
 

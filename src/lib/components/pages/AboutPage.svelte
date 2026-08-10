@@ -1,5 +1,5 @@
 <script lang="ts">
-  import portrait from '$lib/assets/andrew-portrait-v3-full.png'
+  import portrait from '$lib/assets/andrew.png'
   import Kanji from '$lib/components/chrome/Kanji.svelte'
   import MotionHeading from '$lib/components/chrome/MotionHeading.svelte'
   import { JP, MAILTO } from '$lib/constants'
@@ -64,7 +64,7 @@
       <h1 class="motion-subhero-heading"><span>Andrew</span><span>Philip</span><span>Weilbacher</span></h1>
       <p class="motion-rise">{content.hero}</p>
     </div>
-    <figure class="subhero-portrait"><img src={portrait} alt={content.portraitAlt} width="552" height="828" fetchpriority="high" /></figure>
+    <figure class="subhero-portrait"><img src={portrait} alt={content.portraitAlt} width="529" height="744" fetchpriority="high" /></figure>
   </div>
 </section>
 

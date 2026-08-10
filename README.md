@@ -42,9 +42,7 @@ Database integration is intentionally deferred. When it is introduced, developme
 
 ## Image assets
 
-The two AI-generated images (`andrew-portrait.jpg`, `data-city.jpg`) are committed so production builds do not depend on remote asset URLs. `scripts/sync-assets.mjs` (wired as `predev` / `prebuild`) only downloads them when they are absent.
-
-If those URLs ever expire, place the two `.jpg` files manually in `src/lib/assets/` with the exact filenames above. The sync script skips any file that already exists.
+The supplied Andrew portrait (`src/lib/assets/andrew.png`) is committed with the rest of the first-party visual assets. The sync hook only checks the optional generated `data-city.jpg` fallback when it is absent, so production builds do not depend on its remote URL.
 
 ## Structure
 
