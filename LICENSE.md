@@ -26,5 +26,5 @@ A commercial license may permit, depending on the applicable agreement:
 
 Commercial licensing inquiries:
 
-contact@marketingprowess.simplelogin.com
+contact@AdvancedDigitalMarketingLTDA.com
 AdvancedDigitalMarketingLTDA.com

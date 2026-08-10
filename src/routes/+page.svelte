@@ -257,7 +257,7 @@
         >
           Start a project
         </a>
-        <span class="break-all font-mono2 text-[12px] text-white/40">contact@marketingprowess.simplelogin.com</span>
+        <span class="break-all font-mono2 text-[12px] text-white/40">contact@AdvancedDigitalMarketingLTDA.com</span>
       </div>
     </Reveal>
   </div>

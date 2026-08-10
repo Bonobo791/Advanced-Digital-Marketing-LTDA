@@ -5,7 +5,7 @@ Cyberpunk-themed marketing agency website. SvelteKit 2 + Svelte 5 (runes) + Tail
 **Owner / operator:** Andrew Philip Weilbacher
 **Services:** SEO & GEO, Paid Search, Paid Social, Web Design
 **Registered office:** SAO PAULO, SP
-**Contact:** contact@marketingprowess.simplelogin.com
+**Contact:** contact@AdvancedDigitalMarketingLTDA.com
 
 ## Develop
 
