@@ -3,7 +3,8 @@
   import { page } from '$app/state'
   import { fly } from 'svelte/transition'
   import { expoOut } from 'svelte/easing'
-  import { LINKS, MAILTO } from '$lib/constants'
+  import { JP, LINKS, MAILTO } from '$lib/constants'
+  import logoMark from '$lib/assets/adm-logo-mark.png'
   import Scramble from '../cyber/Scramble.svelte'
 
   let open = $state(false)
@@ -20,10 +21,12 @@
   })
 </script>
 
-<header class="fixed inset-x-0 top-0 z-[60] border-b border-white/10 bg-[#0a0a0b]/85 backdrop-blur-md">
+<header class="fixed inset-x-0 top-0 z-[60] border-b border-white/10 bg-[#151a20]/92 backdrop-blur-md">
   <div class="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-6 md:px-12">
-    <a href="/" class="font-mono2 text-sm font-bold tracking-[0.18em] text-[#f2f2f2]" aria-label="Advanced Digital Marketing LTDA - home">
-      ADM<span class="text-[#00e5ff]">//</span>LTDA
+    <a href="/" class="flex items-center gap-3 font-mono2 text-sm font-bold tracking-[0.18em] text-[#eef2ef]" aria-label="Advanced Digital Marketing LTDA - home">
+      <img src={logoMark} alt="" class="h-6 w-6" width="1560" height="1560" />
+      <span>ADM<span class="text-[#e66757]">//</span>LTDA</span>
+      <span class="hidden font-jp text-[10px] font-bold tracking-[0.16em] text-white/30 lg:inline">先進</span>
     </a>
 
     <nav class="hidden items-center gap-8 md:flex" aria-label="Primary">
@@ -32,16 +35,17 @@
         <a
           href={l.to}
           class="font-mono2 text-[12px] uppercase tracking-[0.18em] {active
-            ? 'text-[#00e5ff]'
+            ? 'text-[#76d7dd]'
             : 'text-white/60 hover:text-white'}"
           aria-current={active ? 'page' : undefined}
         >
           <Scramble text={l.label} />
+          <span class="ml-1 font-jp text-[10px] normal-case tracking-normal text-white/25">{l.jp}</span>
         </a>
       {/each}
       <a
         href={MAILTO}
-        class="chamfer-sm bg-[#00e5ff] px-5 py-2.5 font-mono2 text-[12px] font-bold uppercase tracking-[0.14em] text-[#04181c] hover:bg-[#5cf0ff]"
+        class="chamfer-sm bg-[#76d7dd] px-5 py-2.5 font-mono2 text-[12px] font-bold uppercase tracking-[0.14em] text-[#172025] hover:bg-[#a4eef0]"
       >
         Start a project
       </a>
@@ -68,7 +72,7 @@
   {#if open}
     <nav
       aria-label="Mobile"
-      class="border-t border-white/10 bg-[#0a0a0b] md:hidden"
+      class="border-t border-white/10 bg-[#151a20] md:hidden"
       in:fly={{ y: reduced ? 0 : -8, duration: reduced ? 0 : 200, easing: expoOut, opacity: reduced ? 1 : 0 }}
       out:fly={{ y: reduced ? 0 : -8, duration: reduced ? 0 : 120, easing: expoOut, opacity: reduced ? 1 : 0 }}
     >
@@ -77,15 +81,16 @@
           {@const active = pathname === l.to}
           <a
             href={l.to}
-            class="py-3 font-mono2 text-[13px] uppercase tracking-[0.18em] {active ? 'text-[#00e5ff]' : 'text-white/70'}"
+            class="flex items-baseline justify-between py-3 font-mono2 text-[13px] uppercase tracking-[0.18em] {active ? 'text-[#76d7dd]' : 'text-white/70'}"
             aria-current={active ? 'page' : undefined}
           >
-            {l.label}
+            <span>{l.label}</span>
+            <span class="font-jp text-[11px] normal-case tracking-normal text-white/30">{l.jp}</span>
           </a>
         {/each}
         <a
           href={MAILTO}
-          class="chamfer-sm mt-2 inline-flex w-fit bg-[#00e5ff] px-5 py-2.5 font-mono2 text-[12px] font-bold uppercase tracking-[0.14em] text-[#04181c]"
+          class="chamfer-sm mt-2 inline-flex w-fit bg-[#76d7dd] px-5 py-2.5 font-mono2 text-[12px] font-bold uppercase tracking-[0.14em] text-[#172025]"
         >
           Start a project
         </a>

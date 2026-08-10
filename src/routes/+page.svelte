@@ -4,8 +4,8 @@
   import Reveal from '$lib/components/cyber/Reveal.svelte'
   import Rule from '$lib/components/cyber/Rule.svelte'
   import Scramble from '$lib/components/cyber/Scramble.svelte'
-  import { MAILTO } from '$lib/constants'
-  import dataCity from '$lib/assets/data-city.jpg'
+  import { JP, MAILTO } from '$lib/constants'
+  import cityInk from '$lib/assets/city-ink.jpg'
 
   const BOOT_LINES = [
     { prompt: '>', text: 'boot adm.core .......... ok' },
@@ -91,12 +91,15 @@
 </script>
 
 <!-- HERO -->
-<section class="mx-auto flex min-h-[100dvh] max-w-[1400px] items-center px-6 pb-16 pt-24 md:px-12">
-  <div class="grid w-full items-center gap-12 md:grid-cols-12">
+<section class="relative mx-auto flex min-h-[100dvh] max-w-[1400px] items-center overflow-hidden px-6 pb-16 pt-24 md:px-12">
+  <span class="v-rail pointer-events-none fixed left-2 top-1/2 z-20 hidden -translate-y-1/2 font-jp text-[10px] font-bold tracking-[0.3em] text-white/35 lg:block" aria-hidden="true">{JP.heroRail}</span>
+  <span class="hanko pointer-events-none absolute left-1 top-[calc(50%+10rem)] z-10 hidden h-5 w-5 text-[10px] lg:inline-flex" aria-hidden="true">{JP.seal}</span>
+  <span class="hero-kanji" aria-hidden="true">{JP.seal}</span>
+  <div class="relative z-10 grid w-full items-center gap-12 md:grid-cols-12">
     <div class="md:col-span-7">
-      <p class="mono-label text-[#00e5ff]">Advanced Digital Marketing LTDA</p>
+      <p class="mono-label text-[#76d7dd]">Advanced Digital Marketing LTDA <span class="font-jp ml-2 normal-case tracking-normal text-[#e66757]">{JP.brand}</span></p>
       <h1 class="font-display mt-6 text-[clamp(2.5rem,4.6vw,3.5rem)] font-bold leading-[1.02] tracking-tight">
-        Search is changing. We make sure you get <GlitchWord text="found." class="text-[#00e5ff] glow-cyan" />
+        Search is changing. We make sure you get <GlitchWord text="found." class="text-[#e66757] glow-cyan" />
       </h1>
       <p class="mt-6 max-w-[52ch] text-base leading-relaxed text-white/60 md:text-lg">
         One senior operator for SEO, GEO, paid search, paid social, and web design.
@@ -104,13 +107,13 @@
       <div class="mt-8 flex flex-wrap items-center gap-4">
         <a
           href={MAILTO}
-          class="chamfer-sm bg-[#00e5ff] px-7 py-3.5 font-mono2 text-[13px] font-bold uppercase tracking-[0.14em] text-[#04181c] hover:bg-[#5cf0ff]"
+          class="chamfer-sm bg-[#76d7dd] px-7 py-3.5 font-mono2 text-[13px] font-bold uppercase tracking-[0.14em] text-[#172025] hover:bg-[#a4eef0]"
         >
           Start a project
         </a>
         <a
           href="#services"
-          class="chamfer-sm border border-white/20 px-7 py-3.5 font-mono2 text-[13px] uppercase tracking-[0.14em] text-white/80 hover:border-[#00e5ff] hover:text-[#00e5ff]"
+          class="chamfer-sm border border-white/20 px-7 py-3.5 font-mono2 text-[13px] uppercase tracking-[0.14em] text-white/80 hover:border-[#76d7dd] hover:text-[#76d7dd]"
         >
           See services
         </a>
@@ -123,9 +126,9 @@
 </section>
 
 <!-- SYSTEMS STRIP -->
-<section class="border-y border-white/10">
+<section class="border-y border-white/10 bg-[#1d252c]">
   <div class="mx-auto max-w-[1400px] px-6 py-10 md:px-12">
-    <p class="mono-label text-center text-white/40">Operating across</p>
+    <p class="mono-label text-center text-white/40">Operating across <span class="font-jp ml-2 normal-case tracking-normal text-white/25">{JP.platforms}</span></p>
     <div class="mt-6 flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
       {#each PLATFORMS as p (p.slug)}
         <img
@@ -155,12 +158,12 @@
       <Reveal delay={i * 0.06}>
         <div class="ledger-row group border-b border-white/10 py-8 md:py-10">
           <div class="grid items-baseline gap-3 md:grid-cols-12 md:gap-6">
-            <span class="font-mono2 text-[12px] text-[#00e5ff] md:col-span-2">{s.key}</span>
+            <span class="font-mono2 text-[12px] text-[#76d7dd] md:col-span-2">{s.key}</span>
             <h3 class="font-display text-2xl font-bold tracking-tight md:col-span-4 md:text-4xl">
               <Scramble text={s.name} />
             </h3>
             <p class="text-sm leading-relaxed text-white/50 md:col-span-5 md:text-base">{s.outcome}</p>
-            <span class="hidden justify-self-end text-[#00e5ff] md:col-span-1 md:block">
+            <span class="hidden justify-self-end text-[#76d7dd] md:col-span-1 md:block">
               <svg
                 width="26"
                 height="26"
@@ -188,18 +191,18 @@
 </section>
 
 <!-- HOW IT WORKS -->
-<section class="border-y border-white/10 bg-[#0d0d10]">
+<section class="border-y border-white/10 bg-[#1d252c]">
   <div class="mx-auto max-w-[1400px] px-6 py-24 md:px-12 md:py-32">
     <Reveal>
       <h2 class="font-display max-w-[18ch] text-4xl font-bold leading-[1.02] tracking-tight md:text-6xl">
-        How an engagement runs
+        How an engagement runs <span class="font-jp ml-2 align-middle text-[0.28em] font-bold tracking-[0.18em] text-[#e66757]">{JP.compound}</span>
       </h2>
     </Reveal>
     <div class="mt-16 grid gap-12 md:grid-cols-3 md:gap-8">
       {#each STEPS as s, i (s.n)}
         <Reveal delay={i * 0.08}>
-          <div class="border-t border-[#00e5ff]/30 pt-6">
-            <span class="font-mono2 text-[13px] text-[#00e5ff]">{s.n}</span>
+          <div class="border-t border-[#76d7dd]/30 pt-6">
+            <span class="font-mono2 text-[13px] text-[#76d7dd]">{s.n}</span>
             <h3 class="font-display mt-3 text-2xl font-bold tracking-tight">{s.verb}</h3>
             <p class="mt-3 text-sm leading-relaxed text-white/60">{s.text}</p>
           </div>
@@ -221,7 +224,7 @@
       <Reveal delay={0.1}>
         <div class="bracketed chamfer mt-10">
           <span class="bk bk-tl"></span><span class="bk bk-tr"></span><span class="bk bk-bl"></span><span class="bk bk-br"></span>
-          <img src={dataCity} alt="Visualization of search data flowing through a city-scale network" class="block w-full" loading="lazy" />
+          <img src={cityInk} alt="Ink-and-vermilion city skyline at night" class="city-image block w-full" loading="lazy" width="1396" height="975" />
         </div>
         <p class="mt-3 font-mono2 text-[11px] uppercase tracking-[0.18em] text-white/30">
           Your market is a network. We make it route to you.
@@ -232,7 +235,7 @@
       {#each DIFFS as d, i (d.title)}
         <Reveal delay={i * 0.08}>
           <div class="py-8 {i > 0 ? 'border-t border-white/10' : ''}">
-            <h3 class="font-display text-xl font-bold tracking-tight text-[#f2f2f2] md:text-2xl">{d.title}</h3>
+            <h3 class="font-display text-xl font-bold tracking-tight text-[#eef2ef] md:text-2xl">{d.title}</h3>
             <p class="mt-3 max-w-[58ch] text-sm leading-relaxed text-white/60 md:text-base">{d.text}</p>
           </div>
         </Reveal>
@@ -242,18 +245,19 @@
 </section>
 
 <!-- FINAL CTA -->
-<section class="border-t border-white/10 bg-[#0d0d10]">
+<section class="border-t border-white/10 bg-[#1d252c]">
   <div class="mx-auto max-w-[1400px] px-6 py-24 text-center md:px-12 md:py-32">
+    <span class="hanko h-8 w-8 text-[15px]" aria-hidden="true">{JP.seal}</span>
     <Reveal>
       <h2 class="font-display mx-auto max-w-[16ch] text-4xl font-bold leading-[1.02] tracking-tight md:text-6xl">
-        Be the <span class="text-[#00e5ff] glow-cyan">answer</span>, not another blue link.
+        Be the <span class="text-[#e66757]">answer</span>, not another blue link.
       </h2>
     </Reveal>
     <Reveal delay={0.1}>
       <div class="mt-10 flex flex-col items-center gap-5">
         <a
           href={MAILTO}
-          class="chamfer-sm bg-[#00e5ff] px-8 py-4 font-mono2 text-[13px] font-bold uppercase tracking-[0.14em] text-[#04181c] hover:bg-[#5cf0ff]"
+          class="chamfer-sm bg-[#76d7dd] px-8 py-4 font-mono2 text-[13px] font-bold uppercase tracking-[0.14em] text-[#172025] hover:bg-[#a4eef0]"
         >
           Start a project
         </a>

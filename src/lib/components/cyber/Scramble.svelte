@@ -11,8 +11,7 @@
 
   const GLYPHS = '!<>-_/[]{}=+*^?#010101'
 
-  const initialText = text
-  let display = $state(initialText)
+  let display = $state('')
   let frame = $state<number | null>(null)
   let reduced = $state(false)
 
@@ -47,4 +46,4 @@
   }
 </script>
 
-<span class={className} onmouseenter={run} role="presentation">{display}</span>
+<span class={className} onmouseenter={run} role="presentation">{display || text}</span>
