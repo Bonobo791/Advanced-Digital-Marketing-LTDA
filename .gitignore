@@ -9,6 +9,7 @@ vite.config.ts.timestamp-*
 new-assets
 reasonix.toml
 .env
+.env.local
 .playwright-cli
 .impeccable
 .codex
