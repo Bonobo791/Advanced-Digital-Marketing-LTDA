@@ -13,12 +13,12 @@
    */
   import { untrack } from 'svelte'
   import {
-    SERVICE_IDS,
+    CATALOG_SERVICE_IDS,
     SERVICES,
     adSpendFeeBRL,
     formatPrice,
     isSubscribable,
-    type ServiceId,
+    type CatalogServiceId,
   } from '$lib/catalog'
   import { parseBRLInput } from '$lib/brl'
   import { EMAIL } from '$lib/constants'
@@ -27,15 +27,15 @@
   let {
     locale,
     preselect = [],
-  }: { locale: Locale; preselect?: ServiceId[] } = $props()
+  }: { locale: Locale; preselect?: CatalogServiceId[] } = $props()
 
-  const subscribable = SERVICE_IDS.filter((id) => isSubscribable(SERVICES[id]))
+  const subscribable = CATALOG_SERVICE_IDS.filter((id) => isSubscribable(SERVICES[id]))
   const adsIds = subscribable.filter((id) => SERVICES[id].pricing.kind === 'ads-spend')
 
   // Seed the selection once from the (static) preselect prop. Toggling after
   // mount is fully user-controlled; preselect never changes per page.
-  let selected = $state<Set<ServiceId>>(initialSelectionFor())
-  let spends = $state<Partial<Record<ServiceId, string>>>({})
+  let selected = $state<Set<CatalogServiceId>>(initialSelectionFor())
+  let spends = $state<Partial<Record<CatalogServiceId, string>>>({})
   let email = $state('')
   let submitting = $state(false)
   let errorMessage = $state<string | undefined>(undefined)
@@ -88,7 +88,7 @@
   let text = $derived(copy[locale])
 
   /** One-time seed of the checkbox state from the static preselect prop. */
-  function initialSelectionFor(): Set<ServiceId> {
+  function initialSelectionFor(): Set<CatalogServiceId> {
     return new Set(preselect.filter((id) => isSubscribable(SERVICES[id])))
   }
 
@@ -100,17 +100,24 @@
     untrack(() => {
       if (next.size !== selected.size || [...next].some((id) => !selected.has(id))) {
         selected = next
+        // Drop ad-spend inputs from the previous service page — they describe
+        // a package the visitor no longer has selected, and reusing them would
+        // quote a stale amount. A fresh payload also needs a fresh idempotency
+        // key (payloadFingerprint mismatch regenerates it on submit).
+        spends = {}
+        errorMessage = undefined
+        payloadFingerprint = ''
       }
     })
   })
 
-  function spendOf(id: ServiceId): number {
+  function spendOf(id: CatalogServiceId): number {
     const value = spends[id]
     if (value === undefined) return 0
     return parseBRLInput(value) ?? 0
   }
 
-  function priceOf(id: ServiceId): { amount: string } {
+  function priceOf(id: CatalogServiceId): { amount: string } {
     const pricing = SERVICES[id].pricing
     if (pricing.kind === 'fixed') {
       // One currency per locale: BRL on pt-BR pages, USD on en-US pages.
@@ -129,7 +136,7 @@
     }, 0),
   )
 
-  function toggle(id: ServiceId) {
+  function toggle(id: CatalogServiceId) {
     const next = new Set(selected)
     if (next.has(id)) {
       next.delete(id)
@@ -177,6 +184,10 @@
         return locale === 'pt-BR'
           ? 'O pagamento ainda não está configurado. Tente novamente mais tarde.'
           : 'Payments are not configured yet. Please try again later.'
+      case 'rate_limited':
+        return locale === 'pt-BR'
+          ? 'Muitas tentativas. Aguarde alguns minutos e tente novamente.'
+          : 'Too many attempts. Please try again in a few minutes.'
       default:
         return genericError
     }
@@ -224,31 +235,47 @@
         totalBRL,
       )
 
-      const response = await fetch('/api/checkout/subscription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: email.trim(),
-          serviceIds,
-          config,
-          idempotencyKey,
-          locale,
-        }),
-      })
+      const controller = new AbortController()
+      // Bound the request: a stalled Mercado Pago round-trip must reach the
+      // error handling instead of leaving `submitting` active indefinitely.
+      const timeout = window.setTimeout(() => controller.abort(), 15_000)
+      try {
+        const response = await fetch('/api/checkout/subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email.trim(),
+            serviceIds,
+            config,
+            idempotencyKey,
+            locale,
+          }),
+          signal: controller.signal,
+        })
 
-      const body = (await response.json().catch(() => ({}))) as { checkoutUrl?: unknown; error?: unknown }
-      if (!response.ok) {
-        errorMessage = errorMessageFor(typeof body.error === 'string' ? body.error : undefined)
-        return
-      }
-      if (typeof body.checkoutUrl !== 'string') {
+        const body = (await response.json().catch(() => ({}))) as { checkoutUrl?: unknown; error?: unknown }
+        if (!response.ok) {
+          errorMessage = errorMessageFor(typeof body.error === 'string' ? body.error : undefined)
+          return
+        }
+        if (typeof body.checkoutUrl !== 'string') {
+          errorMessage = genericError
+          return
+        }
+
+        // Full-page redirect: the browser address bar visibly leaves our domain.
+        window.location.assign(body.checkoutUrl)
+      } catch (error) {
+        // Fail loudly on the server log; keep the generic message user-facing.
+        console.error('[checkout] subscription request failed', error)
         errorMessage = genericError
-        return
+      } finally {
+        window.clearTimeout(timeout)
+        submitting = false
       }
-
-      // Full-page redirect: the browser address bar visibly leaves our domain.
-      window.location.assign(body.checkoutUrl)
-    } catch {
+    } catch (error) {
+      // Fail loudly on the server log; keep the generic message user-facing.
+      console.error('[checkout] subscription preparation failed', error)
       errorMessage = genericError
     } finally {
       submitting = false
@@ -273,7 +300,7 @@
               type="checkbox"
               checked={selected.has(id)}
               onchange={() => toggle(id)}
-              disabled={locale !== 'pt-BR'}
+              disabled={submitting || locale !== 'pt-BR'}
             />
             <span class="sub-name">
               <b>{service.name[locale]}</b>
@@ -292,7 +319,7 @@
                 placeholder="0"
                 value={spends[id] ?? ''}
                 oninput={(e) => (spends[id] = (e.currentTarget as HTMLInputElement).value)}
-                disabled={locale !== 'pt-BR'}
+                disabled={submitting || locale !== 'pt-BR'}
               />
               <small>{text.adSpendHint}</small>
             </label>

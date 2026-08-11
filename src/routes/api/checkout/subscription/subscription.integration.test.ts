@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { POST } from './+server'
 import { MercadoPagoError, createSubscription } from '$lib/server/mercadoPago'
 import { checkoutBackUrl, isValidEmail } from '$lib/server/checkout'
+import { resetRateLimitBuckets } from '$lib/server/rate-limit'
 
 vi.mock('$lib/server/mercadoPago', async (importOriginal) => {
   const actual = await importOriginal<typeof import('$lib/server/mercadoPago')>()
@@ -17,6 +18,7 @@ const requestEvent = (body: unknown) =>
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
     }),
+    getClientAddress: () => '127.0.0.1',
   }) as Parameters<typeof POST>[0]
 
 const UUID = '00000000-0000-4000-8000-000000000000'
@@ -31,6 +33,7 @@ const validBody = {
 describe('POST /api/checkout/subscription', () => {
   beforeEach(() => {
     vi.stubEnv('PUBLIC_SITE_URL', 'https://advanceddigitalmarketingltda.com')
+    resetRateLimitBuckets()
     mockCreateSubscription.mockReset()
     mockCreateSubscription.mockResolvedValue({
       id: 'sub-1',
@@ -40,6 +43,7 @@ describe('POST /api/checkout/subscription', () => {
 
   afterEach(() => {
     vi.unstubAllEnvs()
+    resetRateLimitBuckets()
   })
 
   it('creates the subscription with the server-computed total and returns the checkout URL', async () => {
@@ -102,6 +106,8 @@ describe('POST /api/checkout/subscription', () => {
       [['seo-content', 'nope'], 'invalid_service'],
       [['ai-automation'], 'quote_only_service'],
       [[], 'no_services_selected'],
+      // >32 service ids is rejected before pricing, even when every id is valid.
+      [Array.from({ length: 33 }, () => 'seo-content'), 'invalid_service'],
     ]
     for (const [serviceIds, code] of cases) {
       const response = await POST(requestEvent({ ...validBody, serviceIds }))
@@ -157,6 +163,32 @@ describe('POST /api/checkout/subscription', () => {
     mockCreateSubscription.mockRejectedValueOnce(new Error('boom'))
     await expect(POST(requestEvent(validBody))).rejects.toThrow('boom')
   })
+
+  it('rejects repeated requests from the same IP with 429 after the window fills', async () => {
+    // 10 allowed per window; the 11th is throttled BEFORE createSubscription.
+    for (let i = 0; i < 10; i += 1) {
+      const ok = await POST(requestEvent(validBody))
+      expect(ok.status).toBe(200)
+    }
+    expect(mockCreateSubscription).toHaveBeenCalledTimes(10)
+
+    const rejected = await POST(requestEvent(validBody))
+    expect(rejected.status).toBe(429)
+    expect(await rejected.json()).toEqual({ error: 'rate_limited' })
+    expect(mockCreateSubscription).toHaveBeenCalledTimes(10)
+
+    // A different IP is unaffected.
+    const otherIp = {
+      request: new Request('http://localhost/api/checkout/subscription', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(validBody),
+      }),
+      getClientAddress: () => '10.0.0.2',
+    } as Parameters<typeof POST>[0]
+    const ok = await POST(otherIp)
+    expect(ok.status).toBe(200)
+  })
 })
 
 describe('checkoutBackUrl', () => {
@@ -175,6 +207,21 @@ describe('checkoutBackUrl', () => {
       expect(url).toBe('https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/')
       expect(errorSpy).toHaveBeenCalledWith(
         expect.stringContaining('PUBLIC_SITE_URL is not set'),
+      )
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
+  it('falls back to the canonical origin when PUBLIC_SITE_URL is malformed', () => {
+    // 'not-a-url' has no scheme — `new URL` would throw and crash checkout.
+    vi.stubEnv('PUBLIC_SITE_URL', 'not-a-url')
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const url = checkoutBackUrl()
+      expect(url).toBe('https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/')
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('PUBLIC_SITE_URL is malformed'),
       )
     } finally {
       errorSpy.mockRestore()
