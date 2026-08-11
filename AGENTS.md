@@ -24,6 +24,7 @@ This is a SvelteKit 2 / Svelte 5 site using TypeScript, Vite, and Tailwind CSS.
 - `src/lib/server/` — Turso/libSQL access (`db.ts`, `schema.mjs`/`seed.mjs`), versioned pricing (`pricing.ts`), and product lookup (`products.ts`).
 - `src/lib/` contains locale logic, constants, client helpers, and tests.
 - `static/` contains public fonts and static assets; `src/lib/assets/` contains imported visual assets.
+- `new-assets/` — gitignored design **handoff** folder. New design mockups, drafts, and assets are delivered here for implementation only. Nothing that ships on the live site lives here: implement mockups as routes/components, and move any asset that should go live into its proper app location (`src/lib/assets/` for imported assets, `static/` for public ones) before shipping. Do not treat `new-assets/` as a source of truth for production content or assets.
 - `netlify/edge-functions/` contains deployment runtime code.
 - `scripts/` contains `migrate.mjs` (db migration) and build-time asset synchronization. Do not edit generated `.svelte-kit/`, `build/`, or `reports/` output.
 
