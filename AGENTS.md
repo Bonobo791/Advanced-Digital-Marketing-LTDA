@@ -17,14 +17,14 @@
 
 This is a SvelteKit 2 / Svelte 5 site using TypeScript, Vite, and Tailwind CSS.
 
-**Tech stack:** Node 24 / npm 11 · SvelteKit 2 + Svelte 5 (runes) · TypeScript (strict) · Vite 6 · Tailwind CSS 3 + PostCSS/autoprefixer · Fontsource (Archivo, JetBrains Mono, Overpass) · Vitest + fast-check (tests) · Stryker (mutation testing) · Netlify (adapter-netlify, Functions, Edge Functions) · Turso/libSQL (`@libsql/client`) · Mercado Pago (`mercadopago` SDK, Checkout Pro redirect flow).
+**Tech stack:** Node 24 / npm 11 · SvelteKit 2 + Svelte 5 (runes) · TypeScript (strict) · Vite 6 · Tailwind CSS 3 + PostCSS/autoprefixer · Fontsource (Archivo, JetBrains Mono, Overpass) · Vitest + fast-check (tests) · Stryker (mutation testing) · Netlify (adapter-netlify, Edge Functions) · Turso/libSQL (`@libsql/client`).
 
-- `src/routes/` — public pages (en + `pt-br/`, incl. `pricing/` and `checkout/` result pages) and `api/`: `checkout`, `webhooks/mercadopago`, `orders/[id]`, `cron`.
+- `src/routes/` — public pages (en + `pt-br/`): `pricing/` (and `pt-br/precos/`) plus `about/`, `contact/`, and home; there are no `api/` routes.
 - `src/lib/components/` contains reusable `chrome` (navigation and footer), `cyber` (visual effects), and `pages` components.
-- `src/lib/server/` — Turso/libSQL access (`db.ts`, `schema.mjs`/`seed.mjs`), versioned pricing, orders repository, Mercado Pago Checkout Pro client + webhook signature validation.
+- `src/lib/server/` — Turso/libSQL access (`db.ts`, `schema.mjs`/`seed.mjs`), versioned pricing (`pricing.ts`), and product lookup (`products.ts`).
 - `src/lib/` contains locale logic, constants, client helpers, and tests.
 - `static/` contains public fonts and static assets; `src/lib/assets/` contains imported visual assets.
-- `netlify/functions/` and `netlify/edge-functions/` contain deployment runtime code.
+- `netlify/edge-functions/` contains deployment runtime code.
 - `scripts/` contains `migrate.mjs` (db migration) and build-time asset synchronization. Do not edit generated `.svelte-kit/`, `build/`, or `reports/` output.
 
 ## Build, Test, and Development Commands
@@ -43,7 +43,7 @@ npm run test:watch       # run Vitest interactively
 npm run mutate           # run configured Stryker mutation tests
 ```
 
-Copy `.env.example` to `.env`/`.env.local` and set `CRON_SECRET`, `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN`, and `MERCADO_PAGO_ACCESS_TOKEN` (real credentials live in the gitignored `.env.local`). `npm run db:migrate` applies the Turso schema + seed and loads `.env`/`.env.local` itself.
+Copy `.env.example` to `.env`/`.env.local` and set `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` (real credentials live in the gitignored `.env.local`). `npm run db:migrate` applies the Turso schema + seed and loads `.env`/`.env.local` itself.
 
 ## Coding Style & Naming Conventions
 
@@ -59,4 +59,4 @@ Use a short imperative subject, such as `Fix Netlify production build`, and keep
 
 ## Security & Configuration
 
-Never commit secrets. Configure `CRON_SECRET` in Netlify for production and verify changes to the authenticated cron route with both valid and invalid credentials. Payment flow: prices are resolved server-side from Turso (never trust client amounts); the Mercado Pago webhook is signature-validated when `MERCADO_PAGO_WEBHOOK_SECRET` is set and always re-fetches the payment before updating an order.
+Never commit secrets. Prices displayed on the pricing page are read server-side from Turso (never hardcoded in the frontend); the database is the source of truth for products and prices.

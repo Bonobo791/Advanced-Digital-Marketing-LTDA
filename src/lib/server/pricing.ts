@@ -4,14 +4,12 @@
  * A price change NEVER updates an existing `prices` row: the old row is
  * deactivated (active = 0, effective_until set) and a new row is inserted.
  * `getCurrentPrice()` returns the single active price whose effective window
- * contains "now". `resolveCheckoutPrice()` is the server-side authority used
- * by the checkout endpoint — it snapshots the price into the order and
- * returns the exact amount Mercado Pago will charge.
+ * contains "now".
  *
  * Promotions (`price_adjustments`) are supported structurally but not yet
  * exposed anywhere in the UI.
  */
-import { getActiveProduct, listActiveProducts } from './products'
+import { listActiveProducts } from './products'
 import type { SqlDb } from './sql'
 
 export const CURRENCY = 'BRL'
@@ -38,21 +36,6 @@ export interface PriceAdjustment {
   expiresAt: string | null
   maxUses: number | null
   active: boolean
-}
-
-/** Server-computed price snapshot that gets stored on the order. */
-export interface CheckoutPrice {
-  priceId: string
-  productId: string
-  productName: string
-  currency: string
-  /** Unit price before discount (the `prices.amount_cents` snapshot). */
-  amountCents: number
-  subtotalCents: number
-  discountCents: number
-  /** The amount actually charged (subtotal - discount). */
-  totalCents: number
-  promotionId: string | null
 }
 
 interface PriceRowShape {
@@ -161,8 +144,6 @@ export async function validatePromotion(
   }
 }
 
-export type ResolveResult = CheckoutPrice | undefined
-
 /** A product with its currently active price (for the /pricing page). */
 export interface PricedProduct {
   slug: string
@@ -183,52 +164,4 @@ export async function listActiveProductsWithPrice(
     if (price) priced.push({ slug: product.slug, name: product.name, description: product.description, price })
   }
   return priced
-}
-
-/**
- * Resolves the price the customer will pay for a product slug.
- *
- * - unknown/inactive product or no active price -> undefined
- * - an invalid/expired promotion code -> undefined (checkout refused)
- * - otherwise the snapshot with discount applied, clamped to >= 0
- */
-export async function resolveCheckoutPrice(
-  db: SqlDb,
-  productSlug: string,
-  promotionCode?: string,
-  now: Date = new Date(),
-): Promise<CheckoutPrice | undefined> {
-  const product = await getActiveProduct(db, productSlug)
-  if (!product) return undefined
-
-  const price = await getCurrentPrice(db, product.id, now)
-  if (!price) return undefined
-
-  let discountCents = 0
-  let promotionId: string | null = null
-
-  if (promotionCode) {
-    const promotion = await validatePromotion(db, promotionCode, now)
-    if (!promotion) return undefined
-    promotionId = promotion.id
-    discountCents =
-      promotion.type === 'percentage'
-        ? Math.round((price.amountCents * promotion.value) / 100)
-        : promotion.value
-    discountCents = Math.min(discountCents, price.amountCents)
-  }
-
-  const totalCents = price.amountCents - discountCents
-
-  return {
-    priceId: price.id,
-    productId: product.id,
-    productName: product.name,
-    currency: price.currency,
-    amountCents: price.amountCents,
-    subtotalCents: price.amountCents,
-    discountCents,
-    totalCents,
-    promotionId,
-  }
 }

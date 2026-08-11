@@ -1,6 +1,7 @@
 <script lang="ts">
   import Kanji from '$lib/components/chrome/Kanji.svelte'
   import MotionHeading from '$lib/components/chrome/MotionHeading.svelte'
+  import { EMAIL, PORTUGUESE_EMAIL } from '$lib/constants'
   import { formatBRL } from '$lib/format'
   import type { Locale } from '$lib/locale'
   import type { PricedProduct } from '$lib/server/pricing'
@@ -13,25 +14,27 @@
         label: 'Pricing',
         labelJp: '料金',
         heading: 'Fixed scope. Fixed price.',
-        sub: 'One-time projects paid online via Mercado Pago — Pix, card or boleto. Monthly retainers are quoted separately.',
-        start: 'Pay and start',
+        sub: 'One-time projects with clear pricing. Contact us to get started — we reply within one business day.',
+        cta: 'Contact us',
+        perMonth: '/month',
         unavailable: 'Pricing is temporarily unavailable. Please try again in a moment.',
-        footnote: 'Payment is processed by Mercado Pago. Your project starts once the payment is confirmed.',
+        footnote: 'Prices are fixed in BRL. Custom scopes are quoted on request.',
       },
       'pt-BR': {
         label: 'Preços',
         labelJp: '料金',
         heading: 'Escopo fechado. Preço fechado.',
-        sub: 'Projetos pontuais pagos online pelo Mercado Pago — Pix, cartão ou boleto. Retenções mensais são orçadas separadamente.',
-        start: 'Pagar e começar',
+        sub: 'Projetos pontuais com preço fechado. Fale conosco para começar — respondemos em até um dia útil.',
+        cta: 'Fale conosco',
+        perMonth: '/mês',
         unavailable: 'Os preços estão temporariamente indisponíveis. Tente novamente em instantes.',
-        footnote: 'O pagamento é processado pelo Mercado Pago. O projeto começa após a confirmação do pagamento.',
+        footnote: 'Preços fixos em reais. Escopos sob medida são orçados sob consulta.',
       },
     }[locale],
   )
 
-  const checkoutHref = (slug: string) =>
-    locale === 'pt-BR' ? `/pt-br/checkout/?product=${slug}` : `/checkout/?product=${slug}`
+  const contactHref = (productName: string) =>
+    `mailto:${locale === 'pt-BR' ? PORTUGUESE_EMAIL : EMAIL}?subject=${encodeURIComponent(productName)}`
 </script>
 
 <section class="editorial-subhero">
@@ -55,8 +58,11 @@
           <article class="pricing-card motion-rise">
             <h3>{product.name}</h3>
             <p class="pricing-desc">{product.description}</p>
-            <div class="pricing-price">{formatBRL(product.price.amountCents)}</div>
-            <a class="pricing-cta" href={checkoutHref(product.slug)}>{copy.start}<span aria-hidden="true"> →</span></a>
+            <div class="pricing-price">
+              {formatBRL(product.price.amountCents)}
+              {#if product.price.billingType === 'recurring'}<span class="pricing-per">{copy.perMonth}</span>{/if}
+            </div>
+            <a class="pricing-cta" href={contactHref(product.name)}>{copy.cta}<span aria-hidden="true"> →</span></a>
           </article>
         {/each}
       </div>
@@ -83,6 +89,7 @@
   .pricing-card h3 { margin: 0; font-size: 1.15rem; letter-spacing: 0.01em; }
   .pricing-desc { margin: 0; color: var(--ink-muted); font-size: 0.95rem; }
   .pricing-price { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
+  .pricing-per { font-size: 1rem; color: var(--ink-muted); font-weight: 500; }
   .pricing-cta {
     align-self: flex-start;
     margin-top: auto;

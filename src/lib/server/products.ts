@@ -3,7 +3,6 @@
  *
  * The slug set below is the typed set of seeded product slugs; names,
  * descriptions and prices live in the database (`products` / `prices`).
- * The browser only ever sends a slug; prices are resolved server-side.
  */
 import type { SqlDb } from './sql'
 
