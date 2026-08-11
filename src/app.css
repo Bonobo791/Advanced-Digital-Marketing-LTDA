@@ -1095,3 +1095,65 @@ img { display: block; max-width: 100%; }
   .service-page .opt { max-width: 520px; padding: 32px 28px 28px; }
   .service-page .opt-grid { margin-top: 48px; }
 }
+
+/* ─── Subscription configurator (SubscribeSection) ─────────────────────── */
+.service-page .subscribe-panel .sec-lead { max-width: 46em; }
+.sub-list { display: grid; gap: 14px; margin-top: 48px; }
+.sub-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 24px;
+  align-items: center;
+  padding: 20px 22px;
+  border: 1px solid var(--index-hair-i);
+  background: var(--index-paper);
+  transition: border-color 250ms var(--ease-out);
+}
+.sub-row.on { border-color: var(--index-verm); }
+.sub-check { display: flex; gap: 14px; align-items: flex-start; cursor: pointer; }
+.sub-check input { flex: none; width: 18px; height: 18px; margin-top: 4px; accent-color: var(--index-verm); }
+.sub-name b { display: block; font-family: 'ADM Display', sans-serif; font-size: 1.05rem; letter-spacing: -0.01em; text-transform: uppercase; }
+.sub-name i { display: block; margin-top: 6px; color: var(--index-ink60); font-size: 13px; font-style: normal; line-height: 1.5; }
+.sub-price { text-align: right; }
+.sub-price b { font-family: 'ADM Display', sans-serif; font-size: 1.35rem; white-space: nowrap; }
+.sub-price small { display: block; margin-top: 2px; color: var(--index-ink60); font-size: 11px; }
+.sub-spend { grid-column: 2; display: grid; gap: 6px; min-width: 240px; }
+.sub-spend span,
+.sub-email span { color: var(--index-ink60); font-family: 'ADM Semi', sans-serif; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
+.sub-spend small { color: var(--index-ink60); font-size: 11px; }
+.sub-email input,
+.sub-spend input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--index-hair-i);
+  border-radius: 0;
+  background: var(--index-paper);
+  color: var(--index-ink);
+  font: inherit;
+  font-size: 15px;
+}
+.sub-email input:focus,
+.sub-spend input:focus { outline: none; border-color: var(--index-verm); }
+.sub-email input:disabled,
+.sub-spend input:disabled { cursor: not-allowed; opacity: 0.55; }
+.sub-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 28px;
+  padding: 22px 4px 6px;
+  border-top: 1px solid var(--index-hair-i);
+}
+.sub-total span { font-family: 'ADM Semi', sans-serif; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; }
+.sub-total b { font-family: 'ADM Display', sans-serif; font-size: clamp(1.8rem, 3vw, 2.4rem); line-height: 1; }
+.sub-total small { margin-left: 4px; color: var(--index-ink60); font-size: 0.55em; }
+.sub-checkout { display: grid; gap: 16px; margin-top: 24px; max-width: 460px; }
+.sub-email { display: grid; gap: 6px; }
+.sub-error { color: var(--index-verm); font-size: 14px; }
+.sub-note { max-width: 46em; color: var(--index-ink60); font-size: 13px; }
+.sub-coming-soon { margin-bottom: 18px; }
+@media (max-width: 700px) {
+  .sub-row { grid-template-columns: 1fr; }
+  .sub-price { text-align: left; }
+  .sub-spend { grid-column: 1; }
+}

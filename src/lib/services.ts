@@ -1,6 +1,7 @@
 import type { Locale } from '$lib/locale'
+import type { ServiceId as CatalogServiceId } from './catalog'
 
-export const SERVICE_IDS = ['technical-seo', 'geo', 'web-development', 'paid-search', 'meta-ads'] as const
+export const SERVICE_IDS = ['technical-seo', 'geo', 'web-development', 'paid-search', 'meta-ads', 'ai-automation'] as const
 export type ServiceId = (typeof SERVICE_IDS)[number]
 
 export type ServiceOption = {
@@ -47,7 +48,24 @@ export const SERVICE_ROUTES: Record<ServiceId, Record<Locale, string>> = {
   'web-development': { 'en-US': '/services/web-development/', 'pt-BR': '/pt-br/servicos/web-development/' },
   'paid-search': { 'en-US': '/services/paid-search/', 'pt-BR': '/pt-br/servicos/paid-search/' },
   'meta-ads': { 'en-US': '/services/meta-ads/', 'pt-BR': '/pt-br/servicos/meta-ads/' },
+  'ai-automation': { 'en-US': '/services/ai-automation/', 'pt-BR': '/pt-br/servicos/ai-automation/' },
 }
+
+/**
+ * Maps each site service page to the subscription-catalog services that belong
+ * to it. Used to pre-select the right services when the mix-and-match
+ * configurator is embedded in a service page or the gateway. Empty arrays mean
+ * the service has no monthly subscription offering (quote-only or one-time).
+ */
+export const SERVICE_SUBSCRIPTIONS: Record<ServiceId, CatalogServiceId[]> = {
+  'technical-seo': ['seo-content', 'backlinks'],
+  geo: [],
+  'web-development': ['hosting'],
+  'paid-search': ['paid-search'],
+  'meta-ads': ['meta-ads'],
+  'ai-automation': [],
+}
+
 
 export const SERVICE_META: Record<Locale, Record<ServiceId, { title: string; description: string }>> = {
   'en-US': {
@@ -76,6 +94,11 @@ export const SERVICE_META: Record<Locale, Record<ServiceId, { title: string; des
       description:
         'Meta Ads by Advanced Digital Marketing: Facebook and Instagram campaigns managed against the same keyword and conversion data as your organic strategy. One plan, every channel.',
     },
+    'ai-automation': {
+      title: 'Advanced Digital Marketing LTDA | AI Automation',
+      description:
+        'AI automation by Advanced Digital Marketing: agents, integrations and internal tools that remove repetitive work from your operations — scoped and quoted per project.',
+    },
   },
   'pt-BR': {
     'technical-seo': {
@@ -102,6 +125,11 @@ export const SERVICE_META: Record<Locale, Record<ServiceId, { title: string; des
       title: 'Advanced Digital Marketing LTDA | Meta Ads',
       description:
         'Meta Ads pela Advanced Digital Marketing: campanhas no Facebook e Instagram gerenciadas contra os mesmos dados de palavras-chave e conversão da sua estratégia orgânica. Um plano, todos os canais.',
+    },
+    'ai-automation': {
+      title: 'Advanced Digital Marketing LTDA | Automação com IA',
+      description:
+        'Automação com IA pela Advanced Digital Marketing: agentes, integrações e ferramentas internas que removem trabalho repetitivo das suas operações — escopados e orçados sob consulta.',
     },
   },
 }
@@ -535,6 +563,52 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       bookCall: 'Book a strategy call',
       seeOptions: 'See the options',
     },
+    'ai-automation': {
+      navLabel: 'AI Automation',
+      navJp: '自動',
+      kicker: 'Service · AI Automation',
+      promise: 'Make the busywork run itself',
+      hero: ['Automate the', 'repetitive.'],
+      sub: 'AI automation and workflow engineering: agents, integrations and internal tools that do the repetitive work, scoped and quoted per project.',
+      optionsLabel: 'Scope',
+      optionsHeading: 'Quoted to your workflow.',
+      optionsLead: 'Every automation project is scoped to your stack and your team, then quoted — no generic packages, no one-size-fits-all.',
+      options: [
+        {
+          jp: '自動',
+          name: 'Custom Automation',
+          price: 'Quote only',
+          per: 'Scoped per project',
+          desc: 'Agents, integrations and internal tools that remove repetitive work from your operations.',
+          items: [
+            'Discovery call and workflow map',
+            'Scoped proposal with a fixed price',
+            'Built in your stack, with your tools',
+            'Handover with docs and training',
+            'Support after launch',
+          ],
+          cta: 'Request a quote',
+          subject: 'AI automation quote request',
+        },
+      ],
+      optionsNote: 'a straight answer if we are not the right fit.',
+      mostChosen: 'Most requested',
+      optionsNoteStrong: 'Every quote:',
+      processLabel: 'Process',
+      processHeading: 'How it runs',
+      steps: [
+        { jp: '聞', title: 'Discovery', text: 'A call to map the repetitive work, the tools involved and the measurable outcome you want.' },
+        { jp: '見積', title: 'Proposal', text: 'A fixed-price scope with the build plan, the timeline and what success looks like — before any commitment.' },
+        { jp: '実装', title: 'Build', text: 'We build in your stack, integrate with your tools and test with real data.' },
+        { jp: '渡', title: 'Handover', text: 'Docs, training and support after launch, so the automation runs without us in the room.' },
+      ],
+      auditCta: 'Request a quote',
+      contactLabel: 'Contact',
+      contactHeading: 'What should run itself?',
+      contactSub: 'One email starts it. We reply within one business day with next steps and a straight answer on whether we can help.',
+      bookCall: 'Book a strategy call',
+      seeOptions: 'See how it works',
+    },
   },
   'pt-BR': {
     'technical-seo': {
@@ -963,6 +1037,52 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       contactSub: 'Um e-mail começa tudo. Respondemos em até um dia útil com os próximos passos e uma resposta direta sobre se podemos ajudar.',
       bookCall: 'Agendar uma conversa',
       seeOptions: 'Ver as opções',
+    },
+    'ai-automation': {
+      navLabel: 'Automação com IA',
+      navJp: '自動',
+      kicker: 'Serviço · Automação com IA',
+      promise: 'Deixe o trabalho repetitivo rodar sozinho',
+      hero: ['Automatize o', 'repetitivo.'],
+      sub: 'Automação com IA e engenharia de fluxos: agentes, integrações e ferramentas internas que eliminam o trabalho repetitivo — escopados e orçados sob consulta.',
+      optionsLabel: 'Escopo',
+      optionsHeading: 'Orçado para o seu fluxo.',
+      optionsLead: 'Todo projeto de automação é escopado para o seu stack e o seu time, e então orçado — sem pacotes genéricos, sem tamanho único.',
+      options: [
+        {
+          jp: '自動',
+          name: 'Automação Sob Medida',
+          price: 'Sob consulta',
+          per: 'Escopado por projeto',
+          desc: 'Agentes, integrações e ferramentas internas que removem trabalho repetitivo das suas operações.',
+          items: [
+            'Chamada de descoberta e mapa de fluxos',
+            'Proposta escopada com preço fechado',
+            'Construído no seu stack, com as suas ferramentas',
+            'Entrega com documentação e treinamento',
+            'Suporte após o lançamento',
+          ],
+          cta: 'Solicitar orçamento',
+          subject: 'AI automation quote request',
+        },
+      ],
+      optionsNote: 'uma resposta direta se não formos a escolha certa.',
+      mostChosen: 'Mais solicitado',
+      optionsNoteStrong: 'Todo orçamento:',
+      processLabel: 'Processo',
+      processHeading: 'Como o trabalho acontece',
+      steps: [
+        { jp: '聞', title: 'Descoberta', text: 'Uma chamada para mapear o trabalho repetitivo, as ferramentas envolvidas e o resultado mensurável que você quer.' },
+        { jp: '見積', title: 'Proposta', text: 'Um escopo com preço fechado: plano de construção, cronograma e o que é sucesso — antes de qualquer compromisso.' },
+        { jp: '実装', title: 'Construção', text: 'Construímos no seu stack, integramos com as suas ferramentas e testamos com dados reais.' },
+        { jp: '渡', title: 'Entrega', text: 'Documentação, treinamento e suporte após o lançamento, para a automação rodar sem a nossa presença.' },
+      ],
+      auditCta: 'Solicitar orçamento',
+      contactLabel: 'Contato',
+      contactHeading: 'O que deveria rodar sozinho?',
+      contactSub: 'Um e-mail começa tudo. Respondemos em até um dia útil com os próximos passos e uma resposta direta sobre se podemos ajudar.',
+      bookCall: 'Agendar uma conversa',
+      seeOptions: 'Veja como funciona',
     },
   },
 }

@@ -17,7 +17,15 @@
   let localeEmail = $derived(locale === 'pt-BR' ? PORTUGUESE_EMAIL : EMAIL)
   let isHome = $derived(pathname === normalizePath(LOCALE_ROUTES.home[locale]))
   let links = $derived(isHome ? homeSectionsForLocale(locale).filter((l) => !l.to.includes('#services')) : navigationForLocale(locale))
-  let serviceNav = $derived(serviceNavigation(locale))
+  let serviceNav = $derived([
+    {
+      id: 'services-index',
+      to: locale === 'pt-BR' ? '/pt-br/servicos/' : '/services/',
+      label: copy.servicesAll,
+      jp: '業務',
+    },
+    ...serviceNavigation(locale),
+  ])
   let currentService = $derived(serviceForPath(pathname))
 
   const svcToggle = (e: MouseEvent) => {

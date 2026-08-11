@@ -2,12 +2,17 @@
   import { getContext, onMount } from 'svelte'
   import { EMAIL, JP, PORTUGUESE_EMAIL, PT_MAILTO, MAILTO } from '$lib/constants'
   import { SITE_MOTION, type SiteMotion } from '$lib/client/site-motion'
-  import { SERVICE_CONTENT, type ServiceId } from '$lib/services'
+  import { SERVICE_CONTENT, SERVICE_SUBSCRIPTIONS, type ServiceId } from '$lib/services'
+  import SubscribeSection from './SubscribeSection.svelte'
+  import { getService } from '$lib/catalog'
   import type { Locale } from '$lib/locale'
 
   let { locale, service }: { locale: Locale; service: ServiceId } = $props()
 
   let content = $derived(SERVICE_CONTENT[locale][service])
+  // Quote-only services (e.g. AI Automation) render a single 'sob consulta'
+  // card instead of the options grid — there is no fixed price to subscribe to.
+  let quoteOnly = $derived(getService(service)?.pricing.kind === 'quote')
   let localeEmail = $derived(locale === 'pt-BR' ? PORTUGUESE_EMAIL : EMAIL)
   let localeMailto = $derived(locale === 'pt-BR' ? PT_MAILTO : MAILTO)
   let optionMailto = (subject: string) =>
@@ -51,7 +56,11 @@
     </div>
   </section>
 
-  <section class="paper-sec" id="options"><div class="kanji ink-stroke" style="left:-6vw;bottom:-10%" aria-hidden="true">検索</div><div class="sec-inner"><span class="sec-jp rise">{content.optionsLabel}<span class="font-jp">サービス</span></span><h2 class="shear">{#each words(content.optionsHeading) as word, i}<span class="w">{word}{i < words(content.optionsHeading).length - 1 ? ' ' : ''}</span>{/each}</h2><p class="sec-lead rise">{content.optionsLead}</p><div class="opt-grid">{#each content.options as option, i (option.name)}<article class="opt" class:rec={i === 1}>{#if i === 1}<span class="opt-flag" aria-hidden="true">{content.mostChosen}</span>{/if}<span class="opt-jp font-jp">{option.jp}</span><h3 class="opt-name">{option.name}</h3><p class="opt-price">{option.price}</p><p class="opt-per">{option.per}</p><p class="opt-desc">{option.desc}</p><ul class="opt-list">{#each option.items as item (item)}<li>{item}</li>{/each}</ul><a class="btn {i === 1 ? 'btn-solid' : 'btn-ghost-ink'}" href={optionMailto(option.subject)}>{option.cta}</a></article>{/each}</div><p class="opt-note rise"><b>{content.optionsNoteStrong}</b> {content.optionsNote}</p></div></section>
+  <section class="paper-sec" id="options"><div class="kanji ink-stroke" style="left:-6vw;bottom:-10%" aria-hidden="true">検索</div><div class="sec-inner"><span class="sec-jp rise">{content.optionsLabel}<span class="font-jp">サービス</span></span><h2 class="shear">{#each words(content.optionsHeading) as word, i}<span class="w">{word}{i < words(content.optionsHeading).length - 1 ? ' ' : ''}</span>{/each}</h2><p class="sec-lead rise">{content.optionsLead}</p><div class="opt-grid">{#if quoteOnly}<article class="opt opt--quote"><span class="opt-jp font-jp">{content.options[0].jp}</span><h3 class="opt-name">{content.options[0].name}</h3><p class="opt-price">{content.options[0].price}</p><p class="opt-per">{content.options[0].per}</p><p class="opt-desc">{content.options[0].desc}</p><ul class="opt-list">{#each content.options[0].items as item (item)}<li>{item}</li>{/each}</ul><a class="btn btn-solid" href={optionMailto(content.options[0].subject)}>{content.options[0].cta}</a></article>{:else}{#each content.options as option, i (option.name)}<article class="opt" class:rec={i === 1}>{#if i === 1}<span class="opt-flag" aria-hidden="true">{content.mostChosen}</span>{/if}<span class="opt-jp font-jp">{option.jp}</span><h3 class="opt-name">{option.name}</h3><p class="opt-price">{option.price}</p><p class="opt-per">{option.per}</p><p class="opt-desc">{option.desc}</p><ul class="opt-list">{#each option.items as item (item)}<li>{item}</li>{/each}</ul><a class="btn {i === 1 ? 'btn-solid' : 'btn-ghost-ink'}" href={optionMailto(option.subject)}>{option.cta}</a></article>{/each}{/if}</div><p class="opt-note rise"><b>{content.optionsNoteStrong}</b> {content.optionsNote}</p></div></section>
+
+  {#if SERVICE_SUBSCRIPTIONS[service].length > 0}
+    <SubscribeSection locale={locale} preselect={SERVICE_SUBSCRIPTIONS[service]} />
+  {/if}
 
   <section id="process"><div class="kanji" style="right:-5vw;bottom:-14%" aria-hidden="true">工程</div><div class="sec-inner"><span class="sec-jp rise">{content.processLabel}<span class="font-jp">プロセス</span></span><h2 class="shear">{#each words(content.processHeading) as word, i}<span class="w">{word}{i < words(content.processHeading).length - 1 ? ' ' : ''}</span>{/each}</h2><div class="steps">{#each content.steps as step (step.title)}<div class="step rise"><div class="step-in"><span class="step-jp font-jp">{step.jp}</span><span class="step-en">{step.title}</span><p>{step.text}</p></div></div>{/each}</div><div class="proc-cta rise"><a class="btn btn-solid" href={localeMailto}>{content.auditCta}</a></div></div></section>
 

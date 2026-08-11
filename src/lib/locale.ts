@@ -52,6 +52,7 @@ export const PAGE_META: Record<Locale, Record<PageId, { title: string; descripti
 export const CHROME_COPY: Record<Locale, {
   navigation: Record<PageId, string>
   services: string
+  servicesAll: string
   navigationLabel: string
   bookCall: string
   menu: string
@@ -66,6 +67,7 @@ export const CHROME_COPY: Record<Locale, {
   'en-US': {
     navigation: { home: 'Home', about: 'About', contact: 'Contact' },
     services: 'Services',
+    servicesAll: 'All services',
     navigationLabel: 'Primary navigation',
     bookCall: 'Book a call',
     menu: 'Menu',
@@ -80,6 +82,7 @@ export const CHROME_COPY: Record<Locale, {
   'pt-BR': {
     navigation: { home: 'Início', about: 'Sobre', contact: 'Contato' },
     services: 'Serviços',
+    servicesAll: 'Todos os serviços',
     navigationLabel: 'Navegação principal',
     bookCall: 'Agende uma conversa',
     menu: 'Menu',
