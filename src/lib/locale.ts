@@ -128,6 +128,12 @@ export function servicesIndexForPath(pathname: string): Locale | undefined {
   return undefined
 }
 
+/** True for any checkout route (currently only the pt-BR return page). */
+export function isCheckoutPath(pathname: string): boolean {
+  const normalized = normalizePath(pathname)
+  return normalized.startsWith('/pt-br/checkout')
+}
+
 export function pageForPath(pathname: string): PageId | undefined {
   const normalized = normalizePath(pathname)
 

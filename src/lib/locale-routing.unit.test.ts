@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { absoluteUrl, decideLocaleRequest, LOCALE_ROUTES, localeForPath, localizedPath } from './locale'
+import { absoluteUrl, decideLocaleRequest, isCheckoutPath, LOCALE_ROUTES, localeForPath, localizedPath } from './locale'
 
 describe('locale routes', () => {
   it('maps every existing public page to its Brazilian Portuguese counterpart', () => {
@@ -20,6 +20,15 @@ describe('locale routes', () => {
     expect(localizedPath('/services/paid-search/', 'pt-BR')).toBe('/pt-br/servicos/paid-search/')
     expect(localizedPath('/pt-br/servicos/paid-search/', 'en-US')).toBe('/services/paid-search/')
     expect(localizedPath('/pt-br/servicos/technical-seo/', 'en-US')).toBe('/services/technical-seo/')
+  })
+
+  it('flags checkout routes so the language switcher can hide on them', () => {
+    expect(isCheckoutPath('/pt-br/checkout/complete/')).toBe(true)
+    expect(isCheckoutPath('/pt-br/checkout/complete?preapproval_id=123')).toBe(true)
+    expect(isCheckoutPath('/')).toBe(false)
+    expect(isCheckoutPath('/pt-br/')).toBe(false)
+    expect(isCheckoutPath('/pt-br/contato/')).toBe(false)
+    expect(isCheckoutPath('/services/paid-search/')).toBe(false)
   })
 })
 
