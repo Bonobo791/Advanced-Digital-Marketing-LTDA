@@ -51,4 +51,18 @@ describe('homepage locale decisions', () => {
       decideLocaleRequest({ method: 'GET', pathname: '/contact/', search: '', country: 'US' }),
     ).toEqual({ type: 'next', geoBr: false })
   })
+
+  it('reports the Brazilian suggestion signal on service routes too', () => {
+    // Service detail pages and the gateway indexes are non-home pages: a
+    // Brazilian visitor lands on them with a geo_br signal, no redirect.
+    expect(
+      decideLocaleRequest({ method: 'GET', pathname: '/services/paid-search/', search: '', country: 'BR' }),
+    ).toEqual({ type: 'next', geoBr: true })
+    expect(
+      decideLocaleRequest({ method: 'GET', pathname: '/services/', search: '', country: 'BR' }),
+    ).toEqual({ type: 'next', geoBr: true })
+    expect(
+      decideLocaleRequest({ method: 'GET', pathname: '/pt-br/servicos/technical-seo/', search: '', country: 'US' }),
+    ).toEqual({ type: 'next' })
+  })
 })

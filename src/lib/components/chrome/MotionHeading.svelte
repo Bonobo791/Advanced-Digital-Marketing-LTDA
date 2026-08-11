@@ -6,6 +6,6 @@
 
 <svelte:element this={as} class={`motion-heading ${className}`}>
   {#each words as word, index (word + index)}
-    <span class="motion-heading__word">{word}</span>
+    <span class="motion-heading__word">{word}{index < words.length - 1 ? ' ' : ''}</span>
   {/each}
 </svelte:element>

@@ -192,7 +192,7 @@ export function decideLocaleRequest({ method, pathname, search, language, countr
   if (localeForPath(pathname) === 'pt-BR') return { type: 'next' }
 
   const page = pageForPath(pathname)
-  if ((page && page !== 'home') || servicesIndexForPath(pathname)) {
+  if ((page && page !== 'home') || servicesIndexForPath(pathname) || serviceForPath(pathname)) {
     return { type: 'next', geoBr: language !== 'en-US' && country?.toUpperCase() === 'BR' }
   }
 

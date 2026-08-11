@@ -14,7 +14,14 @@
       return
     }
 
-    if (sessionStorage.getItem('adm-curtain') === '1') {
+    let curtainSeen = false
+    try {
+      curtainSeen = sessionStorage.getItem('adm-curtain') === '1'
+    } catch {
+      // Storage blocked (e.g. private mode): replay the curtain each visit.
+      console.warn('[curtain] sessionStorage unavailable; curtain will replay')
+    }
+    if (curtainSeen) {
       motion.completeCurtain()
       motion.revealHero(60)
       return
@@ -27,7 +34,11 @@
     const doneTimer = window.setTimeout(() => {
       show = false
       document.body.classList.remove('curtain-lock')
-      sessionStorage.setItem('adm-curtain', '1')
+      try {
+        sessionStorage.setItem('adm-curtain', '1')
+      } catch {
+        // Storage blocked: nothing to persist; the curtain already played.
+      }
     }, 1250)
     const revealTimer = window.setTimeout(() => {
       motion.completeCurtain()

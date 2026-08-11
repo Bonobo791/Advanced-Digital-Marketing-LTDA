@@ -39,7 +39,7 @@
         ? 'page'
         : undefined
 
-  let menuRoot: HTMLDivElement | undefined
+  let menuRoot = $state<HTMLDivElement | undefined>()
 
   const onMenuKeydown = (e: KeyboardEvent) => {
     if (e.key !== 'Tab' || !menuRoot) return
@@ -156,7 +156,7 @@
 />
 
 {#if open}
-  <div id="mobile-city-menu" class="editorial-mobile-menu" bind:this={menuRoot} onkeydown={onMenuKeydown}>
+  <div id="mobile-city-menu" class="editorial-mobile-menu" role="dialog" aria-label={copy.navigationLabel} tabindex="-1" bind:this={menuRoot} onkeydown={onMenuKeydown}>
     <nav aria-label={copy.navigationLabel}>
       {#each links as link (link.to)}
         <a href={link.to} onclick={() => (open = false)} aria-current={!isHome && pathname === normalizePath(link.to) ? 'page' : undefined}><span>{link.label}</span><small class="font-jp">{link.jp}</small></a>

@@ -11,14 +11,15 @@
 
   const GLYPHS = '!<>-_/[]{}=+*^?#010101'
 
-  let display = $state('')
+  // Display starts as the plain text; the animation writes into it.
+  let display = $state(initialText())
   let frame = $state<number | null>(null)
   let reduced = $state(false)
   let el: HTMLSpanElement
 
-  $effect(() => {
-    display = text
-  })
+  function initialText(): string {
+    return text
+  }
 
   onMount(() => {
     reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -63,4 +64,4 @@
   }
 </script>
 
-<span bind:this={el} class={className} onmouseenter={run} onclick={run} onfocus={run} role="presentation">{display || text}</span>
+<span bind:this={el} class={className} onmouseenter={run} role="presentation">{display || text}</span>

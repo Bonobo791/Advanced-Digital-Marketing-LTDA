@@ -31,7 +31,6 @@ export type ServiceContent = {
   options: ServiceOption[]
   optionsNote: string
   optionsNoteStrong: string
-  mostChosen: string
   processLabel: string
   processHeading: string
   steps: ServiceStep[]
@@ -231,7 +230,6 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         },
       ],
       optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
-      mostChosen: 'Most chosen',
       optionsNoteStrong: 'Every option:',
       processLabel: 'Process',
       processHeading: 'How it runs',
@@ -310,7 +308,6 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         },
       ],
       optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
-      mostChosen: 'Most chosen',
       optionsNoteStrong: 'Every option:',
       processLabel: 'Process',
       processHeading: 'How it runs',
@@ -389,7 +386,6 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         },
       ],
       optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
-      mostChosen: 'Most chosen',
       optionsNoteStrong: 'Every option:',
       processLabel: 'Process',
       processHeading: 'How it runs',
@@ -468,7 +464,6 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         },
       ],
       optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
-      mostChosen: 'Most chosen',
       optionsNoteStrong: 'Every option:',
       processLabel: 'Process',
       processHeading: 'How it runs',
@@ -547,7 +542,6 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         },
       ],
       optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
-      mostChosen: 'Most chosen',
       optionsNoteStrong: 'Every option:',
       processLabel: 'Process',
       processHeading: 'How it runs',
@@ -593,7 +587,6 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         },
       ],
       optionsNote: 'a straight answer if we are not the right fit.',
-      mostChosen: 'Most requested',
       optionsNoteStrong: 'Every quote:',
       processLabel: 'Process',
       processHeading: 'How it runs',
@@ -706,7 +699,6 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         },
       ],
       optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
-      mostChosen: 'Mais escolhida',
       optionsNoteStrong: 'Toda opção:',
       processLabel: 'Processo',
       processHeading: 'Como o trabalho acontece',
@@ -785,7 +777,6 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         },
       ],
       optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
-      mostChosen: 'Mais escolhida',
       optionsNoteStrong: 'Toda opção:',
       processLabel: 'Processo',
       processHeading: 'Como o trabalho acontece',
@@ -864,7 +855,6 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         },
       ],
       optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
-      mostChosen: 'Mais escolhida',
       optionsNoteStrong: 'Toda opção:',
       processLabel: 'Processo',
       processHeading: 'Como o trabalho acontece',
@@ -943,7 +933,6 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         },
       ],
       optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
-      mostChosen: 'Mais escolhida',
       optionsNoteStrong: 'Toda opção:',
       processLabel: 'Processo',
       processHeading: 'Como o trabalho acontece',
@@ -1022,7 +1011,6 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         },
       ],
       optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
-      mostChosen: 'Mais escolhida',
       optionsNoteStrong: 'Toda opção:',
       processLabel: 'Processo',
       processHeading: 'Como o trabalho acontece',
@@ -1068,7 +1056,6 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         },
       ],
       optionsNote: 'uma resposta direta se não formos a escolha certa.',
-      mostChosen: 'Mais solicitado',
       optionsNoteStrong: 'Todo orçamento:',
       processLabel: 'Processo',
       processHeading: 'Como o trabalho acontece',
