@@ -857,18 +857,6 @@ img { display: block; max-width: 100%; }
 .index-home .hero { min-height: 100dvh; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 120px; padding-bottom: 56px; }
 .index-home .hero-inner { flex: 1 1 auto; display: flex; flex-direction: column; width: 100%; }
 .index-home .hero-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-/* The city photograph leads the homepage hero (brand requirement, PRODUCT.md)
-   as a backdrop layer — the live kanji columns and haze sit on top of it. */
-.index-home .hero-city {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-  opacity: 0.24;
-  filter: saturate(0.85) contrast(1.05);
-}
 .index-home .hero-kick { display: flex; align-items: baseline; gap: 16px; }
 .index-home .hero-kick .jp { color: var(--index-paper); font-family: 'ADM JP Serif', serif; font-size: clamp(1.05rem, 1.8vw, 1.4rem); line-height: 1.9; }
 .index-home .hero-kick .en { color: var(--index-verm); font-family: 'ADM Semi', sans-serif; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; }
@@ -878,7 +866,7 @@ img { display: block; max-width: 100%; }
 .index-home .hero-h1 .h-mask { display: block; overflow: hidden; padding-bottom: .08em; margin-bottom: -.08em; }
 .index-home .hero-h1 .h-line { display: block; will-change: transform; }
 .index-home .hero-h1 em { color: var(--index-verm); font-style: normal; }
-.index-home .hero-mid { display: grid; grid-template-columns: repeat(5, 1fr); margin-top: auto; border-top: 1px solid var(--index-hair-p); }
+.index-home .hero-mid { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: auto; border-top: 1px solid var(--index-hair-p); }
 .index-home .hidx { display: block; padding: 18px 20px 20px; border-left: 1px solid var(--index-hair-p); transition: background .25s var(--ease-out); }
 .index-home .hidx:first-child { border-left: 0; padding-left: 0; }
 .index-home .hidx .jp { display: block; margin-bottom: 6px; color: var(--index-verm); font-family: 'ADM JP', sans-serif; font-size: 13px; letter-spacing: .24em; }
@@ -1034,6 +1022,7 @@ img { display: block; max-width: 100%; }
   .index-home .hero-mid { grid-template-columns: 1fr 1fr; }
   .index-home .hidx { padding: 14px 16px 16px; }
   .index-home .hidx:nth-child(odd) { border-left: 0; padding-left: 0; }
+  .index-home .hidx .en { font-size: 11px; letter-spacing: .1em; }
   .index-home .hero-h1 { font-size: 9vw; }
   .index-home .kc1 { left: 9%; } .index-home .kc2 { left: 47%; } .index-home .kc3, .index-home .kc5 { display: none; } .index-home .kc4 { left: 83%; }
   .index-home .hero-row { flex-direction: column; align-items: flex-start; gap: 24px; margin-top: 24px; }

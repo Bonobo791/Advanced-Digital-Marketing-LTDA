@@ -50,7 +50,6 @@
 <div class="index-home" class:portuguese={locale === 'pt-BR'}>
   <section class="hero index-hero" class:hero-revealed={motion.state.hero === 'revealed'}>
     <div class="hero-bg" aria-hidden="true">
-      <img src={cityInk} alt="" class="hero-city" width="1396" height="975" fetchpriority="high" />
       <div class="kanji k-amb" style="right:-4vw;top:-6%">答</div>
       {#each [['検索・設計・生成・実装・計測・答・未来・', '64s'], ['アドバンスト・デジタル・マーケティング・', '96s'], ['検索・設計・生成・実装・計測・答・未来・', '78s'], ['アドバンスト・デジタル・マーケティング・', '110s'], ['検索・設計・生成・実装・計測・答・未来・', '58s']] as item, i}
         <div class="kcol kc{i + 1}"><span class="kcol-in" style="--spd:{item[1]}">{item[0].repeat(10)}</span></div>
@@ -61,7 +60,7 @@
       <div class="hero-kick"><span class="jp" data-hero-reveal style="--hero-delay:0ms">「答えを、設計する。」</span><span class="en" data-hero-reveal style="--hero-delay:60ms">{content.kicker}</span></div>
       <p class="hero-line1" data-hero-reveal style="--hero-delay:120ms">{content.searchChanging}<b>.</b></p>
       <h1 class="hero-h1"><span class="h-mask"><span class="h-line" data-hero-reveal style="--hero-delay:180ms">{content.hero[0]}</span></span><span class="h-mask"><span class="h-line" data-hero-reveal style="--hero-delay:270ms">{content.hero[1]} <em>{content.hero[2]}</em></span></span></h1>
-      <div class="hero-mid" data-hero-reveal style="--hero-delay:420ms">{#each content.services.slice(0, 5) as service}<a class="hidx" href="#services"><span class="jp">{service.jp}</span><span class="en">{service.title}</span></a>{/each}</div>
+      <div class="hero-mid" data-hero-reveal style="--hero-delay:420ms">{#each content.services.slice(0, 4) as service}<a class="hidx" href="#services"><span class="jp">{service.jp}</span><span class="en">{service.title}</span></a>{/each}</div>
       <div class="hero-row"><p class="hero-sub" data-hero-reveal style="--hero-delay:440ms">{content.heroSub}</p><div class="cta-row" data-hero-reveal style="--hero-delay:520ms">{#if showWhatsapp}<a class="btn btn-solid" href={WHATSAPP_URL}>{content.whatsapp}</a><a class="btn btn-ghost" href={localeMailto}>{content.email}</a>{:else}<a class="btn btn-solid" href={localeMailto}>{content.email}</a><a class="btn btn-ghost" href="#services">{content.explore}</a>{/if}</div></div>
     </div>
   </section>

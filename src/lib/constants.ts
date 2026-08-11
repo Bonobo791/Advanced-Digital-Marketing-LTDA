@@ -127,7 +127,7 @@ export const PAGE_COPY: Record<Locale, PageCopy> = {
     home: {
       kicker: 'We design the answer.', searchChanging: 'Search is changing',
       hero: ['We make sure', 'you get', 'found.'],
-      heroSub: 'A São Paulo engineering studio helping US small businesses get found on Google and inside AI answers.',
+      heroSub: 'A São Paulo engineering studio putting US small businesses on top of Google and inside AI answers.',
       book: 'Book a strategy call', email: 'Book a strategy call', whatsapp: 'Book via WhatsApp', emailCta: EMAIL, explore: 'Explore services', detailsSuffix: 'details', servicesLabel: 'Services', servicesHeading: 'What we do', serviceCta: 'Start with this service',
       services: [
         { jp: '技術', title: 'Technical SEO', line: 'The foundation everything else sits on.', detail: 'Crawl architecture, Core Web Vitals, structured data and indexation control. We find what is holding your site back and fix it at the code level, where the problem actually lives.', tags: ['Site audit', 'Schema markup', 'Speed engineering', 'Log analysis'], product: 'seo' },
