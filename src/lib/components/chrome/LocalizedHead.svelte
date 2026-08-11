@@ -1,12 +1,33 @@
 <script lang="ts">
   import { browser } from '$app/environment'
-  import { absoluteUrl, LOCALE_ROUTES, PAGE_META, type Locale, type PageId } from '$lib/locale'
+  import {
+    absoluteUrl,
+    LOCALE_ROUTES,
+    PAGE_META,
+    SERVICES_INDEX_META,
+    SERVICES_INDEX_ROUTES,
+    type Locale,
+    type PageId,
+  } from '$lib/locale'
   import { SERVICE_META, SERVICE_ROUTES, type ServiceId } from '$lib/services'
 
-  let { locale, page, service }: { locale: Locale; page?: PageId; service?: ServiceId } = $props()
+  let {
+    locale,
+    page,
+    service,
+    servicesIndex = false,
+  }: { locale: Locale; page?: PageId; service?: ServiceId; servicesIndex?: boolean } = $props()
 
-  let metadata = $derived(service ? SERVICE_META[locale][service] : PAGE_META[locale][page!])
-  let routes = $derived(service ? SERVICE_ROUTES[service] : LOCALE_ROUTES[page!])
+  let metadata = $derived(
+    servicesIndex
+      ? SERVICES_INDEX_META[locale]
+      : service
+        ? SERVICE_META[locale][service]
+        : PAGE_META[locale][page!],
+  )
+  let routes = $derived(
+    servicesIndex ? SERVICES_INDEX_ROUTES : service ? SERVICE_ROUTES[service] : LOCALE_ROUTES[page!],
+  )
 
   // In-app navigation reuses the outer <html> element, so the SSR lang
   // attribute must be kept in sync on the client (screen readers otherwise

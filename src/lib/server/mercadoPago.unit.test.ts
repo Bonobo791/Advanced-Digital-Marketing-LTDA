@@ -249,6 +249,27 @@ describe('getSubscription', () => {
     await expect(getSubscription('s1')).resolves.toBeUndefined()
   })
 
+  it('maps 401 and 403 to unauthorized', async () => {
+    stubFetch(() => jsonResponse({}, 401))
+    await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'unauthorized' })
+    stubFetch(() => jsonResponse({}, 403))
+    await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'unauthorized' })
+  })
+
+  it('maps request timeouts to timeout', async () => {
+    stubFetch(() => {
+      throw new DOMException('The operation was aborted due to timeout', 'TimeoutError')
+    })
+    await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'timeout' })
+  })
+
+  it('rejects a response without a string id instead of coercing it', async () => {
+    stubFetch(() => jsonResponse({ id: 123, status: 'authorized' }))
+    await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'invalid_response' })
+    stubFetch(() => jsonResponse({ status: 'authorized' }))
+    await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'invalid_response' })
+  })
+
   it('maps non-ok responses to api_error', async () => {
     stubFetch(() => jsonResponse({}, 503))
     await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'api_error' })

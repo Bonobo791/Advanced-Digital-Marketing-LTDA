@@ -7,12 +7,12 @@
  * browser picks services, server prices them, Mercado Pago bills them.
  */
 import {
-  SERVICE_IDS,
+  CATALOG_SERVICE_IDS,
   SERVICES,
   adSpendFeeBRL,
   isSubscribable,
   type CatalogService,
-  type ServiceId,
+  type CatalogServiceId,
 } from '$lib/catalog'
 import type { Locale } from '$lib/locale'
 
@@ -34,7 +34,7 @@ export class PricingError extends Error {
 }
 
 export type LineItem = {
-  id: ServiceId
+  id: CatalogServiceId
   name: string
   monthlyBRL: number
 }
@@ -59,6 +59,40 @@ function isValidAdSpend(value: unknown): value is number {
 }
 
 /**
+ * Resolves the monthly BRL amount for ONE selected service, applying the
+ * fixed-price and ad-spend rules (including ad-spend validation). Kept out of
+ * `computeMonthlyQuote` so the accumulation loop stays flat and the function
+ * stays below the complexity gate.
+ */
+function resolveLineItem(
+  id: CatalogServiceId,
+  service: CatalogService,
+  rawConfig: Record<string, unknown>,
+  locale: Locale,
+): LineItem {
+  const name = service.name[locale]
+
+  if (service.pricing.kind === 'fixed') {
+    return { id, name, monthlyBRL: service.pricing.monthlyBRL }
+  }
+
+  if (service.pricing.kind === 'ads-spend') {
+    const perService = rawConfig[id]
+    const monthlyAdSpend =
+      typeof perService === 'object' && perService !== null
+        ? (perService as Record<string, unknown>).monthlyAdSpend
+        : undefined
+    if (!isValidAdSpend(monthlyAdSpend)) {
+      throw new PricingError('invalid_ad_spend', `Invalid monthly ad spend for ${id}`)
+    }
+    return { id, name, monthlyBRL: adSpendFeeBRL(monthlyAdSpend) }
+  }
+
+  // quote-only services never reach this point (rejected in computeMonthlyQuote).
+  throw new PricingError('quote_only_service', `Service is quote-only: ${id}`)
+}
+
+/**
  * Computes the authoritative monthly quote for the selected services.
  *
  * `serviceIds` — array of catalog ids selected by the browser.
@@ -73,7 +107,7 @@ export function computeMonthlyQuote(
   serviceIds: unknown,
   config: unknown,
   locale: Locale,
-  catalog: Record<ServiceId, CatalogService> = SERVICES,
+  catalog: Record<CatalogServiceId, CatalogService> = SERVICES,
 ): PriceQuote {
   if (!Array.isArray(serviceIds) || serviceIds.length === 0) {
     throw new PricingError('no_services_selected', 'No services selected')
@@ -81,12 +115,12 @@ export function computeMonthlyQuote(
 
   const rawConfig = typeof config === 'object' && config !== null ? (config as Record<string, unknown>) : {}
 
-  const selection = new Set<ServiceId>()
+  const selection = new Set<CatalogServiceId>()
   for (const rawId of serviceIds) {
-    if (typeof rawId !== 'string' || !(rawId in catalog)) {
+    if (typeof rawId !== 'string' || !Object.hasOwn(catalog, rawId)) {
       throw new PricingError('invalid_service', `Unknown service: ${String(rawId)}`)
     }
-    const id = rawId as ServiceId
+    const id = rawId as CatalogServiceId
     const service = catalog[id]
     if (!service.active) {
       throw new PricingError('service_unavailable', `Service unavailable: ${id}`)
@@ -100,33 +134,11 @@ export function computeMonthlyQuote(
   const items: LineItem[] = []
   let totalBRL = 0
 
-  for (const id of SERVICE_IDS) {
+  for (const id of CATALOG_SERVICE_IDS) {
     if (!selection.has(id)) continue
-    const service = catalog[id]
-    const name = service.name[locale]
-
-    if (service.pricing.kind === 'fixed') {
-      items.push({ id, name, monthlyBRL: service.pricing.monthlyBRL })
-      totalBRL += service.pricing.monthlyBRL
-      continue
-    }
-
-    if (service.pricing.kind === 'ads-spend') {
-      const perService = rawConfig[id]
-      const monthlyAdSpend =
-        typeof perService === 'object' && perService !== null
-          ? (perService as Record<string, unknown>).monthlyAdSpend
-          : undefined
-      if (!isValidAdSpend(monthlyAdSpend)) {
-        throw new PricingError('invalid_ad_spend', `Invalid monthly ad spend for ${id}`)
-      }
-      const fee = adSpendFeeBRL(monthlyAdSpend)
-      items.push({ id, name, monthlyBRL: fee })
-      totalBRL += fee
-      continue
-    }
-
-    // quote-only services never reach this point (rejected above).
+    const item = resolveLineItem(id, catalog[id], rawConfig, locale)
+    items.push(item)
+    totalBRL += item.monthlyBRL
   }
 
   if (items.length === 0 || totalBRL <= 0) {

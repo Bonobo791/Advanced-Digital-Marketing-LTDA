@@ -1,4 +1,12 @@
 /**
+ * Minimum intersection ratio before an element counts as revealed. Used for
+ * both the observer's `threshold` and the per-entry check, so an entry that
+ * merely crossed the ratio boundary (or a stale entry from another observer)
+ * can never reveal an element early.
+ */
+export const REVEAL_THRESHOLD = 0.12
+
+/**
  * Shared scroll-reveal setup for `.index-home` pages (hero pages).
  *
  * All pages that render `[data-hero-reveal]` elements must call
@@ -23,13 +31,13 @@ export function setupReveals(): () => void {
     observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
+          if (entry.isIntersecting && entry.intersectionRatio >= REVEAL_THRESHOLD) {
             entry.target.classList.add('io-on')
             observer?.unobserve(entry.target)
           }
         })
       },
-      { threshold: 0.12, rootMargin: '0px 0px -6% 0px' },
+      { threshold: REVEAL_THRESHOLD, rootMargin: '0px 0px -6% 0px' },
     )
     revealables.forEach((element) => observer?.observe(element))
   }

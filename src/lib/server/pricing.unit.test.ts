@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { SERVICES, type CatalogService, type ServiceId } from '$lib/catalog'
+import { SERVICES, type CatalogService, type CatalogServiceId } from '$lib/catalog'
 import { PricingError, computeMonthlyQuote } from './pricing'
 
-const CATALOG = SERVICES as Record<ServiceId, CatalogService>
+const CATALOG = SERVICES as Record<CatalogServiceId, CatalogService>
 
 /** Catalog clone with one service made inactive, for the inactive-path tests. */
-function catalogWithInactive(id: ServiceId): Record<ServiceId, CatalogService> {
+function catalogWithInactive(id: CatalogServiceId): Record<CatalogServiceId, CatalogService> {
   return { ...SERVICES, [id]: { ...SERVICES[id], active: false } }
 }
 
@@ -100,6 +100,16 @@ describe('computeMonthlyQuote — validation', () => {
 
   it('rejects unknown service ids', () => {
     for (const bad of [['nope'], ['seo-content', 'hosting-evil'], ['seo-content', 42]]) {
+      expect(() => computeMonthlyQuote(bad, {}, 'pt-BR')).toThrowError(
+        expect.objectContaining({ code: 'invalid_service' }),
+      )
+    }
+  })
+
+  it('rejects inherited Object.prototype keys as service ids', () => {
+    // 'toString' / 'constructor' pass a prototype-chain `in` check but are not
+    // catalog services — they must fail as invalid_service, not resolve.
+    for (const bad of [['toString'], ['constructor'], ['seo-content', 'hasOwnProperty']]) {
       expect(() => computeMonthlyQuote(bad, {}, 'pt-BR')).toThrowError(
         expect.objectContaining({ code: 'invalid_service' }),
       )

@@ -6,10 +6,14 @@
  * The client uses it only to DISPLAY prices; the authoritative total is always
  * recomputed server-side by `src/lib/server/pricing.ts`. Never accept a
  * client-supplied total as authoritative.
+ *
+ * Catalog ids (`CATALOG_SERVICE_IDS` / `CatalogServiceId`) are distinct from
+ * the page-level service slugs in `src/lib/services.ts` (`SERVICE_IDS` /
+ * `ServiceId`) — the names deliberately do not collide.
  */
 import type { Locale } from '$lib/locale'
 
-export const SERVICE_IDS = [
+export const CATALOG_SERVICE_IDS = [
   'seo-content',
   'backlinks',
   'hosting',
@@ -17,7 +21,7 @@ export const SERVICE_IDS = [
   'meta-ads',
   'ai-automation',
 ] as const
-export type ServiceId = (typeof SERVICE_IDS)[number]
+export type CatalogServiceId = (typeof CATALOG_SERVICE_IDS)[number]
 
 /**
  * Paid-ads management rule (spec §2): the monthly management fee for an ads
@@ -43,7 +47,7 @@ export type ServicePricing =
   | { kind: 'quote' }
 
 export type CatalogService = {
-  id: ServiceId
+  id: CatalogServiceId
   name: Record<Locale, string>
   description: Record<Locale, string>
   /** BRL is authoritative for checkout; USD is a display reference only. */
@@ -51,7 +55,7 @@ export type CatalogService = {
   active: boolean
 }
 
-export const SERVICES: Record<ServiceId, CatalogService> = {
+export const SERVICES: Record<CatalogServiceId, CatalogService> = {
   'seo-content': {
     id: 'seo-content',
     name: { 'en-US': 'SEO Content', 'pt-BR': 'Conteúdo SEO' },
@@ -124,12 +128,14 @@ export const SERVICES: Record<ServiceId, CatalogService> = {
   },
 }
 
-export function isServiceId(value: unknown): value is ServiceId {
-  return typeof value === 'string' && (SERVICE_IDS as readonly string[]).includes(value)
+export function isServiceId(value: unknown): value is CatalogServiceId {
+  return typeof value === 'string' && (CATALOG_SERVICE_IDS as readonly string[]).includes(value)
 }
 
 export function getService(id: string): CatalogService | undefined {
-  return SERVICES[id as ServiceId]
+  // Inherited Object.prototype keys ('constructor', 'toString', …) are not
+  // catalog services — guard before indexing SERVICES.
+  return isServiceId(id) ? SERVICES[id] : undefined
 }
 
 /** A service can be included in checkout when it is active and not quote-only. */

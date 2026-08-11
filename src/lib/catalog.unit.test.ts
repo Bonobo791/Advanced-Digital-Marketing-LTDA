@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   ADS_SPEND_RULE,
+  CATALOG_SERVICE_IDS,
   SERVICES,
-  SERVICE_IDS,
   adSpendFeeBRL,
   formatBRL,
   formatPrice,
@@ -14,25 +14,25 @@ import {
 
 describe('catalog integrity', () => {
   it('defines every advertised service id in the catalog', () => {
-    expect(SERVICE_IDS.length).toBe(Object.keys(SERVICES).length)
-    for (const id of SERVICE_IDS) {
+    expect(CATALOG_SERVICE_IDS.length).toBe(Object.keys(SERVICES).length)
+    for (const id of CATALOG_SERVICE_IDS) {
       expect(SERVICES[id]).toBeDefined()
       expect(SERVICES[id].id).toBe(id)
     }
   })
 
   it('has unique service ids', () => {
-    expect(new Set(SERVICE_IDS).size).toBe(SERVICE_IDS.length)
+    expect(new Set(CATALOG_SERVICE_IDS).size).toBe(CATALOG_SERVICE_IDS.length)
   })
 
   it('marks every service active', () => {
-    for (const id of SERVICE_IDS) expect(SERVICES[id].active).toBe(true)
+    for (const id of CATALOG_SERVICE_IDS) expect(SERVICES[id].active).toBe(true)
   })
 })
 
 describe('isServiceId', () => {
   it('accepts every catalog id', () => {
-    for (const id of SERVICE_IDS) expect(isServiceId(id)).toBe(true)
+    for (const id of CATALOG_SERVICE_IDS) expect(isServiceId(id)).toBe(true)
   })
 
   it('rejects unknown, empty and non-string values', () => {
@@ -124,5 +124,13 @@ describe('getService', () => {
   it('returns the service for a known id and undefined otherwise', () => {
     expect(getService('hosting')).toBe(SERVICES.hosting)
     expect(getService('nope')).toBeUndefined()
+  })
+
+  it('never treats inherited Object.prototype keys as catalog services', () => {
+    // 'constructor' / 'toString' exist on the SERVICES object via the
+    // prototype chain — they are not CatalogServiceIds and must not resolve.
+    expect(getService('constructor')).toBeUndefined()
+    expect(getService('toString')).toBeUndefined()
+    expect(getService('hasOwnProperty')).toBeUndefined()
   })
 })

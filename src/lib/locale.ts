@@ -106,6 +106,20 @@ export const SERVICES_INDEX_ROUTES: Record<Locale, string> = {
   'pt-BR': '/pt-br/servicos/',
 }
 
+/** Title/description metadata for the services index (one entry per locale). */
+export const SERVICES_INDEX_META: Record<Locale, { title: string; description: string }> = {
+  'en-US': {
+    title: 'Services | Advanced Digital Marketing LTDA',
+    description:
+      'SEO, GEO, paid media, web and AI automation by Advanced Digital Marketing — subscribe monthly to the mix that fits, or engage per project.',
+  },
+  'pt-BR': {
+    title: 'Serviços | Advanced Digital Marketing LTDA',
+    description:
+      'SEO, GEO, mídia paga, web e automação com IA pela Advanced Digital Marketing — assine mensalmente a combinação que faz sentido para você, ou contrate por projeto.',
+  },
+}
+
 /** Returns the locale of a services-gateway pathname, if any. */
 export function servicesIndexForPath(pathname: string): Locale | undefined {
   const normalized = normalizePath(pathname)

@@ -1,8 +1,9 @@
 <script lang="ts">
   import { browser } from '$app/environment'
   import { page } from '$app/state'
+  import { getSessionItem, setSessionItem } from '$lib/client/session-storage'
   import { saveLanguagePreference } from '$lib/client/language-preference'
-  import { browserPrefersPortuguese, localeForPath, localizedPath, pageForPath } from '$lib/locale'
+  import { browserPrefersPortuguese, localeForPath, localizedPath, pageForPath, servicesIndexForPath } from '$lib/locale'
   import { serviceForPath } from '$lib/services'
 
   const dismissedKey = 'adm-language-suggestion-dismissed'
@@ -15,9 +16,10 @@
     if (!browser) return
 
     visible = false
-    const known = pageForPath(page.url.pathname) ?? serviceForPath(page.url.pathname)
+    const known =
+      pageForPath(page.url.pathname) ?? servicesIndexForPath(page.url.pathname) ?? serviceForPath(page.url.pathname)
     if (localeForPath(page.url.pathname) === 'pt-BR' || !known || !destination) return
-    if (sessionStorage.getItem(dismissedKey)) return
+    if (getSessionItem(dismissedKey)) return
 
     const language = document.cookie.match(/(?:^|; )language=([^;]+)/)?.[1]
     const inBrazil = /(?:^|; )geo_br=1(?:;|$)/.test(document.cookie)
@@ -31,8 +33,9 @@
   })
 
   function dismiss() {
-    sessionStorage.setItem(dismissedKey, '1')
+    // Keep the prompt closed in memory even when storage is blocked.
     visible = false
+    setSessionItem(dismissedKey, '1')
   }
 </script>
 

@@ -1,6 +1,6 @@
 import type { Locale } from '$lib/locale'
 import { normalizePath } from './path.ts'
-import type { ServiceId as CatalogServiceId } from './catalog'
+import type { CatalogServiceId } from './catalog'
 
 export const SERVICE_IDS = ['technical-seo', 'geo', 'web-development', 'paid-search', 'meta-ads', 'ai-automation'] as const
 export type ServiceId = (typeof SERVICE_IDS)[number]
@@ -1081,8 +1081,16 @@ export function serviceForPath(pathname: string): ServiceId | undefined {
   // /servicos/x must not resolve to a service.
   const match = /^\/(?:pt-br\/servicos|services)\/([a-z-]+)$/.exec(normalizePath(pathname))
   if (!match) return undefined
-  const id = match[1] as ServiceId
-  return SERVICE_IDS.includes(id) ? id : undefined
+  return resolveServiceSlug(match[1])
+}
+
+/**
+ * Validates a [slug] route param against the known page slugs. Kept
+ * isomorphic (no @sveltejs/kit imports) so the edge bundle can keep importing
+ * this module — the [slug] loaders call it and raise 404 themselves.
+ */
+export function resolveServiceSlug(slug: string): ServiceId | undefined {
+  return (SERVICE_IDS as readonly string[]).includes(slug) ? (slug as ServiceId) : undefined
 }
 
 export function serviceNavigation(locale: Locale) {

@@ -145,7 +145,7 @@ export const PAGE_COPY: Record<Locale, PageCopy> = {
       ],
       audit: 'Start with an audit', whyLabel: 'Why us', whyHeading: 'Built by engineers, priced by São Paulo.',
       whyLead: 'Most agencies sell you a retainer and staff it with whoever is free.',
-      whyLeadStrong: 'We are a two-person engineering studio by design.',
+      whyLeadStrong: 'We are an owner-operated engineering studio by design.',
       whyLeadAfter: ' The audit, the code, the content system and the ad account are all run by the people you actually talk to.',
       cityAlt: 'São Paulo skyline rendered in ink and vermilion',
       reasons: [
@@ -218,7 +218,7 @@ export const PAGE_COPY: Record<Locale, PageCopy> = {
       ],
       audit: 'Comece com um diagnóstico', whyLabel: 'Por que nós', whyHeading: 'Engenharia de busca para empresas brasileiras.',
       whyLead: 'Você não precisa de mais um relatório genérico.',
-      whyLeadStrong: 'Precisa de uma equipe sênior que execute.',
+      whyLeadStrong: 'Somos um estúdio de engenharia operado pelo próprio fundador.',
       whyLeadAfter: ' Da auditoria à implementação, busca, site e mídia são conduzidos pelas pessoas com quem você realmente fala.',
       cityAlt: 'Horizonte de São Paulo em tinta e vermelhão',
       reasons: [

@@ -10,6 +10,17 @@ describe('locale routes', () => {
     expect(absoluteUrl(LOCALE_ROUTES.home['en-US'])).toBe('https://advanceddigitalmarketingltda.com/')
     expect(absoluteUrl(LOCALE_ROUTES.home['pt-BR'])).toBe('https://advanceddigitalmarketingltda.com/pt-br/')
   })
+
+  it('converts service index paths between locales', () => {
+    expect(localizedPath('/services/', 'pt-BR')).toBe('/pt-br/servicos/')
+    expect(localizedPath('/pt-br/servicos/', 'en-US')).toBe('/services/')
+  })
+
+  it('converts service detail paths between locales', () => {
+    expect(localizedPath('/services/paid-search/', 'pt-BR')).toBe('/pt-br/servicos/paid-search/')
+    expect(localizedPath('/pt-br/servicos/paid-search/', 'en-US')).toBe('/services/paid-search/')
+    expect(localizedPath('/pt-br/servicos/technical-seo/', 'en-US')).toBe('/services/technical-seo/')
+  })
 })
 
 describe('homepage locale decisions', () => {

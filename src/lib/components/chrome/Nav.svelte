@@ -3,7 +3,7 @@
   import { browser } from '$app/environment'
   import { page } from '$app/state'
   import { EMAIL, JP, PORTUGUESE_EMAIL, PT_MAILTO, MAILTO } from '$lib/constants'
-  import { CHROME_COPY, homeSectionsForLocale, localeForPath, LOCALE_ROUTES, navigationForLocale, normalizePath } from '$lib/locale'
+  import { CHROME_COPY, homeSectionsForLocale, localeForPath, LOCALE_ROUTES, navigationForLocale, normalizePath, SERVICES_INDEX_ROUTES } from '$lib/locale'
   import { serviceForPath, serviceNavigation } from '$lib/services'
   import LanguageSwitcher from './LanguageSwitcher.svelte'
 
@@ -20,7 +20,7 @@
   let serviceNav = $derived([
     {
       id: 'services-index',
-      to: locale === 'pt-BR' ? '/pt-br/servicos/' : '/services/',
+      to: SERVICES_INDEX_ROUTES[locale],
       label: copy.servicesAll,
       jp: '業務',
     },
@@ -40,6 +40,7 @@
         : undefined
 
   let menuRoot = $state<HTMLDivElement | undefined>()
+  let menuButton = $state<HTMLButtonElement | undefined>()
 
   const onMenuKeydown = (e: KeyboardEvent) => {
     if (e.key !== 'Tab' || !menuRoot) return
@@ -140,7 +141,7 @@
       <LanguageSwitcher />
     </div>
 
-    <button type="button" class="editorial-menu-button" aria-expanded={open} aria-controls="mobile-city-menu" onclick={() => (open = !open)}>
+    <button type="button" class="editorial-menu-button" aria-expanded={open} aria-controls="mobile-city-menu" bind:this={menuButton} onclick={() => (open = !open)}>
       <span>{open ? copy.close : copy.menu}</span>
     </button>
   </div>
@@ -151,7 +152,13 @@
     if (svcOpen && e.target instanceof Element && !e.target.closest('.nav-svc')) svcOpen = false
   }}
   onkeydown={(e) => {
-    if (e.key === 'Escape') svcOpen = false
+    if (e.key !== 'Escape') return
+    svcOpen = false
+    if (open) {
+      open = false
+      // Restore focus to the toggle instead of dropping to the document body.
+      menuButton?.focus()
+    }
   }}
 />
 

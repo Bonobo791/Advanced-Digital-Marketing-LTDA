@@ -214,6 +214,9 @@ export async function getSubscription(subscriptionId: string): Promise<Subscript
     throw new MercadoPagoError('api_error', 'Mercado Pago request failed')
   }
 
+  if (response.status === 401 || response.status === 403) {
+    throw new MercadoPagoError('unauthorized', 'Mercado Pago rejected the access token')
+  }
   if (response.status === 404) return undefined
   if (!response.ok) {
     throw new MercadoPagoError('api_error', `Mercado Pago returned HTTP ${response.status}`)
@@ -227,13 +230,25 @@ export async function getSubscription(subscriptionId: string): Promise<Subscript
   }
 
   const record = typeof body === 'object' && body !== null ? (body as Record<string, unknown>) : {}
+  if (typeof record.id !== 'string' || !record.id) {
+    throw new MercadoPagoError('invalid_response', 'Mercado Pago response is missing id')
+  }
+  return mapSubscriptionStatus(record)
+}
+
+/**
+ * Maps a sanitized subscription status from a validated Mercado Pago
+ * preapproval record. Only safe, typed fields are copied — everything else in
+ * the response (card ids, tokens, …) is dropped.
+ */
+function mapSubscriptionStatus(record: Record<string, unknown>): SubscriptionStatus {
   const recurring =
     typeof record.auto_recurring === 'object' && record.auto_recurring !== null
       ? (record.auto_recurring as Record<string, unknown>)
       : {}
 
   return {
-    id: typeof record.id === 'string' ? record.id : String(record.id ?? ''),
+    id: record.id as string,
     status: typeof record.status === 'string' ? record.status : null,
     reason: typeof record.reason === 'string' ? record.reason : null,
     externalReference: typeof record.external_reference === 'string' ? record.external_reference : null,

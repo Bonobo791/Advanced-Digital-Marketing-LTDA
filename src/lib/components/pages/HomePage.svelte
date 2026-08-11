@@ -6,6 +6,7 @@
   import { SITE_MOTION, type SiteMotion } from '$lib/client/site-motion'
   import { setupReveals } from '$lib/client/reveal'
   import type { Locale } from '$lib/locale'
+  import { words } from '$lib/text'
 
   let { locale }: { locale: Locale } = $props()
 
@@ -14,10 +15,9 @@
   let localeMailto = $derived(locale === 'pt-BR' ? PT_MAILTO : MAILTO)
   let localeEmail = $derived(locale === 'pt-BR' ? PORTUGUESE_EMAIL : EMAIL)
   let serviceContactHref = (title: string) =>
-    `mailto:${locale === 'pt-BR' ? PORTUGUESE_EMAIL : EMAIL}?subject=${encodeURIComponent(title)}`
+    `mailto:${localeEmail}?subject=${encodeURIComponent(title)}`
   let openService = $state(-1)
   const motion = getContext<SiteMotion>(SITE_MOTION)
-  const words = (text: string) => text.trim().split(/\s+/)
   // Heading word lists computed once per heading (not per loop iteration).
   let servicesWords = $derived(words(content.servicesHeading))
   let processWords = $derived(words(content.processHeading))
@@ -50,6 +50,7 @@
 <div class="index-home" class:portuguese={locale === 'pt-BR'}>
   <section class="hero index-hero" class:hero-revealed={motion.state.hero === 'revealed'}>
     <div class="hero-bg" aria-hidden="true">
+      <img src={cityInk} alt="" class="hero-city" width="1396" height="975" fetchpriority="high" />
       <div class="kanji k-amb" style="right:-4vw;top:-6%">答</div>
       {#each [['検索・設計・生成・実装・計測・答・未来・', '64s'], ['アドバンスト・デジタル・マーケティング・', '96s'], ['検索・設計・生成・実装・計測・答・未来・', '78s'], ['アドバンスト・デジタル・マーケティング・', '110s'], ['検索・設計・生成・実装・計測・答・未来・', '58s']] as item, i}
         <div class="kcol kc{i + 1}"><span class="kcol-in" style="--spd:{item[1]}">{item[0].repeat(10)}</span></div>

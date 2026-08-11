@@ -8,6 +8,7 @@
   import WebsiteBuildPricing from './WebsiteBuildPricing.svelte'
   import { getService } from '$lib/catalog'
   import type { Locale } from '$lib/locale'
+  import { words } from '$lib/text'
 
   let { locale, service }: { locale: Locale; service: ServiceId } = $props()
 
@@ -17,10 +18,11 @@
   let quoteOnly = $derived(getService(service)?.pricing.kind === 'quote')
   let localeEmail = $derived(locale === 'pt-BR' ? PORTUGUESE_EMAIL : EMAIL)
   let localeMailto = $derived(locale === 'pt-BR' ? PT_MAILTO : MAILTO)
+  // The email address is never duplicated here — localeEmail is the single
+  // source, so subject-only mailto links cannot drift from the visible one.
   let optionMailto = (subject: string) =>
-    `mailto:${locale === 'pt-BR' ? PORTUGUESE_EMAIL : EMAIL}?subject=${encodeURIComponent(subject)}`
+    `mailto:${localeEmail}?subject=${encodeURIComponent(subject)}`
   const motion = getContext<SiteMotion>(SITE_MOTION)
-  const words = (text: string) => text.trim().split(/\s+/)
 
   onMount(() => {
     motion.registerHero()

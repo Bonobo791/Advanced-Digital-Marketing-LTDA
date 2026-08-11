@@ -838,7 +838,7 @@ img { display: block; max-width: 100%; }
   .motion-ready .editorial-hero [data-hero-found] { transform: none; }
 }
 
-/* Homepage v2: the source of truth is new-assets/index.html. */
+/* Homepage v2: the live implementation is src/lib/components/pages/HomePage.svelte. */
 .index-home {
   --index-ink: #121212;
   --index-paper: #f2efe9;
@@ -857,6 +857,18 @@ img { display: block; max-width: 100%; }
 .index-home .hero { min-height: 100dvh; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 120px; padding-bottom: 56px; }
 .index-home .hero-inner { flex: 1 1 auto; display: flex; flex-direction: column; width: 100%; }
 .index-home .hero-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+/* The city photograph leads the homepage hero (brand requirement, PRODUCT.md)
+   as a backdrop layer — the live kanji columns and haze sit on top of it. */
+.index-home .hero-city {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0.24;
+  filter: saturate(0.85) contrast(1.05);
+}
 .index-home .hero-kick { display: flex; align-items: baseline; gap: 16px; }
 .index-home .hero-kick .jp { color: var(--index-paper); font-family: 'ADM JP Serif', serif; font-size: clamp(1.05rem, 1.8vw, 1.4rem); line-height: 1.9; }
 .index-home .hero-kick .en { color: var(--index-verm); font-family: 'ADM Semi', sans-serif; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; }
@@ -912,10 +924,10 @@ img { display: block; max-width: 100%; }
 .index-home .svc-en b { display: block; margin-bottom: 6px; font-family: 'ADM Semi', sans-serif; font-size: clamp(1.05rem, 1.8vw, 1.4rem); letter-spacing: .02em; text-transform: uppercase; }
 .index-home .svc-en i { display: block; color: var(--index-ink60); font-size: 15px; font-style: normal; }
 .index-home .svc-arrow { padding-bottom: 6px; color: var(--index-verm); font-size: 22px; transition: transform .35s var(--ease-out); }
-.index-home .svc[aria-expanded='true'] .svc-arrow { transform: rotate(90deg); }
-.index-home .svc[aria-expanded='true'] .svc-jp { color: var(--index-verm); }
+.index-home .svc-head[aria-expanded='true'] .svc-arrow { transform: rotate(90deg); }
+.index-home .svc-head[aria-expanded='true'] .svc-jp { color: var(--index-verm); }
 .index-home .svc-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .45s var(--ease-io); }
-.index-home .svc[aria-expanded='true'] .svc-body { grid-template-rows: 1fr; }
+.index-home .svc-head[aria-expanded='true'] + .svc-body { grid-template-rows: 1fr; }
 .index-home .svc-body-in { overflow: hidden; }
 .index-home .svc-body-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) auto; gap: 24px; padding-bottom: 40px; }
 .index-home .svc-body-grid p { grid-column: 2; max-width: 56ch; margin: 0; color: var(--index-ink60); font-size: 16px; }
@@ -1050,13 +1062,13 @@ img { display: block; max-width: 100%; }
   .index-home [data-hero-reveal], .index-home [data-hero-found] { opacity: 1 !important; transform: none !important; }
 }
 
-/* Service pages: the source of truth is new-assets/service-template.html.
-   Service pages share the index-home design scope (hero, sections, steps,
-   contact) and add the options grid below. */
+/* Service pages: the live implementation is src/lib/components/pages/
+   ServicePage.svelte (+ WebsiteBuildPricing.svelte). Service pages share the
+   index-home design scope (hero, sections, steps, contact) and add the
+   options grid below. */
 .service-page .hero { padding-top: clamp(148px, 22vh, 220px); }
 .service-page .hero-inner { justify-content: space-between; }
 .service-page .sec-lead { max-width: 52ch; margin: 0 0 48px; color: var(--index-ink60); font-size: clamp(1rem, 1.6vw, 1.15rem); }
-.service-page .opt-jp { font-family: 'ADM JP Sans 900', 'ADM JP', sans-serif; }
 
 .service-page .opt-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-top: 64px; }
 .service-page .opt {
@@ -1071,7 +1083,9 @@ img { display: block; max-width: 100%; }
 .service-page .opt.rec { background: var(--index-ink); color: var(--index-paper); border-color: var(--index-ink); }
 .service-page .opt-flag { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; color: var(--index-verm); font-family: 'ADM Semi', sans-serif; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; }
 .service-page .opt-flag::before { width: 24px; height: 1px; background: var(--index-verm); content: ''; }
-.service-page .opt-jp { display: block; margin-bottom: 20px; color: var(--index-verm); font-size: clamp(2.6rem, 4vw, 3.4rem); line-height: 1; }
+/* .opt-jp is a single rule (font-family + layout merged) — the duplicate
+   font-family-only declaration was removed. */
+.service-page .opt-jp { display: block; margin-bottom: 20px; color: var(--index-verm); font-size: clamp(2.6rem, 4vw, 3.4rem); line-height: 1; font-family: 'ADM JP Sans 900', 'ADM JP', sans-serif; }
 .service-page .opt-name { font-family: 'ADM Display', sans-serif; font-size: clamp(1.3rem, 1.9vw, 1.6rem); letter-spacing: -0.01em; line-height: 1.08; text-transform: uppercase; }
 .service-page .opt-price { margin-top: 20px; font-family: 'ADM Display', sans-serif; font-size: clamp(2rem, 3vw, 2.5rem); line-height: 1; }
 .service-page .opt-per { margin-top: 6px; color: var(--index-ink60); font-family: 'ADM Semi', sans-serif; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; }

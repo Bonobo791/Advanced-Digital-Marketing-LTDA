@@ -1,6 +1,7 @@
 <script lang="ts">
   import { getContext, onMount } from 'svelte'
   import { SITE_MOTION, type SiteMotion } from '$lib/client/site-motion'
+  import { getSessionItem, setSessionItem } from '$lib/client/session-storage'
 
   const motion = getContext<SiteMotion>(SITE_MOTION)
 
@@ -14,13 +15,7 @@
       return
     }
 
-    let curtainSeen = false
-    try {
-      curtainSeen = sessionStorage.getItem('adm-curtain') === '1'
-    } catch {
-      // Storage blocked (e.g. private mode): replay the curtain each visit.
-      console.warn('[curtain] sessionStorage unavailable; curtain will replay')
-    }
+    const curtainSeen = getSessionItem('adm-curtain') === '1'
     if (curtainSeen) {
       motion.completeCurtain()
       motion.revealHero(60)
@@ -34,11 +29,8 @@
     const doneTimer = window.setTimeout(() => {
       show = false
       document.body.classList.remove('curtain-lock')
-      try {
-        sessionStorage.setItem('adm-curtain', '1')
-      } catch {
-        // Storage blocked: nothing to persist; the curtain already played.
-      }
+      // Storage blocked: nothing to persist; the curtain already played.
+      setSessionItem('adm-curtain', '1')
     }, 1250)
     const revealTimer = window.setTimeout(() => {
       motion.completeCurtain()

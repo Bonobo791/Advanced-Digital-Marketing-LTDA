@@ -19,6 +19,7 @@
     type WebsiteBuildType,
   } from '$lib/website-builds'
   import type { Locale } from '$lib/locale'
+  import { words } from '$lib/text'
 
   let { locale }: { locale: Locale } = $props()
 
@@ -53,7 +54,6 @@
   let type = $state<WebsiteBuildType>('website')
   let kind = $state<WebsiteBuildKind>('new')
   let price = $derived(websiteBuildPrice(locale, type, kind))
-  const words = (value: string) => value.trim().split(/\s+/)
 </script>
 
 <section class="paper-sec build-panel" id="builds">

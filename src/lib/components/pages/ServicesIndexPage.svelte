@@ -2,7 +2,7 @@
   import { getContext, onMount } from 'svelte'
   import { SITE_MOTION, type SiteMotion } from '$lib/client/site-motion'
   import { setupReveals } from '$lib/client/reveal'
-  import { SERVICES, formatPrice, getService, type ServiceId as CatalogServiceId } from '$lib/catalog'
+  import { SERVICES, formatPrice, getService, type CatalogServiceId } from '$lib/catalog'
   import {
     SERVICE_CONTENT,
     SERVICE_IDS,
@@ -11,6 +11,7 @@
     type ServiceId,
   } from '$lib/services'
   import type { Locale } from '$lib/locale'
+  import { words } from '$lib/text'
   import SubscribeSection from './SubscribeSection.svelte'
   import WebsiteBuildPricing from './WebsiteBuildPricing.svelte'
 
@@ -42,8 +43,6 @@
   } as const
 
   let text = $derived(copy[locale])
-  const words = (value: string) => value.trim().split(/\s+/)
-
   const motion = getContext<SiteMotion>(SITE_MOTION)
 
   onMount(() => {
@@ -88,7 +87,7 @@
         <span class="jp" data-hero-reveal style="--hero-delay:0ms">「業務」</span>
         <span class="en" data-hero-reveal style="--hero-delay:60ms">{text.kicker}</span>
       </div>
-      <p class="hero-line1" data-hero-reveal style="--hero-delay:120ms">Services<b>.</b></p>
+      <p class="hero-line1" data-hero-reveal style="--hero-delay:120ms">{text.kicker}<b>.</b></p>
       <h1 class="hero-h1">
         <span class="h-mask"><span class="h-line" data-hero-reveal style="--hero-delay:180ms">{text.heading.split(' ')[0]}</span></span>
         <span class="h-mask"><span class="h-line" data-hero-reveal style="--hero-delay:270ms"><em>{text.heading.split(' ').slice(1).join(' ')}</em></span></span>

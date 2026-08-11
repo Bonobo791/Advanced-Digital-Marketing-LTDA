@@ -89,7 +89,13 @@ function findForbiddenSvelteKitImports(): { file: string; specifier: string }[] 
           violations.push({ file: relativeToRoot(file), specifier })
         }
         const resolved = resolveRelative(file, specifier)
-        if (resolved && !visited.has(resolved)) queue.push(resolved)
+        if (resolved) {
+          if (!visited.has(resolved)) queue.push(resolved)
+        } else {
+          // The specifier passed the extension check but does not exist on
+          // disk: fail loudly instead of silently stopping the traversal.
+          violations.push({ file: relativeToRoot(file), specifier })
+        }
       }
     }
   }
