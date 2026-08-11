@@ -81,6 +81,7 @@ export function readStoredAttribution(): Attribution | undefined {
     if (!raw) return undefined
     return sanitizeAttribution(JSON.parse(raw) as unknown)
   } catch {
+    console.warn('[attribution] getItem failed; treating as no stored attribution')
     return undefined
   }
 }
@@ -106,7 +107,11 @@ export function captureAttribution(): Attribution | undefined {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(attribution))
   } catch {
-    // Storage may be unavailable (private mode / quota); attribution is best-effort.
+    // Persistence is the whole point of first-touch capture: the caller
+    // (layout) ignores the returned object, so a silent failure would drop
+    // the campaign data with no signal and later order attribution would be
+    // wrong. Fail loud instead (blocked storage / quota in private mode).
+    console.warn('[attribution] setItem failed; first-touch attribution not persisted')
   }
   return attribution
 }
