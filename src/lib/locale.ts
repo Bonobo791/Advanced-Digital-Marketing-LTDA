@@ -96,9 +96,22 @@ export const CHROME_COPY: Record<Locale, {
   },
 }
 
-export function normalizePath(pathname: string) {
-  const path = pathname.startsWith('/') ? pathname : `/${pathname}`
-  return path === '/' ? path : path.replace(/\/+$/, '')
+/**
+ * Localized gateway routes listing all services. Not part of PAGE_IDS (they
+ * render no nav entry of their own), but they must route through locale
+ * helpers so the language switcher, edge geo handling and nav work on them.
+ */
+export const SERVICES_INDEX_ROUTES: Record<Locale, string> = {
+  'en-US': '/services/',
+  'pt-BR': '/pt-br/servicos/',
+}
+
+/** Returns the locale of a services-gateway pathname, if any. */
+export function servicesIndexForPath(pathname: string): Locale | undefined {
+  const normalized = normalizePath(pathname)
+  if (normalized === '/services') return 'en-US'
+  if (normalized === '/pt-br/servicos') return 'pt-BR'
+  return undefined
 }
 
 export function pageForPath(pathname: string): PageId | undefined {
@@ -115,10 +128,15 @@ export function localeForPath(pathname: string): Locale {
 }
 
 import { SERVICE_ROUTES, serviceForPath } from './services.ts'
+import { normalizePath } from './path.ts'
+
+export { normalizePath }
 
 export function localizedPath(pathname: string, locale: Locale) {
   const page = pageForPath(pathname)
   if (page) return LOCALE_ROUTES[page][locale]
+  const servicesLocale = servicesIndexForPath(pathname)
+  if (servicesLocale) return SERVICES_INDEX_ROUTES[locale]
   const service = serviceForPath(pathname)
   return service ? SERVICE_ROUTES[service][locale] : undefined
 }
@@ -174,7 +192,7 @@ export function decideLocaleRequest({ method, pathname, search, language, countr
   if (localeForPath(pathname) === 'pt-BR') return { type: 'next' }
 
   const page = pageForPath(pathname)
-  if (page && page !== 'home') {
+  if ((page && page !== 'home') || servicesIndexForPath(pathname)) {
     return { type: 'next', geoBr: language !== 'en-US' && country?.toUpperCase() === 'BR' }
   }
 

@@ -1,4 +1,5 @@
 import type { Locale } from '$lib/locale'
+import { normalizePath } from './path.ts'
 import type { ServiceId as CatalogServiceId } from './catalog'
 
 export const SERVICE_IDS = ['technical-seo', 'geo', 'web-development', 'paid-search', 'meta-ads', 'ai-automation'] as const
@@ -1087,13 +1088,11 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
   },
 }
 
-function normalizeServicePath(pathname: string) {
-  const path = pathname.startsWith('/') ? pathname : `/${pathname}`
-  return path === '/' ? path : path.replace(/\/+$/, '')
-}
-
 export function serviceForPath(pathname: string): ServiceId | undefined {
-  const match = /^\/(?:pt-br\/)?(?:services|servicos)\/([a-z-]+)$/.exec(normalizeServicePath(pathname))
+  // Only the two real namespaces resolve: /services/<slug> (en-US) and
+  // /pt-br/servicos/<slug> (pt-BR). Mixed forms like /pt-br/services/x or
+  // /servicos/x must not resolve to a service.
+  const match = /^\/(?:pt-br\/servicos|services)\/([a-z-]+)$/.exec(normalizePath(pathname))
   if (!match) return undefined
   const id = match[1] as ServiceId
   return SERVICE_IDS.includes(id) ? id : undefined

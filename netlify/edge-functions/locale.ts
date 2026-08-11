@@ -4,7 +4,7 @@ type EdgeContext = {
   cookies: {
     get(name: string): string | undefined
     set(options: { name: string; value: string; path: string; sameSite: 'lax'; secure: boolean }): void
-    delete(options: { name: string; path: string }): void
+    delete(name: string): void
   }
   geo: { country?: { code?: string } }
   next(): Response | Promise<Response>
@@ -33,13 +33,25 @@ export default function locale(request: Request, context: EdgeContext) {
   if (decision.geoBr === true) {
     context.cookies.set({ name: 'geo_br', value: '1', path: '/', sameSite: 'lax', secure: true })
   } else if (decision.geoBr === false) {
-    context.cookies.delete({ name: 'geo_br', path: '/' })
+    context.cookies.delete('geo_br')
   }
 
   return context.next()
 }
 
 export const config = {
-  path: ['/', '/about', '/about/', '/contact', '/contact/'],
+  path: [
+    '/',
+    '/about',
+    '/about/',
+    '/contact',
+    '/contact/',
+    '/services',
+    '/services/',
+    '/services/*',
+    '/pt-br/servicos',
+    '/pt-br/servicos/',
+    '/pt-br/servicos/*',
+  ],
   method: ['GET'],
 }

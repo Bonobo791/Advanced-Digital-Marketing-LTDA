@@ -28,6 +28,35 @@
   ])
   let currentService = $derived(serviceForPath(pathname))
 
+  // The services-gateway entry has no ServiceId, so aria-current for it must
+  // use the plain pathname comparison; service entries use `currentService`.
+  const currentNav = (item: { id: string; to: string }) =>
+    item.id === 'services-index'
+      ? pathname === normalizePath(item.to)
+        ? 'page'
+        : undefined
+      : currentService === item.id
+        ? 'page'
+        : undefined
+
+  let menuRoot: HTMLDivElement | undefined
+
+  const onMenuKeydown = (e: KeyboardEvent) => {
+    if (e.key !== 'Tab' || !menuRoot) return
+    const focusables = Array.from(menuRoot.querySelectorAll<HTMLElement>('a[href], button'))
+    if (focusables.length === 0) return
+    const first = focusables[0]
+    const last = focusables[focusables.length - 1]
+    const active = document.activeElement
+    if (e.shiftKey && (active === first || active === menuRoot)) {
+      e.preventDefault()
+      last.focus()
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault()
+      first.focus()
+    }
+  }
+
   const svcToggle = (e: MouseEvent) => {
     e.stopPropagation()
     svcOpen = !svcOpen
@@ -48,6 +77,15 @@
     }
   })
 
+  // Focus the first interactive element when the mobile menu opens, and close
+  // the menu when the viewport grows back to desktop (releasing menu-lock).
+  $effect(() => {
+    if (!browser) return
+    if (open && menuRoot) {
+      menuRoot.querySelector<HTMLElement>('a[href], button')?.focus()
+    }
+  })
+
   onMount(() => {
     let lastY = window.scrollY
     let frame = 0
@@ -64,8 +102,14 @@
     }
 
     window.addEventListener('scroll', onScroll, { passive: true })
+    const desktop = window.matchMedia('(min-width: 901px)')
+    const onDesktop = (e: MediaQueryListEvent) => {
+      if (e.matches) open = false
+    }
+    if (desktop.addEventListener) desktop.addEventListener('change', onDesktop)
     return () => {
       window.removeEventListener('scroll', onScroll)
+      if (desktop.removeEventListener) desktop.removeEventListener('change', onDesktop)
       if (frame) cancelAnimationFrame(frame)
       document.body.classList.remove('menu-lock')
     }
@@ -83,7 +127,7 @@
         <button class="nav-svc-btn" type="button" aria-haspopup="true" aria-expanded={svcOpen} onclick={svcToggle}>{copy.services} <span class="caret" aria-hidden="true"></span></button>
         <div class="svc-menu">
           {#each serviceNav as s (s.to)}
-            <a href={s.to} aria-current={currentService === s.id ? 'page' : undefined}><span class="jp font-jp">{s.jp}</span>{s.label}</a>
+            <a href={s.to} aria-current={currentNav(s)}><span class="jp font-jp">{s.jp}</span>{s.label}</a>
           {/each}
         </div>
       </div>
@@ -112,13 +156,13 @@
 />
 
 {#if open}
-  <div id="mobile-city-menu" class="editorial-mobile-menu">
+  <div id="mobile-city-menu" class="editorial-mobile-menu" bind:this={menuRoot} onkeydown={onMenuKeydown}>
     <nav aria-label={copy.navigationLabel}>
       {#each links as link (link.to)}
-        <a href={link.to} aria-current={!isHome && pathname === normalizePath(link.to) ? 'page' : undefined}><span>{link.label}</span><small class="font-jp">{link.jp}</small></a>
+        <a href={link.to} onclick={() => (open = false)} aria-current={!isHome && pathname === normalizePath(link.to) ? 'page' : undefined}><span>{link.label}</span><small class="font-jp">{link.jp}</small></a>
       {/each}
       {#each serviceNav as s (s.to)}
-        <a href={s.to} aria-current={currentService === s.id ? 'page' : undefined}><span>{s.label}</span><small class="font-jp">{s.jp}</small></a>
+        <a href={s.to} onclick={() => (open = false)} aria-current={currentNav(s)}><span>{s.label}</span><small class="font-jp">{s.jp}</small></a>
       {/each}
     </nav>
 
