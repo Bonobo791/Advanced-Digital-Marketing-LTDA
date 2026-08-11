@@ -114,7 +114,15 @@ function readCredentials(): { accessToken?: string; sandboxToken?: string } {
  */
 async function logMercadoPagoError(response: Response, code: MercadoPagoError['code']): Promise<void> {
   const body = await response.text().catch(() => '')
-  const preview = body.length > 2000 ? `${body.slice(0, 2000)}…(truncated ${body.length} bytes)` : body
+  // MP error bodies can echo customer-controlled input (email, reason,
+  // back_url) — strip control chars/newlines to prevent log forging and
+  // terminal escape injection, then collapse whitespace.
+  const sanitized = body
+    .replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const preview =
+    sanitized.length > 2000 ? `${sanitized.slice(0, 2000)}…(truncated ${body.length} bytes)` : sanitized
   console.error(`[mercadoPago] ${code} (HTTP ${response.status}): ${preview}`)
 }
 
@@ -161,9 +169,11 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
   }
 
   if (response.status === 401 || response.status === 403) {
+    await logMercadoPagoError(response, 'unauthorized')
     throw new MercadoPagoError('unauthorized', 'Mercado Pago rejected the access token')
   }
   if (!response.ok) {
+    await logMercadoPagoError(response, 'api_error')
     throw new MercadoPagoError('api_error', `Mercado Pago returned HTTP ${response.status}`)
   }
 
@@ -227,10 +237,12 @@ export async function getSubscription(subscriptionId: string): Promise<Subscript
   }
 
   if (response.status === 401 || response.status === 403) {
+    await logMercadoPagoError(response, 'unauthorized')
     throw new MercadoPagoError('unauthorized', 'Mercado Pago rejected the access token')
   }
   if (response.status === 404) return undefined
   if (!response.ok) {
+    await logMercadoPagoError(response, 'api_error')
     throw new MercadoPagoError('api_error', `Mercado Pago returned HTTP ${response.status}`)
   }
 
