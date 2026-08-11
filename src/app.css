@@ -158,8 +158,17 @@ img { display: block; max-width: 100%; }
   inset: 0 0 auto var(--rail-w);
   z-index: 100;
   color: #fff;
-  mix-blend-mode: difference;
   transition: transform 400ms var(--ease-out);
+}
+
+/* The difference blend is confined to the nav's own painted text (brand,
+   links + services dropdown, mobile toggle) instead of the whole header, so
+   the LanguageSwitcher (and its .language-switcher__flipper) sits outside the
+   blended subtree and keeps its designed pill/active colors. */
+.editorial-brand,
+.editorial-nav__links,
+.editorial-menu-button {
+  mix-blend-mode: difference;
 }
 
 .editorial-nav--hidden { transform: translateY(-100%); transition-duration: 200ms; }
@@ -312,7 +321,7 @@ img { display: block; max-width: 100%; }
   transform: rotate(45deg) translateY(-2px);
   transition: transform 250ms var(--ease-out);
 }
-.nav-svc:hover .caret, .nav-svc.open .caret, .nav-svc:focus-within .caret { transform: rotate(225deg) translateY(-1px); }
+.nav-svc.open .caret { transform: rotate(225deg) translateY(-1px); }
 .svc-menu {
   position: absolute;
   top: calc(100% + 18px);
@@ -328,7 +337,7 @@ img { display: block; max-width: 100%; }
   transform: translateX(-50%) translateY(10px);
   transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out), visibility 0s linear 220ms;
 }
-.nav-svc:hover .svc-menu, .nav-svc.open .svc-menu, .nav-svc:focus-within .svc-menu {
+.nav-svc.open .svc-menu {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(0);

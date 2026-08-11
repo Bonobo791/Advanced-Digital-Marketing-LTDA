@@ -19,19 +19,53 @@ export function isValidEmail(value: unknown): value is string {
 }
 
 /**
+ * Mercado Pago preapproval IDs are opaque server-generated identifiers
+ * (hex-shaped in the observed responses, e.g. "2c938084…"), so this guard is
+ * deliberately conservative: it only rejects the obvious junk a scripted flood
+ * would send (special characters, control bytes, absurd length) while any
+ * real identifier passes. `getSubscription` URL-encodes the id; this check
+ * keeps malformed values from ever reaching the paid API at all.
+ */
+const PREAPPROVAL_ID_RE = /^[A-Za-z0-9_-]{1,128}$/
+
+export function isValidPreapprovalId(value: string): boolean {
+  return PREAPPROVAL_ID_RE.test(value)
+}
+
+/**
  * Back URL for the hosted checkout. The production hostname is never
  * hard-coded: it comes from PUBLIC_SITE_URL, falling back to the site's
  * canonical origin constant. The fallback is loud (logged on the server).
  *
- * A malformed PUBLIC_SITE_URL (e.g. a value without a scheme) must never crash
- * checkout: the URL construction is wrapped so the configured value is not
- * echoed in logs — only the variable name is.
+ * A malformed, non-HTTPS, or loopback PUBLIC_SITE_URL must never crash
+ * checkout or reach Mercado Pago — Mercado Pago requires a public HTTPS
+ * back_url, so any such value activates the canonical-origin fallback
+ * instead. The configured value is never echoed in logs — only the variable
+ * name is.
  */
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1', '[::1]'])
+
+/** A host Mercado Pago will accept as a back_url origin — public, non-loopback. */
+function isPublicHostname(hostname: string): boolean {
+  const host = hostname.toLowerCase()
+  return (
+    host.length > 0 &&
+    !LOOPBACK_HOSTS.has(host) &&
+    !host.endsWith('.localhost') &&
+    !host.endsWith('.local')
+  )
+}
+
 export function checkoutBackUrl(): string {
   const siteUrl = process.env.PUBLIC_SITE_URL?.trim()
   if (siteUrl) {
     try {
-      return new URL('/pt-br/checkout/complete/', siteUrl).toString()
+      const url = new URL(siteUrl)
+      if (url.protocol !== 'https:' || !isPublicHostname(url.hostname)) {
+        console.error('[checkout] PUBLIC_SITE_URL is not a public HTTPS URL; using the SITE_ORIGIN constant for the Mercado Pago back_url')
+        return new URL('/pt-br/checkout/complete/', SITE_ORIGIN).toString()
+      }
+      return new URL('/pt-br/checkout/complete/', url).toString()
     } catch {
       console.error('[checkout] PUBLIC_SITE_URL is malformed; using the SITE_ORIGIN constant for the Mercado Pago back_url')
       return new URL('/pt-br/checkout/complete/', SITE_ORIGIN).toString()

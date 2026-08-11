@@ -302,7 +302,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       kicker: 'Service · Web Development',
       promise: 'Sites built to rank from the first commit',
       hero: ['Built to', 'rank.'],
-      sub: 'Next.js and Astro builds where performance budgets, semantic HTML and structured data are requirements, not afterthoughts. Migrations that keep every ranking you already own.',
+      sub: 'Next.js and Astro builds where performance budgets, semantic HTML and structured data are requirements, not afterthoughts. Migrations planned around ranking risk — redirects, QA and monitoring built in.',
       optionsLabel: 'Options',
       optionsHeading: 'Build it right, rank from day one.',
       optionsLead:
@@ -745,7 +745,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       kicker: 'Serviço · Sites e landing pages',
       promise: 'Sites construídos para ranquear desde o primeiro commit',
       hero: ['Construído', 'para ranquear.'],
-      sub: 'Construções em Next.js e Astro onde orçamentos de performance, HTML semântico e dados estruturados são requisitos, não reflexões tardias. Migrações que preservam cada ranking que você já conquistou.',
+      sub: 'Construções em Next.js e Astro onde orçamentos de performance, HTML semântico e dados estruturados são requisitos, não reflexões tardias. Migrações planejadas em torno do risco de ranking — redirecionamentos, QA e monitoramento incluídos.',
       optionsLabel: 'Opções',
       optionsHeading: 'Construa certo, ranqueie desde o dia um.',
       optionsLead:

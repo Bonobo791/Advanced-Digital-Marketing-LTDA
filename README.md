@@ -51,4 +51,6 @@ The supplied Andrew portrait (`src/lib/assets/andrew.png`) is committed with the
 
 ## License
 
-This website is under the PolyForm Shield 1.0.0 license.
+The PolyForm Shield 1.0.0 license applies to the first-party code, copy, and
+visual assets in this repository. Bundled third-party fonts (Archivo, Noto JP)
+remain under the SIL Open Font License — see `LICENSE.md` for the full terms.

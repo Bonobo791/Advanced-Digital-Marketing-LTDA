@@ -84,7 +84,7 @@ not implemented here.
 |---|---|---|
 | `MERCADO_PAGO_ACCESS_TOKEN` | Yes | Server-only Mercado Pago access token. Both production and test credentials are `APP_USR-...` (the environment is whichever section of the panel they came from). Never expose client-side. |
 | `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN` | For sandbox | When it equals the access token, sandbox mode is detected. Note: the Subscriptions API returns only `init_point` (there is no `sandbox_init_point` for preapprovals) — the checkout environment is resolved server-side from the preapproval. |
-| `PUBLIC_SITE_URL` | Yes (prod) | Base URL used for the `back_url` redirect back to `/pt-br/checkout/complete/`. Must be a public HTTPS domain Mercado Pago accepts — `localhost` and `*.netlify.app` are rejected with `400 invalid_field_content`. Falls back to the `SITE_ORIGIN` constant with a loud server-side warning if unset or malformed (a malformed value is never echoed in logs). |
+| `PUBLIC_SITE_URL` | Yes (prod) | Base URL used for the `back_url` redirect back to `/pt-br/checkout/complete/`. Must be a public HTTPS domain Mercado Pago accepts — non-HTTPS schemes and loopback hosts (`localhost`, `127.0.0.1`, `0.0.0.0`, `::1`) are rejected in code, and `*.netlify.app` is rejected by MP with `400 invalid_field_content`. Falls back to the `SITE_ORIGIN` constant with a loud server-side warning if unset, malformed, or not a public HTTPS URL (the configured value is never echoed in logs). |
 
 The token is read only inside `src/lib/server/mercadoPago.ts` and never appears
 in API responses, HTML, or logs. Do **not** add a Mercado Pago public key —
@@ -200,7 +200,7 @@ returned:
 |---|---|
 | 400 | `invalid_json`, `invalid_email`, `invalid_idempotency_key`, `invalid_service`, `service_unavailable`, `quote_only_service`, `invalid_ad_spend`, `no_services_selected` |
 | 502 | `unauthorized`, `api_error`, `invalid_response`, `missing_init_point`, `invalid_init_point` |
-| 503 | `missing_credentials`, `timeout` |
+| 503 | `missing_credentials`, `timeout`, `client_address_unavailable` |
 
 Unexpected errors are re-thrown so the server logs them (Sentry/Netlify logs).
 
@@ -220,12 +220,21 @@ state) and renders one of:
   (`Sua assinatura foi processada.` plus the subscription reference);
 - **pending** — any other status (`paused`, `cancelled`, ...) — the page never
   claims success for these;
+- **rate_limited** — too many verification requests from the same client in a
+  short window (throttled with the same per-IP limiter as subscription
+  creation; the page asks the customer to wait and retry);
 - **error / missing** — no `preapproval_id` on the URL, the API rejected the
   token, or the preapproval was not found (logged loudly server-side).
 
 The page does not persist any local state and does not trust browser query
 parameters as proof of payment on its own — the status is fetched from Mercado
 Pago. The page stays `noindex` and transient.
+
+Abuse protection runs before any outbound call: requests carrying a
+`preapproval_id` are throttled per client IP (same in-memory limiter and
+bucket as `POST /api/checkout/subscription`), and identifiers that fail a
+conservative shape check (only `[A-Za-z0-9_-]`, max 128 chars) are rejected
+without touching the Mercado Pago API.
 
 ## Webhooks
 
@@ -276,6 +285,12 @@ understandable inside Mercado Pago without any local database.
   in-memory per serverless instance (no shared store) — it raises the cost of
   abuse without adding infrastructure; if real abuse appears, move the limit
   to a shared store or a platform/WAF rule.
+- If the client IP cannot be resolved at all (`getClientAddress()` throws and
+  no proxy header is present), the request is **refused** with HTTP 503 +
+  `client_address_unavailable` rather than pooling unidentified clients into a
+  single rate-limit bucket — ten valid attempts from any customers would
+  otherwise exhaust the shared bucket and 429 unrelated visitors
+  (AGENTS.md: no silent fallbacks).
 
 ## Analytics
 

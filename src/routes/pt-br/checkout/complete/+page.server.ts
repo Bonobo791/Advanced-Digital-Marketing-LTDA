@@ -1,5 +1,8 @@
 import type { PageServerLoad } from './$types'
+import { isValidPreapprovalId } from '$lib/server/checkout'
 import { MercadoPagoError, getSubscription } from '$lib/server/mercadoPago'
+import { ClientAddressError, clientIpAddress } from '$lib/server/client-ip'
+import { checkRateLimit } from '$lib/server/rate-limit'
 
 // The return page must verify the redirect server-side (it reads the
 // preapproval_id query param), so it cannot be prerendered.
@@ -9,6 +12,7 @@ export type CompletionState =
   | { state: 'missing' }
   | { state: 'confirmed'; subscriptionId: string }
   | { state: 'pending'; subscriptionId: string }
+  | { state: 'rate_limited' }
   | { state: 'error' }
 
 /**
@@ -17,10 +21,40 @@ export type CompletionState =
  * back_url; the page only reports "processada" when the preapproval status is
  * `authorized` (verified live against the API). Anything else renders a
  * pending/error state instead of an unconditional success claim.
+ *
+ * Abuse protection runs before the outbound call: this page is unauthenticated
+ * and every request carrying a nonempty `preapproval_id` triggers a paid
+ * Mercado Pago API call, so requests are throttled per client IP with the same
+ * limiter used by subscription creation, and identifiers that fail the shape
+ * check are rejected without touching the API.
  */
-export const load: PageServerLoad = async ({ url }): Promise<CompletionState> => {
+export const load: PageServerLoad = async ({ url, request, getClientAddress }): Promise<CompletionState> => {
   const preapprovalId = url.searchParams.get('preapproval_id')
   if (!preapprovalId) return { state: 'missing' }
+
+  // Throttle before any outbound call. Fails loud when no client address is
+  // resolvable — pooling unidentified clients into one bucket would 429
+  // unrelated customers (same rule as the subscription endpoint).
+  let clientAddress: string
+  try {
+    clientAddress = clientIpAddress(getClientAddress, request)
+  } catch (error) {
+    if (error instanceof ClientAddressError) {
+      console.error('[checkout] cannot determine client IP for completion verification; refusing request')
+      return { state: 'error' }
+    }
+    throw error
+  }
+  const rateLimit = checkRateLimit(clientAddress)
+  if (!rateLimit.allowed) {
+    console.warn('[checkout] completion verification rate limit exceeded')
+    return { state: 'rate_limited' }
+  }
+
+  if (!isValidPreapprovalId(preapprovalId)) {
+    console.warn(`[checkout] rejecting malformed preapproval_id (${preapprovalId.length} chars)`)
+    return { state: 'error' }
+  }
 
   let subscription
   try {

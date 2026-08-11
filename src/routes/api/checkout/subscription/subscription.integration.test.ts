@@ -189,6 +189,70 @@ describe('POST /api/checkout/subscription', () => {
     const ok = await POST(otherIp)
     expect(ok.status).toBe(200)
   })
+
+  it('fails loudly when no client IP is resolvable, instead of pooling unidentified clients', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const event = {
+        request: new Request('http://localhost/api/checkout/subscription', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(validBody),
+        }),
+        getClientAddress: (): string => {
+          throw new Error('adapter provides no client address')
+        },
+      } as Parameters<typeof POST>[0]
+
+      const response = await POST(event)
+      expect(response.status).toBe(503)
+      expect(await response.json()).toEqual({ error: 'client_address_unavailable' })
+      expect(mockCreateSubscription).not.toHaveBeenCalled()
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('cannot determine client IP for rate limiting'),
+      )
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
+  it('still rate-limits via proxy headers when getClientAddress throws', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const event = (forwardedFor?: string, realIp?: string) => {
+        const headers: Record<string, string> = { 'content-type': 'application/json' }
+        if (forwardedFor !== undefined) headers['x-forwarded-for'] = forwardedFor
+        if (realIp !== undefined) headers['x-real-ip'] = realIp
+        return {
+          request: new Request('http://localhost/api/checkout/subscription', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(validBody),
+          }),
+          getClientAddress: (): string => {
+            throw new Error('adapter provides no client address')
+          },
+        } as Parameters<typeof POST>[0]
+      }
+
+      // x-forwarded-for first hop is used.
+      expect((await POST(event('203.0.113.7, 10.0.0.1'))).status).toBe(200)
+      // x-real-ip is used when x-forwarded-for is absent.
+      expect((await POST(event(undefined, '203.0.113.8'))).status).toBe(200)
+      // The proxy-derived IPs are NOT pooled with the resolvable-IP bucket:
+      // exhausting one forwarded IP does not affect a different forwarded IP.
+      for (let i = 0; i < 10; i += 1) {
+        expect((await POST(event('198.51.100.9'))).status).toBe(200)
+      }
+      expect((await POST(event('198.51.100.9'))).status).toBe(429)
+      expect((await POST(event('198.51.100.10'))).status).toBe(200)
+
+      // The fail-loud path logged nothing (no unidentified pooling).
+      expect(errorSpy).not.toHaveBeenCalled()
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
 })
 
 describe('checkoutBackUrl', () => {
@@ -222,6 +286,37 @@ describe('checkoutBackUrl', () => {
       expect(url).toBe('https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/')
       expect(errorSpy).toHaveBeenCalledWith(
         expect.stringContaining('PUBLIC_SITE_URL is malformed'),
+      )
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
+  it('falls back to the canonical origin when PUBLIC_SITE_URL is not HTTPS', () => {
+    // Syntactically valid but http: — Mercado Pago requires a public HTTPS
+    // back_url, so the configured value must not be used.
+    vi.stubEnv('PUBLIC_SITE_URL', 'http://example.com')
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const url = checkoutBackUrl()
+      expect(url).toBe('https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/')
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('PUBLIC_SITE_URL is not a public HTTPS URL'),
+      )
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
+  it('falls back to the canonical origin when PUBLIC_SITE_URL is a loopback host', () => {
+    // https on localhost is valid URL syntax but never a public origin.
+    vi.stubEnv('PUBLIC_SITE_URL', 'https://localhost:5173')
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const url = checkoutBackUrl()
+      expect(url).toBe('https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/')
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('PUBLIC_SITE_URL is not a public HTTPS URL'),
       )
     } finally {
       errorSpy.mockRestore()

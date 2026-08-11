@@ -1,6 +1,18 @@
 import { env } from '$env/dynamic/public'
 import type { Locale } from './locale'
 
+/**
+ * Browser-side bound for the `/api/checkout/subscription` round-trip.
+ *
+ * Deliberately LONGER than the server's `REQUEST_TIMEOUT_MS` (15s in
+ * `src/lib/server/mercadoPago.ts`): this timer starts when the browser issues
+ * the fetch, so it also covers browser→function latency and server
+ * processing. An equal or shorter client timeout could abort right as the
+ * server returns the checkout URL, turning a successful preapproval into a
+ * generic failure. Guarded by `checkout-timeouts.unit.test.ts`.
+ */
+export const CHECKOUT_REQUEST_TIMEOUT_MS = 30_000
+
 export const EMAIL = 'contact@AdvancedDigitalMarketingLTDA.com'
 export const PORTUGUESE_EMAIL = 'contato@AdvancedDigitalMarketingLTDA.com'
 export const MAILTO = `mailto:${EMAIL}?subject=Strategy%20call%20request`
@@ -132,7 +144,7 @@ export const PAGE_COPY: Record<Locale, PageCopy> = {
       services: [
         { jp: '技術', title: 'Technical SEO', line: 'The foundation everything else sits on.', detail: 'Crawl architecture, Core Web Vitals, structured data and indexation control. We find what is holding your site back and fix it at the code level, where the problem actually lives.', tags: ['Site audit', 'Schema markup', 'Speed engineering', 'Log analysis'], product: 'seo' },
         { jp: '生成', title: 'GEO', line: 'Get cited by the answer engines.', detail: 'Generative Engine Optimization. We structure your content, entities and authority signals so ChatGPT, Perplexity and Google AI Overviews quote you by name when your buyers ask.', tags: ['Entity mapping', 'Answer-first content', 'Citation tracking', 'llms.txt'], product: 'seo' },
-        { jp: '開発', title: 'Web Development', line: 'Sites built to rank from the first commit.', detail: 'Next.js and Astro builds where performance budgets, semantic HTML and structured data are requirements, not afterthoughts. Migrations that keep every ranking you already own.', tags: ['Design and build', 'Headless CMS', 'Safe migrations', 'CRO iteration'], product: 'website-development' },
+        { jp: '開発', title: 'Web Development', line: 'Sites built to rank from the first commit.', detail: 'Next.js and Astro builds where performance budgets, semantic HTML and structured data are requirements, not afterthoughts. Migrations planned around ranking risk — redirects, QA and monitoring built in.', tags: ['Design and build', 'Headless CMS', 'Safe migrations', 'CRO iteration'], product: 'website-development' },
         { jp: '広告', title: 'Paid Search', line: 'Buy the clicks you cannot win yet.', detail: 'Google Ads managed against the same keyword map as your organic strategy. One plan, two channels, no wasted spend while the organic work compounds.', tags: ['Account restructure', 'Landing pages', 'Feed optimization', 'Weekly reporting'], product: 'google-ads-management' },
         { jp: '広告', title: 'Meta Ads', line: 'Buy attention while the organic work compounds.', detail: 'Facebook and Instagram campaigns run against the same keyword and conversion data as your organic strategy. One plan, every channel, no wasted spend.', tags: ['Audience targeting', 'Creative testing', 'Pixel and tracking', 'Weekly reporting'], product: 'meta-ads-management' },
       ],

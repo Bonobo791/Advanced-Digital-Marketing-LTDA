@@ -5,6 +5,7 @@ import { PricingError, computeMonthlyQuote } from '$lib/server/pricing'
 import { MercadoPagoError, createSubscription } from '$lib/server/mercadoPago'
 import { checkoutBackUrl, isValidEmail } from '$lib/server/checkout'
 import { checkRateLimit } from '$lib/server/rate-limit'
+import { ClientAddressError, clientIpAddress } from '$lib/server/client-ip'
 
 // API routes run as Netlify Functions; the root layout's prerender/trailingSlash
 // settings must not apply to them.
@@ -66,7 +67,20 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
   // Abuse protection: the request is validated but not yet billed — every
   // accepted request here calls the paid Mercado Pago API. Throttle per client
   // IP (best-effort per serverless instance; see rate-limit.ts).
-  const rateLimit = checkRateLimit(clientIpAddress(getClientAddress, request))
+  let clientAddress: string
+  try {
+    clientAddress = clientIpAddress(getClientAddress, request)
+  } catch (error) {
+    if (error instanceof ClientAddressError) {
+      // Fail loudly (AGENTS.md): without a client address we cannot rate-limit,
+      // and pooling unidentified clients into one bucket would 429 unrelated
+      // customers. Refuse the request instead of silently accepting it.
+      console.error('[checkout] cannot determine client IP for rate limiting; refusing request')
+      return json({ error: 'client_address_unavailable' }, { status: 503 })
+    }
+    throw error
+  }
+  const rateLimit = checkRateLimit(clientAddress)
   if (!rateLimit.allowed) {
     console.warn('[checkout] rate limit exceeded; rejecting subscription creation')
     return json({ error: 'rate_limited' }, { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } })
@@ -108,20 +122,3 @@ function mercadoPagoStatus(code: MercadoPagoError['code']): number {
   }
 }
 
-/**
- * Resolves the client IP for rate limiting. Prefers the platform-provided
- * address (adapter-netlify populates `getClientAddress`); falls back to the
- * first `x-forwarded-for` hop, then `x-real-ip`, then a stable placeholder.
- */
-function clientIpAddress(
-  getClientAddress: () => string,
-  request: Request,
-): string {
-  try {
-    return getClientAddress()
-  } catch {
-    const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    if (forwarded) return forwarded
-    return request.headers.get('x-real-ip')?.trim() || 'unknown'
-  }
-}

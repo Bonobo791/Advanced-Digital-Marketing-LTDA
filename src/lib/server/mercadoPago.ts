@@ -16,7 +16,16 @@
 import { isSandboxAccessToken } from './sandbox.ts'
 
 export const PREAPPROVAL_ENDPOINT = 'https://api.mercadopago.com/preapproval'
-const REQUEST_TIMEOUT_MS = 15_000
+/**
+ * Time budget for a single Mercado Pago API call.
+ *
+ * The client-side checkout timer in `SubscribeSection.svelte` must stay
+ * comfortably longer than this: the browser clock starts when the fetch is
+ * issued and therefore also covers browser→function latency and server
+ * processing, so an equal or shorter client timeout could abort right as the
+ * server returns the checkout URL. Guarded by `checkout-timeouts.unit.test.ts`.
+ */
+export const REQUEST_TIMEOUT_MS = 15_000
 
 export type CreateSubscriptionInput = {
   email: string

@@ -21,7 +21,7 @@
     type CatalogServiceId,
   } from '$lib/catalog'
   import { parseBRLInput } from '$lib/brl'
-  import { EMAIL } from '$lib/constants'
+  import { CHECKOUT_REQUEST_TIMEOUT_MS, EMAIL } from '$lib/constants'
   import type { Locale } from '$lib/locale'
 
   let {
@@ -184,6 +184,10 @@
         return locale === 'pt-BR'
           ? 'O pagamento ainda não está configurado. Tente novamente mais tarde.'
           : 'Payments are not configured yet. Please try again later.'
+      case 'client_address_unavailable':
+        return locale === 'pt-BR'
+          ? 'Não foi possível identificar sua conexão. Tente novamente mais tarde.'
+          : 'Could not identify your connection. Please try again later.'
       case 'rate_limited':
         return locale === 'pt-BR'
           ? 'Muitas tentativas. Aguarde alguns minutos e tente novamente.'
@@ -238,7 +242,11 @@
       const controller = new AbortController()
       // Bound the request: a stalled Mercado Pago round-trip must reach the
       // error handling instead of leaving `submitting` active indefinitely.
-      const timeout = window.setTimeout(() => controller.abort(), 15_000)
+      // Leave headroom beyond the server's own timeout (mercadoPago.ts
+      // REQUEST_TIMEOUT_MS = 15 s): this timer covers the full browser →
+      // function → Mercado Pago round-trip, so it must not expire while the
+      // function is still within its upstream budget and about to return.
+      const timeout = window.setTimeout(() => controller.abort(), CHECKOUT_REQUEST_TIMEOUT_MS)
       try {
         const response = await fetch('/api/checkout/subscription', {
           method: 'POST',
