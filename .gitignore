@@ -12,3 +12,6 @@ reasonix.toml
 .playwright-cli
 .impeccable
 .codex
+# Local environment files with real credentials
+.env.local
+.reasonix

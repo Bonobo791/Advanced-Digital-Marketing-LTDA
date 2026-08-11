@@ -846,6 +846,8 @@ img { display: block; max-width: 100%; }
 .index-home .svc-body-grid p { grid-column: 2; max-width: 56ch; margin: 0; color: var(--index-ink60); font-size: 16px; }
 .index-home .svc-tags { display: flex; grid-column: 2; flex-wrap: wrap; gap: 8px 24px; margin-top: 20px; color: var(--index-ink); font-family: 'ADM Semi', sans-serif; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
 .index-home .svc-tags span::before { margin-right: 10px; color: var(--index-verm); content: '·'; }
+.index-home .svc-cta { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 36px; color: var(--index-verm); font-family: 'ADM Semi', sans-serif; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; text-decoration: none; }
+.index-home .svc-cta:hover { color: var(--index-ink); }
 .index-home .steps { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 80px; }
 .index-home .steps::before { position: absolute; top: 50%; right: 0; left: 0; height: 1px; background: var(--index-hair-p); content: ''; }
 .index-home .step { position: relative; display: flex; min-height: 400px; flex-direction: column; }
