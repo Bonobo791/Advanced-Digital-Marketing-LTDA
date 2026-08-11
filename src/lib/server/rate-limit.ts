@@ -18,8 +18,9 @@
 const WINDOW_MS = 60_000
 const MAX_REQUESTS_PER_WINDOW = 10
 
-// Opportunistically pruned: buckets for IPs whose newest request fell out of
-// the window are dropped so the map cannot grow without bound.
+// Hard cap on tracked client IPs. When the map is at capacity and a new IP
+// needs a bucket, one slot is freed (expired buckets first, then the
+// oldest-inserted) so the map can never grow without bound.
 const MAX_BUCKETS = 10_000
 
 const buckets = new Map<string, number[]>()
@@ -31,14 +32,20 @@ export type RateLimitResult = { allowed: boolean; retryAfterSeconds: number }
  * window. `now` is injectable for tests.
  */
 export function checkRateLimit(ip: string, now: number = Date.now()): RateLimitResult {
-  if (buckets.size > MAX_BUCKETS) pruneExpiredBuckets(now)
-
   const windowStart = now - WINDOW_MS
-  const recent = (buckets.get(ip) ?? []).filter((timestamp) => timestamp > windowStart)
+  const existing = buckets.get(ip)
+  const recent = existing ? existing.filter((timestamp) => timestamp > windowStart) : []
 
   if (recent.length >= MAX_REQUESTS_PER_WINDOW) {
     const oldest = recent[0] ?? now
     return { allowed: false, retryAfterSeconds: Math.ceil((oldest + WINDOW_MS - now) / 1000) }
+  }
+
+  // A brand-new client IP needs a bucket: free a slot before inserting so the
+  // cap is a hard bound. Existing IPs (even with fully expired timestamps)
+  // reuse their bucket and never force an eviction.
+  if (!existing && buckets.size >= MAX_BUCKETS) {
+    makeRoom(now)
   }
 
   recent.push(now)
@@ -46,15 +53,32 @@ export function checkRateLimit(ip: string, now: number = Date.now()): RateLimitR
   return { allowed: true, retryAfterSeconds: 0 }
 }
 
-/** Drops buckets whose last request has left the window. */
-function pruneExpiredBuckets(now: number): void {
+/**
+ * Frees one bucket for a new client IP when the map is at capacity. First
+ * drops any bucket whose last request has left the window; when every bucket
+ * is still active inside the window, evicts the oldest-inserted one (Map
+ * preserves insertion order, so this is O(1)). The map therefore never
+ * exceeds MAX_BUCKETS, and a flood of distinct IPs cannot grow memory or turn
+ * every request into an O(n) scan of an oversized map.
+ */
+function makeRoom(now: number): void {
   const windowStart = now - WINDOW_MS
   for (const [ip, timestamps] of buckets) {
-    if (timestamps[timestamps.length - 1] <= windowStart) buckets.delete(ip)
+    if (timestamps[timestamps.length - 1] <= windowStart) {
+      buckets.delete(ip)
+      return
+    }
   }
+  const oldest = buckets.keys().next()
+  if (!oldest.done) buckets.delete(oldest.value)
 }
 
 /** Test hook: clears every bucket. Never called from production code paths. */
 export function resetRateLimitBuckets(): void {
   buckets.clear()
+}
+
+/** Test hook: number of tracked buckets. Never called from production code paths. */
+export function rateLimitBucketCount(): number {
+  return buckets.size
 }
