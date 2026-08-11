@@ -5,6 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/.codex" />
       <excludeFolder url="file://$MODULE_DIR$/.impeccable" />
+      <excludeFolder url="file://$MODULE_DIR$/.netlify" />
       <excludeFolder url="file://$MODULE_DIR$/.playwright-cli" />
       <excludeFolder url="file://$MODULE_DIR$/.reasonix" />
       <excludeFolder url="file://$MODULE_DIR$/.svelte-kit" />
