@@ -24,7 +24,13 @@ Prospects evaluate the agency from a desktop or mobile browser, often comparing 
 
 ## Capabilities and Constraints
 
-Public pages are Home, About, and Contact, built with SvelteKit and deployed as prerendered web pages. Preserve the existing routes, direct email behavior, registered-office details, services, and accessibility behavior. Do not fabricate results, client logos, testimonials, certifications, partnerships, or performance claims.
+Public pages are Home, About, Contact, the Services index and Service detail
+pages (en + pt-BR), and the subscription checkout return page, built with
+SvelteKit and deployed as prerendered web pages (the checkout endpoint and the
+return page run as Netlify Functions). Preserve the existing routes, direct
+email behavior, registered-office details, services, and accessibility
+behavior. Do not fabricate results, client logos, testimonials,
+certifications, partnerships, or performance claims.
 
 ## Brand Commitments
 

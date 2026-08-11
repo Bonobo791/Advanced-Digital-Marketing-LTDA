@@ -4,7 +4,7 @@ Cyberpunk-themed marketing agency website. SvelteKit 2 + Svelte 5 (runes) + Tail
 
 **Owner / operator:** Andrew Philip Weilbacher
 **Services:** SEO & GEO, Paid Search, Paid Social, Web Design
-**Registered office:** SAO PAULO, SP
+**Registered office:** São Paulo, SP
 **Contact:** contact@AdvancedDigitalMarketingLTDA.com
 
 ## Develop
@@ -15,7 +15,10 @@ npm run check
 npm run dev
 ```
 
-No environment variables are required for the public site.
+No environment variables are required for the public site. The subscription
+checkout needs Mercado Pago credentials (`MERCADO_PAGO_ACCESS_TOKEN`,
+optionally `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN` and `PUBLIC_SITE_URL`) — see
+`docs/mercado-pago-subscriptions.md`.
 
 ## Build
 
@@ -40,10 +43,10 @@ The supplied Andrew portrait (`src/lib/assets/andrew.png`) is committed with the
 
 ## Structure
 
-- `src/routes/` — Home (`+page.svelte`), `about/`, `contact/` (+ `pt-br/` variants)
-- `src/lib/components/pages/` — Home, About, Contact page components
+- `src/routes/` — home, `about/`, `contact/`, `services/` + `services/[slug]/` (and `pt-br/` variants), the `pt-br/checkout/complete/` return page, and the single API route `api/checkout/subscription`
+- `src/lib/components/pages/` — Home, About, Contact, ServicesIndex, Service, SubscribeSection, WebsiteBuildPricing page components
 - `src/lib/components/cyber/` — boot blinds, CRT overlay, terminal typing, hover scramble, glitch word, scroll reveals
-- `src/lib/components/chrome/` — nav and footer
+- `src/lib/components/chrome/` — nav, footer, LocalizedHead, curtain, language suggestion
 - `src/app.css` — design tokens, chamfer clips, glitch/CRT/ledger styles, reduced-motion rules
 
 ## License

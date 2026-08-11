@@ -29,6 +29,13 @@ License](#changes-and-new-works-license).
 
 ## Notices
 
+The PolyForm Shield license above applies to the **first-party** code, copy,
+and visual assets in this repository. Bundled third-party fonts are licensed
+separately under the SIL Open Font License — see the notices below. The npm
+font packages (`@fontsource-variable/archivo`, `@fontsource/jetbrains-mono`,
+`@fontsource/overpass`) carry the same OFL terms in `node_modules`; only
+`@fontsource-variable/archivo` is imported by the site.
+
 ## Third-Party Notices — SIL Open Font License
 
 The bundled font files in `static/fonts/` are distributed under the

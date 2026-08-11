@@ -4,7 +4,7 @@ type EdgeContext = {
   cookies: {
     get(name: string): string | undefined
     set(options: { name: string; value: string; path: string; sameSite: 'lax'; secure: boolean }): void
-    delete(name: string): void
+    delete(name: string, options?: { path?: string }): void
   }
   geo: { country?: { code?: string } }
   next(): Response | Promise<Response>
@@ -33,7 +33,9 @@ export default function locale(request: Request, context: EdgeContext) {
   if (decision.geoBr === true) {
     context.cookies.set({ name: 'geo_br', value: '1', path: '/', sameSite: 'lax', secure: true })
   } else if (decision.geoBr === false) {
-    context.cookies.delete('geo_br')
+    // The cookie is set with path '/', so the delete must target the same
+    // path — otherwise the geo cookie never expires for the user.
+    context.cookies.delete('geo_br', { path: '/' })
   }
 
   return context.next()

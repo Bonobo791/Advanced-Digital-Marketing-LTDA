@@ -19,7 +19,7 @@ This is a SvelteKit 2 / Svelte 5 site using TypeScript, Vite, and Tailwind CSS.
 
 **Tech stack:** Node 24 / npm 11 · SvelteKit 2 + Svelte 5 (runes) · TypeScript (strict) · Vite 6 · Tailwind CSS 3 + PostCSS/autoprefixer · Fontsource (Archivo, JetBrains Mono, Overpass) · Vitest + fast-check (tests) · Stryker (mutation testing) · Netlify (adapter-netlify, Edge Functions).
 
-- `src/routes/` — public pages (en + `pt-br/`): `about/`, `contact/`, and home; there are no `api/` routes.
+- `src/routes/` — public pages (en + `pt-br/`): home, `about/`, `contact/`, the `services/` index + `services/[slug]/` details (and `pt-br/servicos/` variants), plus the `pt-br/checkout/complete/` return page. The only API route is `src/routes/api/checkout/subscription/` (POST, Netlify Function); there are no other `api/` routes.
 - `src/lib/components/` contains reusable `chrome` (navigation and footer), `cyber` (visual effects), and `pages` components.
 - `src/lib/` contains locale logic, constants, client helpers, and tests.
 - `static/` contains public fonts and static assets; `src/lib/assets/` contains imported visual assets.
@@ -43,7 +43,11 @@ npm run test:watch       # run Vitest interactively
 npm run mutate           # run configured Stryker mutation tests
 ```
 
-The public site requires no environment variables.
+The public site requires no environment variables. The only server-side
+secrets are the Mercado Pago credentials used by the subscription checkout
+(see `docs/mercado-pago-subscriptions.md`): `MERCADO_PAGO_ACCESS_TOKEN`,
+`MERCADO_PAGO_SANDBOX_ACCESS_TOKEN` (test mode), and optionally
+`PUBLIC_SITE_URL` for the checkout `back_url`. Never commit them.
 
 ## Coding Style & Naming Conventions
 
