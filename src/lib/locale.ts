@@ -3,21 +3,19 @@ export const SITE_ORIGIN = 'https://advanceddigitalmarketingltda.com'
 export const LOCALES = ['en-US', 'pt-BR'] as const
 export type Locale = (typeof LOCALES)[number]
 
-export const PAGE_IDS = ['home', 'about', 'contact', 'pricing'] as const
+export const PAGE_IDS = ['home', 'about', 'contact'] as const
 export type PageId = (typeof PAGE_IDS)[number]
 
 export const LOCALE_ROUTES: Record<PageId, Record<Locale, string>> = {
   home: { 'en-US': '/', 'pt-BR': '/pt-br/' },
   about: { 'en-US': '/about/', 'pt-BR': '/pt-br/sobre/' },
   contact: { 'en-US': '/contact/', 'pt-BR': '/pt-br/contato/' },
-  pricing: { 'en-US': '/pricing/', 'pt-BR': '/pt-br/precos/' },
 }
 
 export const PAGE_JP: Record<PageId, string> = {
   home: '先進デジタルマーケティング',
   about: '運営者',
   contact: '連絡',
-  pricing: '料金',
 }
 
 export const PAGE_META: Record<Locale, Record<PageId, { title: string; description: string }>> = {
@@ -34,10 +32,6 @@ export const PAGE_META: Record<Locale, Record<PageId, { title: string; descripti
       title: 'Contact | Advanced Digital Marketing LTDA',
       description: 'Contact Advanced Digital Marketing LTDA to discuss SEO, GEO, paid media, or web engineering.',
     },
-    pricing: {
-      title: 'Pricing | Advanced Digital Marketing LTDA',
-      description: 'One-time project pricing for SEO, GEO, paid media, and web engineering from Advanced Digital Marketing LTDA.',
-    },
   },
   'pt-BR': {
     home: {
@@ -51,10 +45,6 @@ export const PAGE_META: Record<Locale, Record<PageId, { title: string; descripti
     contact: {
       title: 'Contato | SEO local e visibilidade em IA',
       description: 'Fale sobre como sua empresa pode aparecer no Google, no Maps e nas respostas de IA.',
-    },
-    pricing: {
-      title: 'Preços | Advanced Digital Marketing LTDA',
-      description: 'Investimento em projetos de SEO, GEO, mídia paga e desenvolvimento web da Advanced Digital Marketing LTDA.',
     },
   },
 }
@@ -74,7 +64,7 @@ export const CHROME_COPY: Record<Locale, {
   languageLabel: string
 }> = {
   'en-US': {
-    navigation: { home: 'Home', about: 'About', contact: 'Contact', pricing: 'Pricing' },
+    navigation: { home: 'Home', about: 'About', contact: 'Contact' },
     services: 'Services',
     navigationLabel: 'Primary navigation',
     bookCall: 'Book a call',
@@ -88,7 +78,7 @@ export const CHROME_COPY: Record<Locale, {
     languageLabel: 'Language',
   },
   'pt-BR': {
-    navigation: { home: 'Início', about: 'Sobre', contact: 'Contato', pricing: 'Preços' },
+    navigation: { home: 'Início', about: 'Sobre', contact: 'Contato' },
     services: 'Serviços',
     navigationLabel: 'Navegação principal',
     bookCall: 'Agende uma conversa',

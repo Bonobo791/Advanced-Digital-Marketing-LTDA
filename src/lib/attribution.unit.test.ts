@@ -29,14 +29,14 @@ describe('sanitizeAttribution', () => {
     const attribution = sanitizeAttribution({
       utm_source: 'meta',
       gclid: 'x'.repeat(600),
-      landingPage: '/pricing',
+      landingPage: '/contact',
       referrer: 'https://google.com',
       ignored: 'junk',
     })
     expect(attribution).toEqual({
       utmSource: 'meta',
       gclid: 'x'.repeat(512),
-      landingPage: '/pricing',
+      landingPage: '/contact',
       referrer: 'https://google.com',
     })
   })

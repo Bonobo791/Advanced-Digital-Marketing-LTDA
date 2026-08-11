@@ -17,16 +17,15 @@
 
 This is a SvelteKit 2 / Svelte 5 site using TypeScript, Vite, and Tailwind CSS.
 
-**Tech stack:** Node 24 / npm 11 · SvelteKit 2 + Svelte 5 (runes) · TypeScript (strict) · Vite 6 · Tailwind CSS 3 + PostCSS/autoprefixer · Fontsource (Archivo, JetBrains Mono, Overpass) · Vitest + fast-check (tests) · Stryker (mutation testing) · Netlify (adapter-netlify, Edge Functions) · Turso/libSQL (`@libsql/client`).
+**Tech stack:** Node 24 / npm 11 · SvelteKit 2 + Svelte 5 (runes) · TypeScript (strict) · Vite 6 · Tailwind CSS 3 + PostCSS/autoprefixer · Fontsource (Archivo, JetBrains Mono, Overpass) · Vitest + fast-check (tests) · Stryker (mutation testing) · Netlify (adapter-netlify, Edge Functions).
 
-- `src/routes/` — public pages (en + `pt-br/`): `pricing/` (and `pt-br/precos/`) plus `about/`, `contact/`, and home; there are no `api/` routes.
+- `src/routes/` — public pages (en + `pt-br/`): `about/`, `contact/`, and home; there are no `api/` routes.
 - `src/lib/components/` contains reusable `chrome` (navigation and footer), `cyber` (visual effects), and `pages` components.
-- `src/lib/server/` — Turso/libSQL access (`db.ts`, `schema.mjs`/`seed.mjs`), versioned pricing (`pricing.ts`), and product lookup (`products.ts`).
 - `src/lib/` contains locale logic, constants, client helpers, and tests.
 - `static/` contains public fonts and static assets; `src/lib/assets/` contains imported visual assets.
 - `new-assets/` — gitignored design **handoff** folder. New design mockups, drafts, and assets are delivered here for implementation only. Nothing that ships on the live site lives here: implement mockups as routes/components, and move any asset that should go live into its proper app location (`src/lib/assets/` for imported assets, `static/` for public ones) before shipping. Do not treat `new-assets/` as a source of truth for production content or assets.
 - `netlify/edge-functions/` contains deployment runtime code.
-- `scripts/` contains `migrate.mjs` (db migration) and build-time asset synchronization. Do not edit generated `.svelte-kit/`, `build/`, or `reports/` output.
+- `scripts/` contains build-time asset synchronization. Do not edit generated `.svelte-kit/`, `build/`, or `reports/` output.
 
 ## Build, Test, and Development Commands
 
@@ -44,7 +43,7 @@ npm run test:watch       # run Vitest interactively
 npm run mutate           # run configured Stryker mutation tests
 ```
 
-Copy `.env.example` to `.env`/`.env.local` and set `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` (real credentials live in the gitignored `.env.local`). `npm run db:migrate` applies the Turso schema + seed and loads `.env`/`.env.local` itself.
+The public site requires no environment variables.
 
 ## Coding Style & Naming Conventions
 
@@ -60,4 +59,4 @@ Use a short imperative subject, such as `Fix Netlify production build`, and keep
 
 ## Security & Configuration
 
-Never commit secrets. Prices displayed on the pricing page are read server-side from Turso (never hardcoded in the frontend); the database is the source of truth for products and prices.
+Never commit secrets.
