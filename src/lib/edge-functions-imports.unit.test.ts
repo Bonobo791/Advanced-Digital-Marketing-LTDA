@@ -9,8 +9,10 @@
  *
  * This test statically walks the import graph reachable from
  * `netlify/edge-functions/` and fails if any reachable source file contains a
- * runtime (non type-only) `$lib`/`$app` import. Type-only imports are safe:
- * esbuild erases them before bundling.
+ * runtime (non type-only) `$lib`/`$app` import, or a relative import without an
+ * explicit file extension. Both are invisible to esbuild-style local resolution
+ * but break the remote eszip bundler. Type-only imports are safe: esbuild
+ * erases them before bundling.
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, extname, join, resolve } from 'node:path'
@@ -68,6 +70,11 @@ function findForbiddenSvelteKitImports(): { file: string; specifier: string }[] 
       if (SVELTEKIT_ALIASES.some((alias) => specifier === alias || specifier.startsWith(`${alias}/`))) {
         violations.push({ file: relativeToRoot(file), specifier })
       } else if (specifier.startsWith('.')) {
+        // Netlify's edge bundler (eszip) resolves relative specifiers as exact
+        // file paths — it does not probe for extensions. Require them here.
+        if (!SOURCE_EXTENSIONS.has(extname(specifier))) {
+          violations.push({ file: relativeToRoot(file), specifier })
+        }
         const resolved = resolveRelative(file, specifier)
         if (resolved && !visited.has(resolved)) queue.push(resolved)
       }
@@ -87,7 +94,7 @@ function relativeToRoot(file: string): string {
 }
 
 describe('netlify edge-function import graph', () => {
-  it('contains no runtime $lib/$app imports reachable from netlify/edge-functions/', () => {
+  it('resolves every import reachable from netlify/edge-functions/ without $lib/$app aliases or extension-less relative paths', () => {
     const violations = findForbiddenSvelteKitImports()
     expect(violations).toEqual([])
   })
