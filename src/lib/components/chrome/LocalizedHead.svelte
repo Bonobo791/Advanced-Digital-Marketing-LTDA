@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { browser } from '$app/environment'
   import { absoluteUrl, LOCALE_ROUTES, PAGE_META, type Locale, type PageId } from '$lib/locale'
   import { SERVICE_META, SERVICE_ROUTES, type ServiceId } from '$lib/services'
 
@@ -6,6 +7,14 @@
 
   let metadata = $derived(service ? SERVICE_META[locale][service] : PAGE_META[locale][page!])
   let routes = $derived(service ? SERVICE_ROUTES[service] : LOCALE_ROUTES[page!])
+
+  // In-app navigation reuses the outer <html> element, so the SSR lang
+  // attribute must be kept in sync on the client (screen readers otherwise
+  // keep pronouncing the previous locale).
+  $effect(() => {
+    if (!browser) return
+    document.documentElement.lang = locale
+  })
 </script>
 
 <svelte:head>
