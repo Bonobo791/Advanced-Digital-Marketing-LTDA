@@ -72,20 +72,27 @@ export function isAllowedCheckoutUrl(value: unknown): value is string {
 }
 
 /**
- * Picks the redirect URL from the create-subscription response. The response
- * carries both `init_point` (production) and `sandbox_init_point` (sandbox),
- * so the choice must be driven by the credentials in use — never by whichever
- * field happens to be populated. A missing field for the detected environment
- * returns `undefined` and becomes `missing_init_point`: an incomplete response
- * must never send a real customer to the sandbox (or a test session to
- * production). Mirrors the removed Checkout Pro client.
+ * Picks the redirect URL from the create-subscription response.
+ *
+ * The Subscriptions API (`POST /preapproval`) returns a single checkout link
+ * in `init_point` regardless of environment — sandbox mode is determined by
+ * the credential used (TEST vs APP_USR), and the checkout page resolves the
+ * environment from the preapproval itself. Unlike the removed Checkout Pro
+ * client, there is no `sandbox_init_point` field here.
+ *
+ * Preference: `sandbox_init_point` when present (defensive, in case another
+ * API shape ever returns both), otherwise `init_point`. A response with
+ * NEITHER field returns `undefined` and becomes `missing_init_point` — but a
+ * response that omits `init_point` while carrying only a sandbox URL is still
+ * rejected in production mode, so a real customer is never sent to the
+ * sandbox.
  */
 export function selectInitPoint(
   response: { init_point?: string; sandbox_init_point?: string },
   accessToken: string | undefined,
   sandboxToken: string | undefined,
 ): string | undefined {
-  if (isSandboxAccessToken(accessToken, sandboxToken)) {
+  if (isSandboxAccessToken(accessToken, sandboxToken) && response.sandbox_init_point) {
     return response.sandbox_init_point
   }
   return response.init_point

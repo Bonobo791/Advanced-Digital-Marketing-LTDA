@@ -82,9 +82,9 @@ not implemented here.
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `MERCADO_PAGO_ACCESS_TOKEN` | Yes | Server-only Mercado Pago access token (production `APP_USR-...` or test `TEST-...`). Never expose client-side. |
-| `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN` | For sandbox | When it equals the access token, the client uses `sandbox_init_point` (test mode). |
-| `PUBLIC_SITE_URL` | Yes (prod) | Base URL used for the `back_url` redirect back to `/pt-br/checkout/complete/`. Falls back to the `SITE_ORIGIN` constant with a loud server-side warning if unset or malformed (a malformed value is never echoed in logs). |
+| `MERCADO_PAGO_ACCESS_TOKEN` | Yes | Server-only Mercado Pago access token. Both production and test credentials are `APP_USR-...` (the environment is whichever section of the panel they came from). Never expose client-side. |
+| `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN` | For sandbox | When it equals the access token, sandbox mode is detected. Note: the Subscriptions API returns only `init_point` (there is no `sandbox_init_point` for preapprovals) — the checkout environment is resolved server-side from the preapproval. |
+| `PUBLIC_SITE_URL` | Yes (prod) | Base URL used for the `back_url` redirect back to `/pt-br/checkout/complete/`. Must be a public HTTPS domain Mercado Pago accepts — `localhost` and `*.netlify.app` are rejected with `400 invalid_field_content`. Falls back to the `SITE_ORIGIN` constant with a loud server-side warning if unset or malformed (a malformed value is never echoed in logs). |
 
 The token is read only inside `src/lib/server/mercadoPago.ts` and never appears
 in API responses, HTML, or logs. Do **not** add a Mercado Pago public key —
@@ -92,7 +92,8 @@ this redirect flow needs none. Do not prefix any of these with `PUBLIC_` for
 `import.meta.env` access.
 
 > Note: local `.env` files are gitignored. For local development, set
-> `MERCADO_PAGO_ACCESS_TOKEN=TEST-...` (test credentials) — do **not** copy
+> `MERCADO_PAGO_ACCESS_TOKEN` to the **test** Access Token from the panel's
+> "Credenciais de teste" section (also `APP_USR-...`) — do **not** copy
 > production credentials into a local `.env`. `MERCADO_PAGO_WEBHOOK_SECRET`
 > and `PUBLIC_KEY` in `.env` are unused by this flow.
 
@@ -112,16 +113,22 @@ this redirect flow needs none. Do not prefix any of these with `PUBLIC_` for
 
 ### Test credentials
 
-1. In the same panel, generate **Test credentials** (they start with `TEST-`).
-2. Set `MERCADO_PAGO_ACCESS_TOKEN=TEST-...` and
-   `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN=TEST-...` (same value) in the test
-   environment. The client then redirects to Mercado Pago's sandbox
-   (`sandbox.mercadopago.com.br`) with test cards
+1. In the same panel, open **Credenciais de teste** (test credentials are also
+   `APP_USR-...` — the environment is determined by the panel section, not the
+   prefix).
+2. Set `MERCADO_PAGO_ACCESS_TOKEN` and `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN` to
+   the **same** test Access Token, and `PUBLIC_SITE_URL` to a public HTTPS
+   domain accepted by Mercado Pago (see the environment-variable note above).
+3. **Sandbox requires the buyer to be a test user**: the `payer_email` entered
+   in the subscribe form must be a test account on `@testuser.com` (create
+   buyer test users in the panel under Test accounts). A real email makes
+   Mercado Pago return `500` on `/preapproval`.
+4. Run `npm run test` (all Mercado Pago calls are mocked — no real requests).
+5. For a live sandbox end-to-end check, run `npm run dev`, enter a `@testuser.com`
+   email in the pt-BR configurator, and submit; the browser is redirected via
+   `init_point` to Mercado Pago's subscription checkout, where the subscription
+   is created in **test** mode and paid with test cards
    (e.g. `5031 4332 1540 6351`).
-3. Run `npm run test` (all Mercado Pago calls are mocked — no real requests).
-4. For a live sandbox end-to-end check, run `npm run dev` and click through the
-   pt-BR configurator; the browser should land on Mercado Pago's sandbox
-   checkout, where the subscription is created in **test** mode.
 
 Production credentials are used only when `MERCADO_PAGO_ACCESS_TOKEN` is a
 production token. **Never run a real (non-sandbox) checkout in development.**
@@ -305,13 +312,24 @@ Coverage highlights:
   function environment.
 - **`unauthorized` (502):** token missing the `offline_access`/subscriptions
   scope, expired, or not enabled for Subscriptions in the panel.
-- **`api_error` (502):** MP returned a non-2xx; check MP logs. If the account
-  cannot create preapprovals without a plan, enable "Subscriptions" for the app.
+- **`api_error` (502):** MP returned a non-2xx; the server log now includes the
+  MP response body (`[mercadoPago] api_error (HTTP ...): ...`). Verified causes
+  on this account:
+  - `400 invalid_field_content` — `back_url` domain rejected by MP
+    (`*.netlify.app` and `localhost` are disallowed; use a public HTTPS
+    domain).
+  - `500 Internal server error` on `/preapproval` — the `payer_email` is not a
+    sandbox test user. In sandbox, the buyer email must be a test account on
+    `@testuser.com`; a real email makes MP fail with 500.
 - **Redirecting to sandbox unexpectedly:** `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN`
-  equals the access token — intended in test environments, remove in prod.
-- **Back URL wrong:** set `PUBLIC_SITE_URL` (e.g.
-  `https://advanceddigitalmarketingltda.com`); otherwise the canonical
-  `SITE_ORIGIN` constant is used with a server-side warning.
+  equals the access token — intended in test environments, remove in prod. The
+  Subscriptions API only ever returns `init_point`, so this variable does not
+  change which checkout URL is used; the environment is determined by the
+  credential itself.
+- **Back URL wrong:** set `PUBLIC_SITE_URL` to a public HTTPS domain Mercado
+  Pago accepts (e.g. `https://advanceddigitalmarketingltda.com` — not
+  `localhost` or `*.netlify.app`); otherwise the canonical `SITE_ORIGIN`
+  constant is used with a server-side warning.
 - **USD prices on EN pages:** display-only reference; checkout always charges
   BRL (MP Subscriptions does not support USD from this account).
 - **"Sob consulta" on AI Automation:** by design — quote-only services are

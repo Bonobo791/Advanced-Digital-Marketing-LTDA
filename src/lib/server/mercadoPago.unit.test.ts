@@ -55,12 +55,21 @@ describe('selectInitPoint', () => {
     expect(selectInitPoint(response, TEST_TOKEN, TEST_TOKEN)).toBe(response.sandbox_init_point)
   })
 
-  it('never falls back across environments', () => {
-    // Sandbox credentials but no sandbox_init_point → undefined (→ missing_init_point).
-    expect(selectInitPoint({ init_point: 'https://www.mercadopago.com.br/x' }, TEST_TOKEN, TEST_TOKEN)).toBeUndefined()
-    // Production credentials but only sandbox_init_point → undefined, not the sandbox URL.
+  it('falls back to init_point when the API omits sandbox_init_point (real preapproval shape)', () => {
+    // The Subscriptions API only ever returns init_point — even for test
+    // credentials, the checkout environment is resolved server-side from the
+    // preapproval, so init_point must be used in sandbox mode too.
+    expect(selectInitPoint({ init_point: 'https://www.mercadopago.com.br/x' }, TEST_TOKEN, TEST_TOKEN)).toBe(
+      'https://www.mercadopago.com.br/x',
+    )
+  })
+
+  it('never sends a production customer to a sandbox-only URL', () => {
+    // Production credentials but only sandbox_init_point → undefined, not the
+    // sandbox URL. A real customer must never be redirected to the sandbox.
     expect(selectInitPoint({ sandbox_init_point: 'https://sandbox.mercadopago.com.br/x' }, PROD_TOKEN, undefined)).toBeUndefined()
     expect(selectInitPoint({}, PROD_TOKEN, undefined)).toBeUndefined()
+    expect(selectInitPoint({}, TEST_TOKEN, TEST_TOKEN)).toBeUndefined()
   })
 })
 
