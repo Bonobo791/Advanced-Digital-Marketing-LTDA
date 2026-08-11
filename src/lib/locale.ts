@@ -121,7 +121,7 @@ export function localeForPath(pathname: string): Locale {
   return normalized === '/pt-br' || normalized.startsWith('/pt-br/') ? 'pt-BR' : 'en-US'
 }
 
-import { SERVICE_ROUTES, serviceForPath } from '$lib/services'
+import { SERVICE_ROUTES, serviceForPath } from './services'
 
 export function localizedPath(pathname: string, locale: Locale) {
   const page = pageForPath(pathname)
