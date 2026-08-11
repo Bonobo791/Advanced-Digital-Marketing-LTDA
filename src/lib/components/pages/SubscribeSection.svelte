@@ -11,6 +11,7 @@
    * independently recalculates every price; a manipulated browser total can
    * never change what Mercado Pago bills.
    */
+  import { untrack } from 'svelte'
   import {
     SERVICE_IDS,
     SERVICES,
@@ -20,6 +21,7 @@
     isSubscribable,
     type ServiceId,
   } from '$lib/catalog'
+  import { parseBRLInput } from '$lib/brl'
   import { EMAIL } from '$lib/constants'
   import type { Locale } from '$lib/locale'
 
@@ -41,6 +43,7 @@
   // Stable per checkout session: reused across retries so Mercado Pago's
   // X-Idempotency-Key dedupes a double-submit or a retry after a network drop.
   let idempotencyKey = $state<string | undefined>(undefined)
+  let payloadFingerprint = $state('')
 
   const copy = {
     'en-US': {
@@ -88,13 +91,17 @@
     return new Set(preselect.filter((id) => isSubscribable(SERVICES[id])))
   }
 
-  /** Parses a BRL amount typed with Brazilian separators ("10.000" / "10.000,50"). */
-  function parseBRLInput(value: string): number | undefined {
-    const normalized = value.trim().replace(/\./g, '').replace(',', '.')
-    if (!normalized) return undefined
-    const number = Number(normalized)
-    return Number.isFinite(number) && number >= 0 && number <= 1_000_000 ? number : undefined
-  }
+  // Reseed when the route's preselect changes: in-app navigation between two
+  // [slug] service pages reuses this component, so the $state initializer does
+  // not run again (e.g. paid-search → meta-ads would keep paid-search checked).
+  $effect(() => {
+    const next = initialSelectionFor()
+    untrack(() => {
+      if (next.size !== selected.size || [...next].some((id) => !selected.has(id))) {
+        selected = next
+      }
+    })
+  })
 
   function spendOf(id: ServiceId): number {
     const value = spends[id]
@@ -202,6 +209,16 @@
         if (selected.has(id)) config[id] = { monthlyAdSpend: spendOf(id) }
       }
 
+      // Regenerate the idempotency key whenever the checkout payload changes:
+      // a retry after a lost response must not bind the customer to a stale
+      // package, while retrying the SAME payload reuses the key so Mercado
+      // Pago's X-Idempotency-Key dedupes it.
+      const fingerprint = `${email.trim()}|${serviceIds.join(',')}|${JSON.stringify(config)}`
+      if (fingerprint !== payloadFingerprint) {
+        idempotencyKey = crypto.randomUUID()
+        payloadFingerprint = fingerprint
+      }
+
       fireBeginCheckout(
         serviceIds.map((id) => ({ item_id: id, item_name: SERVICES[id].name[locale] })),
         totalBRL,
@@ -214,7 +231,7 @@
           email: email.trim(),
           serviceIds,
           config,
-          idempotencyKey: (idempotencyKey ??= crypto.randomUUID()),
+          idempotencyKey,
           locale,
         }),
       })

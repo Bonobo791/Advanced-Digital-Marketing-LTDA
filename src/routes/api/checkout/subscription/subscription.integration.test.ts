@@ -19,10 +19,12 @@ const requestEvent = (body: unknown) =>
     }),
   }) as Parameters<typeof POST>[0]
 
+const UUID = '00000000-0000-4000-8000-000000000000'
+
 const validBody = {
   email: 'customer@example.com',
   serviceIds: ['seo-content', 'hosting'],
-  idempotencyKey: 'attempt-1',
+  idempotencyKey: UUID,
   config: {},
 }
 
@@ -53,7 +55,7 @@ describe('POST /api/checkout/subscription', () => {
       externalReference: 'seo-content+hosting',
       amountBRL: 2750,
       backUrl: 'https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/',
-      idempotencyKey: 'attempt-1',
+      idempotencyKey: UUID,
     })
   })
 
@@ -121,8 +123,8 @@ describe('POST /api/checkout/subscription', () => {
     expect(await response.json()).toEqual({ error: 'invalid_ad_spend' })
   })
 
-  it('requires an idempotency key (duplicate-submission guard)', async () => {
-    for (const idempotencyKey of [undefined, '', 'x'.repeat(129)]) {
+  it('requires a UUID v4 idempotency key (duplicate-submission guard)', async () => {
+    for (const idempotencyKey of [undefined, '', 'attempt-1', 'x'.repeat(129), 'not-a-uuid']) {
       const response = await POST(requestEvent({ ...validBody, idempotencyKey }))
       expect(response.status).toBe(400)
       expect(await response.json()).toEqual({ error: 'invalid_idempotency_key' })

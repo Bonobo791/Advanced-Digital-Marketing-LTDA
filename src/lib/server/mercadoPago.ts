@@ -75,7 +75,10 @@ export function isAllowedCheckoutUrl(value: unknown): value is string {
  * Picks the redirect URL from the create-subscription response. The response
  * carries both `init_point` (production) and `sandbox_init_point` (sandbox),
  * so the choice must be driven by the credentials in use — never by whichever
- * field happens to be populated. Mirrors the removed Checkout Pro client.
+ * field happens to be populated. A missing field for the detected environment
+ * returns `undefined` and becomes `missing_init_point`: an incomplete response
+ * must never send a real customer to the sandbox (or a test session to
+ * production). Mirrors the removed Checkout Pro client.
  */
 export function selectInitPoint(
   response: { init_point?: string; sandbox_init_point?: string },
@@ -83,9 +86,9 @@ export function selectInitPoint(
   sandboxToken: string | undefined,
 ): string | undefined {
   if (isSandboxAccessToken(accessToken, sandboxToken)) {
-    return response.sandbox_init_point ?? response.init_point
+    return response.sandbox_init_point
   }
-  return response.init_point ?? response.sandbox_init_point
+  return response.init_point
 }
 
 function isTimeoutError(error: unknown): boolean {

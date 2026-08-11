@@ -36,8 +36,12 @@ export const POST: RequestHandler = async ({ request }) => {
     return json({ error: 'invalid_email' }, { status: 400 })
   }
 
+  // The client always sends a fresh UUID v4 (crypto.randomUUID); rejecting
+  // anything else keeps the X-Idempotency-Key header in the format Mercado
+  // Pago expects and documented in docs/mercado-pago-subscriptions.md.
+  const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
   const idempotencyKey = typeof payload.idempotencyKey === 'string' ? payload.idempotencyKey.trim() : ''
-  if (!idempotencyKey || idempotencyKey.length > 128) {
+  if (!UUID_V4_RE.test(idempotencyKey)) {
     return json({ error: 'invalid_idempotency_key' }, { status: 400 })
   }
 

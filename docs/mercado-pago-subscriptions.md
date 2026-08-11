@@ -298,8 +298,7 @@ Coverage highlights:
 - **"Sob consulta" on AI Automation:** by design — quote-only services are
   never billed through this flow.
 - **Response lost after Mercado Pago created the subscription:** the
-  idempotency key is stable per checkout session, so a plain retry cannot
-  duplicate it. If the customer *changes the selection* and then retries after
-  a lost response, the same key still returns the original preapproval —
-  the stale pending subscription can be cancelled from the Mercado Pago panel
-  (MP is the system of record).
+  idempotency key is regenerated whenever the checkout payload (email,
+  services, ad spend) changes, and reused only while the payload is identical —
+  so a plain retry cannot duplicate the subscription, and an edited retry gets
+  a fresh one instead of the stale preapproval.

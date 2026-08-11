@@ -55,10 +55,11 @@ describe('selectInitPoint', () => {
     expect(selectInitPoint(response, TEST_TOKEN, TEST_TOKEN)).toBe(response.sandbox_init_point)
   })
 
-  it('falls back to the other field when one is missing', () => {
-    expect(selectInitPoint({ init_point: 'https://www.mercadopago.com.br/x' }, TEST_TOKEN, TEST_TOKEN)).toBe(
-      'https://www.mercadopago.com.br/x',
-    )
+  it('never falls back across environments', () => {
+    // Sandbox credentials but no sandbox_init_point → undefined (→ missing_init_point).
+    expect(selectInitPoint({ init_point: 'https://www.mercadopago.com.br/x' }, TEST_TOKEN, TEST_TOKEN)).toBeUndefined()
+    // Production credentials but only sandbox_init_point → undefined, not the sandbox URL.
+    expect(selectInitPoint({ sandbox_init_point: 'https://sandbox.mercadopago.com.br/x' }, PROD_TOKEN, undefined)).toBeUndefined()
     expect(selectInitPoint({}, PROD_TOKEN, undefined)).toBeUndefined()
   })
 })
@@ -183,7 +184,9 @@ describe('createSubscription', () => {
   })
 
   it('rejects an init_point on an unexpected host', async () => {
-    stubFetch(() => jsonResponse({ id: 's1', init_point: 'https://evil.example.com/x' }))
+    // Sandbox mode is active in this suite, so the hostile URL must be the
+    // sandbox field for it to be selected (and then rejected by host check).
+    stubFetch(() => jsonResponse({ id: 's1', sandbox_init_point: 'https://evil.example.com/x' }))
     await expect(createSubscription(input)).rejects.toMatchObject({ code: 'invalid_init_point' })
   })
 

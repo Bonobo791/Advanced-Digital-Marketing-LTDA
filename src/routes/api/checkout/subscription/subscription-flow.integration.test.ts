@@ -49,7 +49,7 @@ describe('POST /api/checkout/subscription — real path', () => {
             'paid-search': { monthlyAdSpend: 10000 },
             'meta-ads': { monthlyAdSpend: 3000 },
           },
-          idempotencyKey: 'attempt-42',
+          idempotencyKey: '00000000-0000-4000-8000-000000000000',
           total: 1, // browser tampering attempt — must be ignored
         }),
       }),
@@ -65,7 +65,7 @@ describe('POST /api/checkout/subscription — real path', () => {
     expect(captured?.url).toBe('https://api.mercadopago.com/preapproval')
     const headers = captured?.init?.headers as Record<string, string>
     expect(headers.Authorization).toBe('Bearer TEST-sandbox-token')
-    expect(headers['X-Idempotency-Key']).toBe('attempt-42')
+    expect(headers['X-Idempotency-Key']).toBe('00000000-0000-4000-8000-000000000000')
 
     const sentBody = JSON.parse(String(captured?.init?.body)) as Record<string, unknown>
     expect(sentBody.payer_email).toBe('customer@example.com')
