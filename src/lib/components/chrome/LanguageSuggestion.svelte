@@ -3,6 +3,7 @@
   import { page } from '$app/state'
   import { saveLanguagePreference } from '$lib/client/language-preference'
   import { browserPrefersPortuguese, localeForPath, localizedPath, pageForPath } from '$lib/locale'
+  import { serviceForPath } from '$lib/services'
 
   const dismissedKey = 'adm-language-suggestion-dismissed'
 
@@ -14,8 +15,8 @@
     if (!browser) return
 
     visible = false
-    const pageId = pageForPath(page.url.pathname)
-    if (localeForPath(page.url.pathname) === 'pt-BR' || !pageId || !destination) return
+    const known = pageForPath(page.url.pathname) ?? serviceForPath(page.url.pathname)
+    if (localeForPath(page.url.pathname) === 'pt-BR' || !known || !destination) return
     if (sessionStorage.getItem(dismissedKey)) return
 
     const language = document.cookie.match(/(?:^|; )language=([^;]+)/)?.[1]

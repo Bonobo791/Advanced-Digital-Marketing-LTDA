@@ -1,10 +1,11 @@
 <script lang="ts">
   import { absoluteUrl, LOCALE_ROUTES, PAGE_META, type Locale, type PageId } from '$lib/locale'
+  import { SERVICE_META, SERVICE_ROUTES, type ServiceId } from '$lib/services'
 
-  let { locale, page }: { locale: Locale; page: PageId } = $props()
+  let { locale, page, service }: { locale: Locale; page?: PageId; service?: ServiceId } = $props()
 
-  let metadata = $derived(PAGE_META[locale][page])
-  let routes = $derived(LOCALE_ROUTES[page])
+  let metadata = $derived(service ? SERVICE_META[locale][service] : PAGE_META[locale][page!])
+  let routes = $derived(service ? SERVICE_ROUTES[service] : LOCALE_ROUTES[page!])
 </script>
 
 <svelte:head>

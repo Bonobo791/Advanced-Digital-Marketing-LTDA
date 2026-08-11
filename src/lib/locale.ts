@@ -61,6 +61,7 @@ export const PAGE_META: Record<Locale, Record<PageId, { title: string; descripti
 
 export const CHROME_COPY: Record<Locale, {
   navigation: Record<PageId, string>
+  services: string
   navigationLabel: string
   bookCall: string
   menu: string
@@ -74,6 +75,7 @@ export const CHROME_COPY: Record<Locale, {
 }> = {
   'en-US': {
     navigation: { home: 'Home', about: 'About', contact: 'Contact', pricing: 'Pricing' },
+    services: 'Services',
     navigationLabel: 'Primary navigation',
     bookCall: 'Book a call',
     menu: 'Menu',
@@ -87,6 +89,7 @@ export const CHROME_COPY: Record<Locale, {
   },
   'pt-BR': {
     navigation: { home: 'Início', about: 'Sobre', contact: 'Contato', pricing: 'Preços' },
+    services: 'Serviços',
     navigationLabel: 'Navegação principal',
     bookCall: 'Agende uma conversa',
     menu: 'Menu',
@@ -118,9 +121,13 @@ export function localeForPath(pathname: string): Locale {
   return normalized === '/pt-br' || normalized.startsWith('/pt-br/') ? 'pt-BR' : 'en-US'
 }
 
+import { SERVICE_ROUTES, serviceForPath } from '$lib/services'
+
 export function localizedPath(pathname: string, locale: Locale) {
   const page = pageForPath(pathname)
-  return page ? LOCALE_ROUTES[page][locale] : undefined
+  if (page) return LOCALE_ROUTES[page][locale]
+  const service = serviceForPath(pathname)
+  return service ? SERVICE_ROUTES[service][locale] : undefined
 }
 
 export function absoluteUrl(pathname: string) {
