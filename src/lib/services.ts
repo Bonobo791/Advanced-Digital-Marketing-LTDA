@@ -6,6 +6,7 @@ export const SERVICE_IDS = ['technical-seo', 'geo', 'web-development', 'paid-sea
 export type ServiceId = (typeof SERVICE_IDS)[number]
 
 export type ServiceOption = {
+  flag?: string
   jp: string
   name: string
   price: string
@@ -146,13 +147,13 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       optionsLabel: 'Options',
       optionsHeading: 'Choose how we start.',
       optionsLead:
-        'Five ways to engage, one standard of work. Every option ends with fixes you can verify yourself, not a PDF of recommendations.',
+        'Three ways to engage, one standard of work. Every option ends with fixes you can verify yourself, not a PDF of recommendations.',
       options: [
         {
           jp: '監査',
           name: 'The Audit',
-          price: '$2,400',
-          per: 'One time · 2 weeks',
+          price: 'Free',
+          per: 'No strings attached',
           desc: 'A complete technical diagnosis with a prioritized fix list, so you know exactly what is blocking you and in what order to attack it.',
           items: [
             'Full crawl and log-file analysis',
@@ -164,39 +165,9 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           cta: 'Start with the audit',
           subject: 'Audit request',
         },
+
         {
-          jp: '実装',
-          name: 'Fix Sprint',
-          price: '$6,800',
-          per: 'One time · 4 weeks',
-          desc: 'The audit, plus hands on keyboards. We ship the fixes ourselves and re-crawl to prove the numbers moved.',
-          items: [
-            'Everything in The Audit',
-            'We implement the fixes in your stack',
-            'Speed engineering to green vitals',
-            'Schema written and deployed',
-            'Before/after re-crawl verification',
-          ],
-          cta: 'Book the sprint',
-          subject: 'Fix sprint request',
-        },
-        {
-          jp: '計測',
-          name: 'Retainer',
-          price: '$2,900',
-          per: 'Per month · 6-month minimum',
-          desc: 'Continuous technical ownership: monitoring, monthly releases and regression alerts, so the wins stay won.',
-          items: [
-            '24/7 uptime and crawl monitoring',
-            'Monthly technical release cycle',
-            'Regression alerts before rankings drop',
-            'Quarterly strategy review',
-            'Priority support, same-day answers',
-          ],
-          cta: 'Talk retainers',
-          subject: 'Retainer inquiry',
-        },
-        {
+          flag: 'Most chosen',
           jp: '設計',
           name: 'Content Development',
           price: '$3,500',
@@ -275,6 +246,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           subject: 'Citation audit request',
         },
         {
+          flag: 'Most chosen',
           jp: '実装',
           name: 'Citation Sprint',
           price: '$6,800',
@@ -353,6 +325,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           subject: 'Build audit request',
         },
         {
+          flag: 'Most chosen',
           jp: '実装',
           name: 'Build Sprint',
           price: '$6,800',
@@ -431,6 +404,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           subject: 'Account audit request',
         },
         {
+          flag: 'Most chosen',
           jp: '実装',
           name: 'Launch Sprint',
           price: '$6,800',
@@ -509,6 +483,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           subject: 'Meta audit request',
         },
         {
+          flag: 'Most chosen',
           jp: '実装',
           name: 'Meta Launch',
           price: '$6,800',
@@ -615,13 +590,13 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       optionsLabel: 'Opções',
       optionsHeading: 'Escolha como começar.',
       optionsLead:
-        'Cinco formas de começar, um padrão de trabalho. Toda opção termina com correções que você mesmo consegue verificar, não um PDF de recomendações.',
+        'Três formas de começar, um padrão de trabalho. Toda opção termina com correções que você mesmo consegue verificar, não um PDF de recomendações.',
       options: [
         {
           jp: '監査',
           name: 'A Auditoria',
-          price: '$2,400',
-          per: 'Pagamento único · 2 semanas',
+          price: 'Grátis',
+          per: 'Sem compromisso',
           desc: 'Um diagnóstico técnico completo com uma lista priorizada de correções, para você saber exatamente o que está te bloqueando e em que ordem atacar.',
           items: [
             'Rastreamento completo e análise de logs',
@@ -633,39 +608,9 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           cta: 'Começar com a auditoria',
           subject: 'Audit request',
         },
+
         {
-          jp: '実装',
-          name: 'Sprint de Correções',
-          price: '$6,800',
-          per: 'Pagamento único · 4 semanas',
-          desc: 'A auditoria, mais mãos no teclado. Implementamos as correções no seu stack e re-rastreamos para provar que os números mudaram.',
-          items: [
-            'Tudo o que está na Auditoria',
-            'Implementamos as correções no seu código',
-            'Engenharia de velocidade até vitais verdes',
-            'Schema escrito e implantado',
-            'Verificação antes/depois com novo rastreamento',
-          ],
-          cta: 'Agendar o sprint',
-          subject: 'Fix sprint request',
-        },
-        {
-          jp: '計測',
-          name: 'Mensal',
-          price: '$2,900',
-          per: 'Por mês · mínimo de 6 meses',
-          desc: 'Acompanhamento técnico contínuo: monitoramento, releases mensais e alertas de regressão, para os ganhos continuarem ganhos.',
-          items: [
-            'Monitoramento 24/7 de uptime e rastreamento',
-            'Ciclo mensal de releases técnicos',
-            'Alertas de regressão antes de cair no ranking',
-            'Revisão estratégica trimestral',
-            'Suporte prioritário, respostas no mesmo dia',
-          ],
-          cta: 'Falar sobre mensalidade',
-          subject: 'Retainer inquiry',
-        },
-        {
+          flag: 'Mais escolhido',
           jp: '設計',
           name: 'Desenvolvimento de Conteúdo',
           price: '$3,500',
@@ -744,6 +689,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           subject: 'Citation audit request',
         },
         {
+          flag: 'Mais escolhido',
           jp: '実装',
           name: 'Sprint de Citações',
           price: '$6,800',
@@ -822,6 +768,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           subject: 'Build audit request',
         },
         {
+          flag: 'Mais escolhido',
           jp: '実装',
           name: 'Sprint de Build',
           price: '$6,800',
@@ -900,6 +847,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           subject: 'Account audit request',
         },
         {
+          flag: 'Mais escolhido',
           jp: '実装',
           name: 'Sprint de Lançamento',
           price: '$6,800',
@@ -978,6 +926,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           subject: 'Meta audit request',
         },
         {
+          flag: 'Mais escolhido',
           jp: '実装',
           name: 'Sprint Meta',
           price: '$6,800',

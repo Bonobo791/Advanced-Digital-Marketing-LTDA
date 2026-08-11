@@ -1068,6 +1068,7 @@ img { display: block; max-width: 100%; }
    options grid below. */
 .service-page .hero { padding-top: clamp(148px, 22vh, 220px); }
 .service-page .hero-inner { justify-content: space-between; }
+.service-page .hero-line1 { margin: clamp(36px, 7vh, 72px) 0 8px; }
 .service-page .sec-lead { max-width: 52ch; margin: 0 0 48px; color: var(--index-ink60); font-size: clamp(1rem, 1.6vw, 1.15rem); }
 
 .service-page .opt-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-top: 64px; }

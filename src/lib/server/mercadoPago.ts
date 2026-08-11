@@ -107,6 +107,18 @@ function readCredentials(): { accessToken?: string; sandboxToken?: string } {
 }
 
 /**
+ * Logs the Mercado Pago error response body server-side so real failures are
+ * diagnosable (e.g. "Subscriptions not enabled", invalid payer_email, bad
+ * back_url). The body is truncated and the raw text is never returned to
+ * callers — the client contract stays a stable error code.
+ */
+async function logMercadoPagoError(response: Response, code: MercadoPagoError['code']): Promise<void> {
+  const body = await response.text().catch(() => '')
+  const preview = body.length > 2000 ? `${body.slice(0, 2000)}…(truncated ${body.length} bytes)` : body
+  console.error(`[mercadoPago] ${code} (HTTP ${response.status}): ${preview}`)
+}
+
+/**
  * Creates a Mercado Pago subscription (no associated plan) and returns the
  * hosted checkout URL. Throws `MercadoPagoError` with a machine-readable code;
  * the raw HTTP body is never surfaced to callers.
