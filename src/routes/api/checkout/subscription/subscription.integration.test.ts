@@ -53,7 +53,7 @@ describe('POST /api/checkout/subscription', () => {
       email: 'customer@example.com',
       reason: 'Conteúdo SEO + Hospedagem',
       externalReference: 'seo-content+hosting',
-      amountBRL: 2750,
+      amountBRL: 2300,
       backUrl: 'https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/',
       idempotencyKey: UUID,
     })

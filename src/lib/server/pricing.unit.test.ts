@@ -23,7 +23,7 @@ describe('computeMonthlyQuote — totals', () => {
 
   it('sums multiple fixed services', () => {
     const quote = computeMonthlyQuote(['seo-content', 'backlinks', 'hosting'], {}, 'pt-BR')
-    expect(quote.totalBRL).toBe(2000 + 3000 + 750)
+    expect(quote.totalBRL).toBe(2000 + 3000 + 300)
     expect(quote.items.map((item) => item.id)).toEqual(['seo-content', 'backlinks', 'hosting'])
   })
 
@@ -33,8 +33,8 @@ describe('computeMonthlyQuote — totals', () => {
       ADS_SPEND,
       'pt-BR',
     )
-    // 2000 + 3000 + 750 + max(10%×10000, 500) + max(10%×3000, 500)
-    expect(quote.totalBRL).toBe(2000 + 3000 + 750 + 1000 + 500)
+    // 2000 + 3000 + 300 + max(10%×10000, 500) + max(10%×3000, 500)
+    expect(quote.totalBRL).toBe(2000 + 3000 + 300 + 1000 + 500)
   })
 
   it('charges the R$ 500 minimum for a low ad spend', () => {

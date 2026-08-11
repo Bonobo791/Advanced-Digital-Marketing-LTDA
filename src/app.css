@@ -1166,3 +1166,32 @@ img { display: block; max-width: 100%; }
   .sub-price { text-align: right; }
   .sub-spend { grid-column: 1 / -1; width: min(100%, 460px); margin-left: 32px; }
 }
+
+/* ─── One-time website builds (WebsiteBuildPricing) ───────────────────── */
+.build-panel .sec-lead { max-width: 46em; }
+.build-row { margin-top: 32px; }
+.build-info { min-width: 0; }
+.build-name { display: block; font-family: 'ADM Display', sans-serif; font-size: 1.15rem; letter-spacing: -0.01em; text-transform: uppercase; }
+.build-flips { display: flex; flex-wrap: wrap; gap: 16px 32px; margin-top: 18px; }
+.flip-group { display: grid; gap: 8px; }
+.flip-label { color: var(--index-ink60); font-family: 'ADM Semi', sans-serif; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
+.flip { display: inline-flex; border: 1px solid var(--index-hair-i); background: var(--index-paper); }
+.flip button {
+  padding: 9px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--index-ink60);
+  font: inherit;
+  font-family: 'ADM Semi', sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 200ms var(--ease-out), color 200ms var(--ease-out);
+}
+.flip button + button { border-left: 1px solid var(--index-hair-i); }
+.flip button[aria-pressed='true'] { background: var(--index-ink); color: var(--index-paper); }
+.flip button:focus-visible { outline: 2px solid var(--index-verm); outline-offset: -2px; z-index: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .flip button:hover:not([aria-pressed='true']) { color: var(--index-verm); }
+}

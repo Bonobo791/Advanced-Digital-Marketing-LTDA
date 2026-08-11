@@ -27,7 +27,7 @@ const SUBSCRIPTION_BODY = {
   reason: 'Conteúdo SEO + Hospedagem',
   external_reference: 'seo-content+hosting',
   payer_email: 'customer@example.com',
-  auto_recurring: { frequency: 1, frequency_type: 'months', transaction_amount: 2750, currency_id: 'BRL' },
+  auto_recurring: { frequency: 1, frequency_type: 'months', transaction_amount: 2300, currency_id: 'BRL' },
   back_url: 'https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/',
   status: 'pending',
 }
@@ -97,7 +97,7 @@ describe('createSubscription', () => {
     email: 'customer@example.com',
     reason: SUBSCRIPTION_BODY.reason,
     externalReference: SUBSCRIPTION_BODY.external_reference,
-    amountBRL: 2750,
+    amountBRL: 2300,
     backUrl: SUBSCRIPTION_BODY.back_url,
     idempotencyKey: 'attempt-123',
   }
@@ -219,7 +219,7 @@ describe('getSubscription', () => {
         reason: 'Conteúdo SEO + Hospedagem',
         external_reference: 'seo-content+hosting',
         payer_email: 'customer@example.com',
-        auto_recurring: { transaction_amount: 2750, currency_id: 'BRL' },
+        auto_recurring: { transaction_amount: 2300, currency_id: 'BRL' },
         init_point: 'https://www.mercadopago.com.br/secret',
         card_id: 'secret-card',
       }),
@@ -231,7 +231,7 @@ describe('getSubscription', () => {
       reason: 'Conteúdo SEO + Hospedagem',
       externalReference: 'seo-content+hosting',
       payerEmail: 'customer@example.com',
-      transactionAmount: 2750,
+      transactionAmount: 2300,
       currencyId: 'BRL',
     })
   })

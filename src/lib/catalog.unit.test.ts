@@ -5,6 +5,7 @@ import {
   SERVICE_IDS,
   adSpendFeeBRL,
   formatBRL,
+  formatPrice,
   formatUSD,
   getService,
   isServiceId,
@@ -45,7 +46,7 @@ describe('catalog pricing (user-defined)', () => {
   it('stores the agreed BRL prices with USD display references', () => {
     expect(SERVICES['seo-content'].pricing).toEqual({ kind: 'fixed', monthlyBRL: 2000, monthlyUSD: 400 })
     expect(SERVICES.backlinks.pricing).toEqual({ kind: 'fixed', monthlyBRL: 3000, monthlyUSD: 600 })
-    expect(SERVICES.hosting.pricing).toEqual({ kind: 'fixed', monthlyBRL: 750, monthlyUSD: 150 })
+    expect(SERVICES.hosting.pricing).toEqual({ kind: 'fixed', monthlyBRL: 300, monthlyUSD: 60 })
   })
 
   it('prices ads services by the ad-spend rule', () => {
@@ -105,6 +106,17 @@ describe('formatBRL / formatUSD', () => {
 
   it('formats USD the American way', () => {
     expect(formatUSD(400)).toBe('$400.00')
+  })
+})
+
+describe('formatPrice', () => {
+  it('shows BRL on pt-BR pages and USD on en-US pages', () => {
+    expect(formatPrice('pt-BR', 300, 60)).toBe('R$\u00A0300,00')
+    expect(formatPrice('en-US', 300, 60)).toBe('$60.00')
+  })
+
+  it('converts BRL to USD at the 5:1 reference rate when no USD reference exists', () => {
+    expect(formatPrice('en-US', 500)).toBe('$100.00')
   })
 })
 

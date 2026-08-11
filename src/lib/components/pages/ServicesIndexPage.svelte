@@ -2,7 +2,7 @@
   import { getContext, onMount } from 'svelte'
   import { SITE_MOTION, type SiteMotion } from '$lib/client/site-motion'
   import { setupReveals } from '$lib/client/reveal'
-  import { SERVICES, formatBRL, getService, type ServiceId as CatalogServiceId } from '$lib/catalog'
+  import { SERVICES, formatPrice, getService, type ServiceId as CatalogServiceId } from '$lib/catalog'
   import {
     SERVICE_CONTENT,
     SERVICE_IDS,
@@ -12,6 +12,7 @@
   } from '$lib/services'
   import type { Locale } from '$lib/locale'
   import SubscribeSection from './SubscribeSection.svelte'
+  import WebsiteBuildPricing from './WebsiteBuildPricing.svelte'
 
   let { locale }: { locale: Locale } = $props()
 
@@ -24,7 +25,7 @@
       monthly: 'Monthly subscription',
       quoteOnly: 'Quote only',
       perProject: 'Per project',
-      adsLine: '10% of ad spend (R$ 500 min)',
+      adsLine: '10% of ad spend ($100 min)',
       view: 'View service',
     },
     'pt-BR': {
@@ -58,7 +59,7 @@
       const name = service.name[locale]
       if (service.pricing.kind === 'ads-spend') return { name, detail: text.adsLine }
       if (service.pricing.kind === 'fixed') {
-        return { name, detail: `${formatBRL(service.pricing.monthlyBRL)}/${text.perMonth}` }
+        return { name, detail: `${formatPrice(locale, service.pricing.monthlyBRL, service.pricing.monthlyUSD)}/${text.perMonth}` }
       }
       return { name, detail: text.quoteOnly }
     })
@@ -72,7 +73,7 @@
       const pricing = SERVICES[sid].pricing
       return pricing.kind === 'fixed' ? sum + pricing.monthlyBRL : sum
     }, 0)
-    return `${formatBRL(total)}/${text.perMonth}`
+    return `${formatPrice(locale, total)}/${text.perMonth}`
   }
 
   function isQuoteOnly(id: ServiceId): boolean {
@@ -131,6 +132,8 @@
       </div>
     </div>
   </section>
+
+  <WebsiteBuildPricing {locale} />
 
   <SubscribeSection locale={locale} />
 </div>

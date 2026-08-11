@@ -16,8 +16,7 @@
     SERVICE_IDS,
     SERVICES,
     adSpendFeeBRL,
-    formatBRL,
-    formatUSD,
+    formatPrice,
     isSubscribable,
     type ServiceId,
   } from '$lib/catalog'
@@ -49,9 +48,10 @@
     'en-US': {
       kicker: 'Subscribe',
       heading: 'Build your monthly package.',
-      lead: 'Pick the services you want, see the monthly total, and pay through Mercado Pago. Prices below are the same BRL amounts used at checkout.',
+      lead: 'Pick the services you want, see the monthly total, and pay through Mercado Pago. Prices are shown in USD for reference; the checkout is billed in BRL.',
       adSpendLabel: 'Monthly ad spend (R$)',
-      adSpendHint: '10% of spend, R$ 500 minimum',
+      adSpendHint: '10% of spend, $100 minimum',
+      perMonth: '/mo',
       total: 'Monthly total',
       emailLabel: 'Email',
       emailPlaceholder: 'you@company.com',
@@ -70,6 +70,7 @@
       lead: 'Escolha os serviços, veja o total mensal na hora e pague pelo Mercado Pago. Os valores abaixo são os mesmos cobrados no checkout.',
       adSpendLabel: 'Investimento mensal em anúncios (R$)',
       adSpendHint: '10% do investimento, mínimo de R$ 500',
+      perMonth: '/mês',
       total: 'Total mensal',
       emailLabel: 'E-mail',
       emailPlaceholder: 'voce@empresa.com.br',
@@ -109,16 +110,15 @@
     return parseBRLInput(value) ?? 0
   }
 
-  function priceOf(id: ServiceId): { brl: string; usd?: string } {
+  function priceOf(id: ServiceId): { amount: string } {
     const pricing = SERVICES[id].pricing
     if (pricing.kind === 'fixed') {
-      return {
-        brl: formatBRL(pricing.monthlyBRL),
-        usd: pricing.monthlyUSD !== undefined ? formatUSD(pricing.monthlyUSD) : undefined,
-      }
+      // One currency per locale: BRL on pt-BR pages, USD on en-US pages.
+      return { amount: formatPrice(locale, pricing.monthlyBRL, pricing.monthlyUSD) }
     }
-    // ads-spend services show their live fee (or the R$ 500 minimum).
-    return { brl: formatBRL(adSpendFeeBRL(spendOf(id))) }
+    // ads-spend services show their live fee (or the minimum); the fee is
+    // computed in BRL and converted for the en-US display.
+    return { amount: formatPrice(locale, adSpendFeeBRL(spendOf(id))) }
   }
 
   let totalBRL = $derived(
@@ -281,8 +281,7 @@
             </span>
           </label>
           <span class="sub-price">
-            <b>{price.brl}</b>
-            {#if price.usd}<small>{price.usd}</small>{/if}
+            <b>{price.amount}</b>
           </span>
           {#if service.pricing.kind === 'ads-spend' && selected.has(id)}
             <label class="sub-spend">
@@ -304,7 +303,7 @@
 
     <div class="sub-total">
       <span>{text.total}</span>
-      <b>{formatBRL(totalBRL)}<small>/mês</small></b>
+      <b>{formatPrice(locale, totalBRL)}<small>{text.perMonth}</small></b>
     </div>
 
     {#if locale === 'pt-BR'}

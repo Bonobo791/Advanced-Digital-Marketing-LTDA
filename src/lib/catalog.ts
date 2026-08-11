@@ -30,6 +30,13 @@ export const ADS_SPEND_RULE = {
   minimumUSD: 100,
 } as const
 
+/**
+ * Display-only BRL→USD conversion at the catalog's reference rate (5:1).
+ * Every fixed price and the ads minimum are stored at 5:1 (R$ 500 ↔ US$ 100),
+ * so the same rate converts an ad-spend fee for the en-US display.
+ */
+export const BRL_USD_REFERENCE_RATE = 5
+
 export type ServicePricing =
   | { kind: 'fixed'; monthlyBRL: number; monthlyUSD?: number }
   | { kind: 'ads-spend' }
@@ -76,7 +83,7 @@ export const SERVICES: Record<ServiceId, CatalogService> = {
       'en-US': 'Hosting with maintenance and site changes included, every month.',
       'pt-BR': 'Hospedagem com manutenção e alterações no site incluídas, todo mês.',
     },
-    pricing: { kind: 'fixed', monthlyBRL: 750, monthlyUSD: 150 },
+    pricing: { kind: 'fixed', monthlyBRL: 300, monthlyUSD: 60 },
     active: true,
   },
   'paid-search': {
@@ -148,4 +155,14 @@ export function formatBRL(value: number): string {
 
 export function formatUSD(value: number): string {
   return usdFormatter.format(value)
+}
+
+/**
+ * Formats a price in the locale's currency: BRL on pt-BR pages, USD on en-US
+ * pages. `usd` is the stored USD reference when one exists; otherwise the BRL
+ * amount is converted at `BRL_USD_REFERENCE_RATE` (display only — checkout is
+ * always priced in BRL server-side).
+ */
+export function formatPrice(locale: Locale, brl: number, usd?: number): string {
+  return locale === 'pt-BR' ? formatBRL(brl) : formatUSD(usd ?? brl / BRL_USD_REFERENCE_RATE)
 }

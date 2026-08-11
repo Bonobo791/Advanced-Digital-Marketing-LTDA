@@ -61,7 +61,7 @@ Mercado Pago:  customer + subscription + checkout + payments + recurring billing
 |---|---|---|
 | `seo-content` | SEO Content (Conteúdo SEO) | Fixed: R$ 2.000/month (US$ 400 reference) |
 | `backlinks` | Backlinks | Fixed: R$ 3.000/month (US$ 600 reference) |
-| `hosting` | Hosting (Hospedagem) | Fixed: R$ 750/month (US$ 150 reference), maintenance + site changes included |
+| `hosting` | Hosting (Hospedagem) | Fixed: R$ 300/month (US$ 60 reference), maintenance + site changes included |
 | `paid-search` | Google Ads Management | Dynamic: 10% of monthly ad spend, **R$ 500 minimum** |
 | `meta-ads` | Meta Ads Management | Dynamic: 10% of monthly ad spend, **R$ 500 minimum** |
 | `ai-automation` | AI Automation | Quote only — never part of checkout |

@@ -78,7 +78,7 @@ describe('POST /api/checkout/subscription — real path', () => {
     expect(sentBody.auto_recurring).toEqual({
       frequency: 1,
       frequency_type: 'months',
-      transaction_amount: 7250, // 2000 + 3000 + 750 + max(1000,500) + max(300,500)
+      transaction_amount: 6800, // 2000 + 3000 + 300 + max(1000,500) + max(300,500)
       currency_id: 'BRL',
     })
   })
