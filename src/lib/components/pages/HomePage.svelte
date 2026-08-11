@@ -4,6 +4,7 @@
   import portraitInk from '$lib/assets/andrew-new.jpg'
   import { EMAIL, MAILTO, PORTUGUESE_EMAIL, PT_MAILTO, WHATSAPP_URL } from '$lib/constants'
   import { SITE_MOTION, type SiteMotion } from '$lib/client/site-motion'
+  import { setupReveals } from '$lib/client/reveal'
   import type { Locale } from '$lib/locale'
 
   let { locale }: { locale: Locale } = $props()
@@ -98,18 +99,6 @@
   onMount(() => {
     motion.registerHero()
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const supportsView = CSS.supports?.('animation-timeline: view()') ?? false
-    const revealables = document.querySelectorAll<HTMLElement>('.index-home .rise, .index-home .wipe, .index-home .shear .w, .index-home .why-img img, .index-home .p-portrait img')
-    let observer: IntersectionObserver | undefined
-    if (!reduced && !supportsView && 'IntersectionObserver' in window) {
-      document.documentElement.classList.add('index-io')
-      observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) { entry.target.classList.add('io-on'); observer?.unobserve(entry.target) }
-        })
-      }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' })
-      revealables.forEach((el) => observer?.observe(el))
-    }
     const list = document.querySelector('.index-home .svc-list')
     let autoOpen: IntersectionObserver | undefined
     if (!reduced && list && 'IntersectionObserver' in window && window.matchMedia('(hover: none)').matches) {
@@ -118,7 +107,8 @@
       }, { threshold: 0.2 })
       autoOpen.observe(list)
     }
-    return () => { observer?.disconnect(); autoOpen?.disconnect(); document.documentElement.classList.remove('index-io') }
+    const teardownReveals = setupReveals()
+    return () => { autoOpen?.disconnect(); teardownReveals() }
   })
 </script>
 

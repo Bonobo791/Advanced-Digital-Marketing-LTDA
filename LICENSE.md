@@ -29,6 +29,25 @@ License](#changes-and-new-works-license).
 
 ## Notices
 
+## Third-Party Notices — SIL Open Font License
+
+The bundled font files in `static/fonts/` are distributed under the
+[SIL Open Font License 1.1](https://openfontlicense.org):
+
+- Archivo (`Archivo-Regular-sub.woff2`, `Archivo-SemiBold-sub.woff2`, `ArchivoBlack-sub.woff2`)
+- Noto Sans JP (`NotoSansJP-Bold-sub.woff2`)
+- Noto Serif JP (`NotoSerifJP-Bold-sub.woff2`)
+- The Japanese display fonts `jp-sans-900.woff2` and `jp-serif-900.woff2` are
+  subset derivatives of the Noto JP families above.
+
+Copyright 2019 The Archivo Project Authors (https://github.com/googlefonts/archivo)
+and 2014-2021 Adobe (Noto JP), with Reserved Font Names "Archivo" and "Noto".
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+these font files, to use, study, copy, merge, embed, modify, redistribute, and
+sell them, subject to the OFL conditions (no standalone sale of the fonts,
+Reserved Font Names preserved in modified works, and the license included with
+any redistribution).
+
 You must ensure that anyone who gets a copy of any part of
 the software from you also gets a copy of these terms or the
 URL for them above, as well as copies of any plain-text lines

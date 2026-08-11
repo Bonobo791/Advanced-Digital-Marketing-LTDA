@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { getContext, onMount } from 'svelte'
+  import { SITE_MOTION, type SiteMotion } from '$lib/client/site-motion'
+  import { setupReveals } from '$lib/client/reveal'
   import { SERVICES, formatBRL, getService, type ServiceId as CatalogServiceId } from '$lib/catalog'
   import {
     SERVICE_CONTENT,
@@ -40,6 +43,13 @@
   let text = $derived(copy[locale])
   const words = (value: string) => value.trim().split(/\s+/)
 
+  const motion = getContext<SiteMotion>(SITE_MOTION)
+
+  onMount(() => {
+    motion.registerHero()
+    return setupReveals()
+  })
+
   type SubscriptionDisplay = { name: string; detail: string }
 
   function subscriptionDisplays(id: ServiceId): SubscriptionDisplay[] {
@@ -71,7 +81,7 @@
 </script>
 
 <div class="index-home service-page services-index">
-  <section class="hero index-hero">
+  <section class="hero index-hero" class:hero-revealed={motion.state.hero === 'revealed'}>
     <div class="sec-inner hero-inner">
       <div class="hero-kick">
         <span class="jp" data-hero-reveal style="--hero-delay:0ms">「業務」</span>

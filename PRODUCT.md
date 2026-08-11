@@ -20,7 +20,7 @@ One senior, owner-operated practitioner handles strategy, implementation, and me
 
 ## Operating Context
 
-Prospects evaluate the agency from a desktop or mobile browser, often comparing it with generalist agencies. Contact happens through a direct email link, not an intake form. The registered office is in Sao Paulo, Brazil.
+Prospects evaluate the agency from a desktop or mobile browser, often comparing it with generalist agencies. Contact happens through a direct email link, not an intake form. The registered office is in São Paulo, Brazil.
 
 ## Capabilities and Constraints
 

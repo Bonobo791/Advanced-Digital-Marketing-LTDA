@@ -1,5 +1,15 @@
 <script lang="ts">
+  import { getContext, onMount } from 'svelte'
+  import { SITE_MOTION, type SiteMotion } from '$lib/client/site-motion'
+  import { setupReveals } from '$lib/client/reveal'
   import { absoluteUrl, LOCALE_ROUTES } from '$lib/locale'
+
+  const motion = getContext<SiteMotion>(SITE_MOTION)
+
+  onMount(() => {
+    motion.registerHero()
+    return setupReveals()
+  })
 </script>
 
 <svelte:head>
@@ -13,7 +23,7 @@
 </svelte:head>
 
 <div class="index-home service-page">
-  <section class="hero index-hero">
+  <section class="hero index-hero" class:hero-revealed={motion.state.hero === 'revealed'}>
     <div class="sec-inner hero-inner">
       <div class="hero-kick">
         <span class="jp" data-hero-reveal style="--hero-delay:0ms">「契約」</span>

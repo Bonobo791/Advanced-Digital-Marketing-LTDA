@@ -3,6 +3,8 @@
   import { EMAIL, JP, PORTUGUESE_EMAIL, PT_MAILTO, MAILTO } from '$lib/constants'
   import { SITE_MOTION, type SiteMotion } from '$lib/client/site-motion'
   import { SERVICE_CONTENT, SERVICE_SUBSCRIPTIONS, type ServiceId } from '$lib/services'
+  import { SITE_MOTION, type SiteMotion } from '$lib/client/site-motion'
+  import { setupReveals } from '$lib/client/reveal'
   import SubscribeSection from './SubscribeSection.svelte'
   import { getService } from '$lib/catalog'
   import type { Locale } from '$lib/locale'
@@ -22,20 +24,7 @@
 
   onMount(() => {
     motion.registerHero()
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const supportsView = CSS.supports?.('animation-timeline: view()') ?? false
-    const revealables = document.querySelectorAll<HTMLElement>('.index-home .rise, .index-home .wipe, .index-home .shear .w')
-    let observer: IntersectionObserver | undefined
-    if (!reduced && !supportsView && 'IntersectionObserver' in window) {
-      document.documentElement.classList.add('index-io')
-      observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) { entry.target.classList.add('io-on'); observer?.unobserve(entry.target) }
-        })
-      }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' })
-      revealables.forEach((el) => observer?.observe(el))
-    }
-    return () => { observer?.disconnect(); document.documentElement.classList.remove('index-io') }
+    return setupReveals()
   })
 </script>
 

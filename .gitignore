@@ -10,6 +10,9 @@ new-assets
 reasonix.toml
 .env
 .env.local
+# Ignore every environment variant except the example
+.env.*
+!.env.example
 .playwright-cli
 .impeccable
 .codex
