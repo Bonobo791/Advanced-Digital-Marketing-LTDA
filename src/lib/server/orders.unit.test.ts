@@ -139,6 +139,30 @@ describe('orders repository', () => {
     expect(refunded.ok && refunded.order.status).toBe('refunded')
   })
 
+  it('lets an approved order move back to pending during in_mediation only', async () => {
+    const order = await createOrder(db, input)
+    await updateOrderStatus(db, order.id, 'pending')
+    await updateOrderStatus(db, order.id, 'approved')
+
+    // A plain `pending` notification never regresses an approved order.
+    const plainPending = await updateOrderStatus(db, order.id, 'pending', {
+      mpStatus: 'pending',
+    })
+    expect(plainPending.ok).toBe(false)
+    if (!plainPending.ok) {
+      expect(plainPending.reason).toBe('invalid_transition')
+      expect(plainPending.order?.status).toBe('approved')
+    }
+
+    // Only in_mediation may hold an approved order as pending.
+    const mediation = await updateOrderStatus(db, order.id, 'pending', {
+      mpStatus: 'in_mediation',
+      mpStatusDetail: 'in_mediation',
+    })
+    expect(mediation.ok && mediation.order.status).toBe('pending')
+    expect(mediation.ok && mediation.order.mpStatus).toBe('in_mediation')
+  })
+
   it('is idempotent for duplicate webhook status updates', async () => {
     const order = await createOrder(db, input)
     await updateOrderStatus(db, order.id, 'pending')
@@ -173,6 +197,7 @@ describe('orders repository', () => {
     expect(mapMpStatusToOrderStatus('in_process')).toBe('pending')
     expect(mapMpStatusToOrderStatus('rejected')).toBe('rejected')
     expect(mapMpStatusToOrderStatus('cancelled')).toBe('rejected')
+    expect(mapMpStatusToOrderStatus('in_mediation')).toBe('pending')
     expect(mapMpStatusToOrderStatus('charged_back')).toBe('refunded')
     expect(mapMpStatusToOrderStatus('refunded')).toBe('refunded')
     expect(mapMpStatusToOrderStatus('weird_status')).toBeUndefined()

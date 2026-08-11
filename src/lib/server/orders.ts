@@ -69,7 +69,11 @@ export interface Order {
 const ALLOWED_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   created: ['pending', 'approved', 'rejected'],
   pending: ['approved', 'rejected'],
-  approved: ['refunded'],
+  // `pending` lets an approved order whose funds are held in mediation be
+  // reflected as pending. The regression is gated on the incoming mpStatus
+  // in updateOrderStatus — a plain `pending` notification never downgrades
+  // an approved order.
+  approved: ['refunded', 'pending'],
   rejected: [],
   refunded: [],
 }
@@ -82,6 +86,8 @@ const MP_STATUS_TO_ORDER: Record<string, OrderStatus> = {
   authorized: 'pending',
   rejected: 'rejected',
   cancelled: 'rejected',
+  // A dispute holds the funds — reflect it as pending rather than approved.
+  in_mediation: 'pending',
   // A chargeback takes money back after approval — treat it as a refund.
   charged_back: 'refunded',
   refunded: 'refunded',
@@ -347,6 +353,13 @@ export async function updateOrderStatus(
   }
 
   if (!ALLOWED_TRANSITIONS[current.status].includes(nextStatus)) {
+    return { ok: false, reason: 'invalid_transition', order: current }
+  }
+
+  // An approved order may only regress to pending while a dispute holds the
+  // funds (in_mediation) — never from a plain `pending` notification, which
+  // would silently roll back an already-approved order.
+  if (current.status === 'approved' && nextStatus === 'pending' && change.mpStatus !== 'in_mediation') {
     return { ok: false, reason: 'invalid_transition', order: current }
   }
 

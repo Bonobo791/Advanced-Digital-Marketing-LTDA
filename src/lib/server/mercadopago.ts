@@ -26,19 +26,53 @@ export interface CheckoutPreferenceInput {
 
 export interface CreatedPreference {
   id: string
-  /** Redirect target (sandbox URL in test mode). */
+  /** Redirect target (sandbox or production, per the configured credentials). */
   initPoint: string
 }
 
-function getClient(): MercadoPagoConfig | undefined {
-  const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN
+/**
+ * Sandbox mode is detected by exact match: the configured access token must
+ * equal `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN` (set to the same value as
+ * `MERCADO_PAGO_ACCESS_TOKEN` in the test environment). Anything else — an
+ * unset sandbox variable or any other token — is treated as production.
+ */
+export function isSandboxAccessToken(
+  accessToken: string | undefined,
+  sandboxToken: string | undefined,
+): boolean {
+  // Empty strings are treated as unset — never a sandbox match.
+  return !!accessToken && !!sandboxToken && accessToken === sandboxToken
+}
+
+/**
+ * Picks the redirect URL from the preference response. The create-preference
+ * response always carries BOTH `init_point` (production) and
+ * `sandbox_init_point` (sandbox), so the choice must be driven by the
+ * credentials in use — never by which field happens to be populated.
+ */
+export function selectCheckoutInitPoint(
+  response: { init_point?: string; sandbox_init_point?: string },
+  accessToken: string | undefined,
+  sandboxToken: string | undefined,
+): string | undefined {
+  if (isSandboxAccessToken(accessToken, sandboxToken)) {
+    return response.sandbox_init_point ?? response.init_point
+  }
+  return response.init_point ?? response.sandbox_init_point
+}
+
+function getClient(
+  accessToken: string | undefined = process.env.MERCADO_PAGO_ACCESS_TOKEN,
+): MercadoPagoConfig | undefined {
   return accessToken ? new MercadoPagoConfig({ accessToken }) : undefined
 }
 
 export async function createCheckoutPreference(
   input: CheckoutPreferenceInput,
 ): Promise<CreatedPreference | undefined> {
-  const config = getClient()
+  const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN
+  const sandboxToken = process.env.MERCADO_PAGO_SANDBOX_ACCESS_TOKEN
+  const config = getClient(accessToken)
   if (!config) return undefined
 
   const preference = new Preference(config)
@@ -62,7 +96,7 @@ export async function createCheckoutPreference(
     },
   })
 
-  const initPoint = response.sandbox_init_point ?? response.init_point
+  const initPoint = selectCheckoutInitPoint(response, accessToken, sandboxToken)
   if (!response.id || !initPoint) {
     throw new Error('Mercado Pago preference response is missing id or init_point')
   }

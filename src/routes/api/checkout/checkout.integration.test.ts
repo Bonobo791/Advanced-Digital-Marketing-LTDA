@@ -125,6 +125,28 @@ describe('POST /api/checkout', () => {
     expect(call.payerEmail).toBe('ada@example.com')
   })
 
+  it('marks the order rejected and returns 502 when the preference creation fails', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      mockCreatePreference.mockRejectedValueOnce(new Error('Mercado Pago unavailable'))
+
+      const response = await POST(requestEvent(validBody))
+      expect(response.status).toBe(502)
+      expect(await response.json()).toEqual({ error: 'payment_creation_failed' })
+      expect(errorSpy).toHaveBeenCalled()
+
+      // The order attempt is terminal — never left orphaned as 'created'.
+      const db = await (await import('$lib/server/db')).getDb()
+      const rows = await db.execute({ sql: 'SELECT id, status FROM orders', args: {} })
+      expect(rows.rows).toHaveLength(1)
+      const row = rows.rows[0] as unknown as { id: string; status: string }
+      expect(row.status).toBe('rejected')
+      expect((await getOrder(db, row.id))?.status).toBe('rejected')
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
   it('builds pt-BR back_urls when the customer locale is pt-BR', async () => {
     const response = await POST(requestEvent({ ...validBody, locale: 'pt-BR' }))
     expect(response.status).toBe(200)
