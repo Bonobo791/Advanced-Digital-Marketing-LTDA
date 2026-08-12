@@ -12,6 +12,8 @@
 - NEVER develop on the default branch/main. Always use dev.
 - NEVER make changes to production databases. That is for humans only.
 - Do not use swarm.
+- Use `fleet` whenever a task decomposes into 2+ independent subtasks — never run them sequentially. Parallel writers must declare non-overlapping `write_paths`.
+- NEVER push to the branch. Only commit and add a commit message.
 
 ## Project Structure & Module Organization
 
