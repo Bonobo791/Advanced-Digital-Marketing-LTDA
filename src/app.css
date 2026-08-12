@@ -1189,6 +1189,19 @@ img { display: block; max-width: 100%; }
 .build-info { min-width: 0; }
 .build-name { display: block; font-family: 'ADM Display', sans-serif; font-size: 1.15rem; letter-spacing: -0.01em; text-transform: uppercase; }
 .build-flips { display: flex; flex-wrap: wrap; gap: 16px 32px; margin-top: 18px; }
+
+/* One-time website build purchase (WebsiteBuildPricing) */
+.build-cta { display: grid; gap: 14px; margin-top: 28px; max-width: 460px; }
+.build-cta .btn { width: 100%; }
+.build-note { max-width: 46em; color: var(--index-ink60); font-size: 13px; }
+.build-row .build-cta { grid-column: 1 / -1; }
+.flip button:disabled { cursor: not-allowed; opacity: 0.55; }
+.flip button:disabled:hover { color: var(--index-ink60); }
+.flip button:disabled[aria-pressed='true'] { background: var(--index-ink); color: var(--index-paper); }
+
+/* Anchored sections land below the fixed top nav when CTA buttons scroll to
+   them (e.g. option cards -> #subscribe / #builds). */
+.index-home section[id] { scroll-margin-top: 96px; }
 .flip-group { display: grid; gap: 8px; }
 .flip-label { color: var(--index-ink60); font-family: 'ADM Semi', sans-serif; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
 .flip { display: inline-flex; border: 1px solid var(--index-hair-i); background: var(--index-paper); }

@@ -1,15 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { load } from './+page.server'
-import { isValidPreapprovalId } from '$lib/server/checkout'
-import { MercadoPagoError, getSubscription } from '$lib/server/mercadoPago'
+import { isValidPaymentId, isValidPreapprovalId } from '$lib/server/checkout'
+import { MercadoPagoError, getPayment, getSubscription } from '$lib/server/mercadoPago'
 import { resetRateLimitBuckets } from '$lib/server/rate-limit'
 
 vi.mock('$lib/server/mercadoPago', async (importOriginal) => {
   const actual = await importOriginal<typeof import('$lib/server/mercadoPago')>()
-  return { ...actual, getSubscription: vi.fn() }
+  return { ...actual, getSubscription: vi.fn(), getPayment: vi.fn() }
 })
 
 const mockGetSubscription = vi.mocked(getSubscription)
+const mockGetPayment = vi.mocked(getPayment)
 
 const urlFor = (query: string) =>
   new URL(`https://example.com/pt-br/checkout/complete/${query}`)
@@ -34,6 +35,7 @@ const authorizedSubscription = {
 describe('checkout/complete load', () => {
   beforeEach(() => {
     mockGetSubscription.mockReset()
+    mockGetPayment.mockReset()
     resetRateLimitBuckets()
   })
 
@@ -182,5 +184,130 @@ describe('checkout/complete load', () => {
         errorSpy.mockRestore()
       }
     })
+  })
+})
+
+describe('checkout/complete load — one-time payments (Checkout Pro)', () => {
+  beforeEach(() => {
+    mockGetPayment.mockReset()
+    resetRateLimitBuckets()
+  })
+
+  const approvedPayment = {
+    id: '1234567890',
+    status: 'approved',
+    statusDetail: 'accredited',
+    externalReference: 'website-build:website:new',
+    transactionAmount: 3000,
+    currencyId: 'BRL',
+  }
+
+  it('reports missing when the redirect carries neither preapproval_id nor payment_id', async () => {
+    expect(await load(loadArgs('') as never)).toEqual({ state: 'missing' })
+    expect(mockGetPayment).not.toHaveBeenCalled()
+    expect(mockGetSubscription).not.toHaveBeenCalled()
+  })
+
+  it('confirms only an approved payment and surfaces the reference', async () => {
+    mockGetPayment.mockResolvedValue(approvedPayment)
+    expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
+      state: 'payment_confirmed',
+      paymentId: '1234567890',
+    })
+    expect(mockGetPayment).toHaveBeenCalledWith('1234567890')
+  })
+
+  it('accepts the legacy collection_id parameter for one-time checkouts', async () => {
+    mockGetPayment.mockResolvedValue(approvedPayment)
+    expect(await load(loadArgs('?collection_id=1234567890') as never)).toEqual({
+      state: 'payment_confirmed',
+      paymentId: '1234567890',
+    })
+  })
+
+  it('never claims success for a payment Mercado Pago has not approved', async () => {
+    for (const status of ['rejected', 'pending', 'in_process', 'refunded', 'cancelled', 'charged_back']) {
+      mockGetPayment.mockResolvedValue({ ...approvedPayment, status })
+      expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
+        state: 'payment_unconfirmed',
+        paymentId: '1234567890',
+      })
+    }
+  })
+
+  it('renders the error state (loudly) when payment verification fails', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      mockGetPayment.mockRejectedValue(new MercadoPagoError('unauthorized', 'x'))
+      expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
+        state: 'error',
+      })
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('payment verification failed: unauthorized'),
+      )
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
+  it('renders the error state when the payment is not found', async () => {
+    mockGetPayment.mockResolvedValue(undefined)
+    expect(await load(loadArgs('?payment_id=nope') as never)).toEqual({
+      state: 'error',
+    })
+  })
+
+  it('rejects malformed payment ids before touching the API', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      for (const bad of ['a b', 'id with spaces', 'x'.repeat(200), '<script>', 'id/../etc']) {
+        expect(await load(loadArgs(`?payment_id=${encodeURIComponent(bad)}`) as never)).toEqual({
+          state: 'error',
+        })
+      }
+      expect(mockGetPayment).not.toHaveBeenCalled()
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('malformed payment_id'))
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('throttles repeated payment verification requests from the same IP', async () => {
+    mockGetPayment.mockResolvedValue(approvedPayment)
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      for (let i = 0; i < 10; i++) {
+        expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
+          state: 'payment_confirmed',
+          paymentId: '1234567890',
+        })
+      }
+      expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
+        state: 'rate_limited',
+      })
+      expect(mockGetPayment).toHaveBeenCalledTimes(10)
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('rate limit exceeded'))
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('does not let a flood of malformed ids consume the payment rate-limit budget', async () => {
+    mockGetPayment.mockResolvedValue(approvedPayment)
+    for (let i = 0; i < 20; i++) {
+      expect(await load(loadArgs('?payment_id=bad%20id') as never)).toEqual({ state: 'error' })
+    }
+    expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
+      state: 'payment_confirmed',
+      paymentId: '1234567890',
+    })
+    expect(mockGetPayment).toHaveBeenCalledTimes(1)
+  })
+
+  it('accepts legitimate payment id shapes', () => {
+    expect(isValidPaymentId('1234567890')).toBe(true)
+    expect(isValidPaymentId('2c9380848b6e4d3a018b7041a2e6158c')).toBe(true)
+    expect(isValidPaymentId('')).toBe(false)
+    expect(isValidPaymentId('a b')).toBe(false)
   })
 })

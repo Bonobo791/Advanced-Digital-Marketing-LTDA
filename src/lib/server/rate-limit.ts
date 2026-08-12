@@ -38,6 +38,8 @@ const buckets = new Map<string, number[]>()
 export const RATE_LIMIT_BUCKETS = {
   subscriptionCreate: 'subscription-create',
   subscriptionVerify: 'subscription-verify',
+  buildCreate: 'build-create',
+  paymentVerify: 'payment-verify',
 } as const
 
 export type RateLimitBucket = keyof typeof RATE_LIMIT_BUCKETS

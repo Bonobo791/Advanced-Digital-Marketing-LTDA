@@ -21,7 +21,9 @@
     type CatalogServiceId,
   } from '$lib/catalog'
   import { parseBRLInput } from '$lib/brl'
-  import { CHECKOUT_REQUEST_TIMEOUT_MS, EMAIL } from '$lib/constants'
+  import { EMAIL } from '$lib/constants'
+  import { fireBeginCheckout } from '$lib/client/analytics'
+  import { fetchCheckoutUrl } from '$lib/client/checkout'
   import type { Locale } from '$lib/locale'
 
   let {
@@ -150,16 +152,6 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim())
   }
 
-  function fireBeginCheckout(items: { item_id: string; item_name: string }[], value: number) {
-    if (typeof window === 'undefined') return
-    const dataLayer = (window as unknown as { dataLayer?: unknown[] }).dataLayer
-    if (!Array.isArray(dataLayer)) {
-      console.info('[checkout] analytics: no dataLayer found; begin_checkout was not fired')
-      return
-    }
-    dataLayer.push({ event: 'begin_checkout', currency: 'BRL', value, items })
-  }
-
   let genericError = $derived(
     locale === 'pt-BR'
       ? 'Não foi possível iniciar o pagamento pelo Mercado Pago. Tente novamente.'
@@ -239,48 +231,20 @@
         totalBRL,
       )
 
-      const controller = new AbortController()
-      // Bound the request: a stalled Mercado Pago round-trip must reach the
-      // error handling instead of leaving `submitting` active indefinitely.
-      // Leave headroom beyond the server's own timeout (mercadoPago.ts
-      // REQUEST_TIMEOUT_MS = 15 s): this timer covers the full browser →
-      // function → Mercado Pago round-trip, so it must not expire while the
-      // function is still within its upstream budget and about to return.
-      const timeout = window.setTimeout(() => controller.abort(), CHECKOUT_REQUEST_TIMEOUT_MS)
-      try {
-        const response = await fetch('/api/checkout/subscription', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: email.trim(),
-            serviceIds,
-            config,
-            idempotencyKey,
-            locale,
-          }),
-          signal: controller.signal,
-        })
-
-        const body = (await response.json().catch(() => ({}))) as { checkoutUrl?: unknown; error?: unknown }
-        if (!response.ok) {
-          errorMessage = errorMessageFor(typeof body.error === 'string' ? body.error : undefined)
-          return
-        }
-        if (typeof body.checkoutUrl !== 'string') {
-          errorMessage = genericError
-          return
-        }
-
-        // Full-page redirect: the browser address bar visibly leaves our domain.
-        window.location.assign(body.checkoutUrl)
-      } catch (error) {
-        // Fail loudly on the server log; keep the generic message user-facing.
-        console.error('[checkout] subscription request failed', error)
-        errorMessage = genericError
-      } finally {
-        window.clearTimeout(timeout)
-        submitting = false
+      const result = await fetchCheckoutUrl('/api/checkout/subscription', {
+        email: email.trim(),
+        serviceIds,
+        config,
+        idempotencyKey,
+        locale,
+      })
+      if (!result.ok) {
+        errorMessage = errorMessageFor(result.errorCode)
+        return
       }
+
+      // Full-page redirect: the browser address bar visibly leaves our domain.
+      window.location.assign(result.checkoutUrl)
     } catch (error) {
       // Fail loudly on the server log; keep the generic message user-facing.
       console.error('[checkout] subscription preparation failed', error)

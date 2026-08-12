@@ -6,7 +6,9 @@
  *  - build type: `website` (base) or `ecommerce` (base × 2)
  *  - project kind: `new` (base) or `migration` (base × 2)
  *
- * Prices are per locale: pt-BR pages show reais, en-US pages show dollars.
+ * Display prices are per locale: pt-BR pages show reais, en-US pages show
+ * dollars. Checkout is always priced in BRL from `WEBSITE_BUILD_BASE_PRICE_BRL`
+ * (server-side only); a browser-supplied amount is never accepted.
  */
 import type { Locale } from '$lib/locale'
 
@@ -24,6 +26,52 @@ export const WEBSITE_BUILD_BASE_PRICE: Record<Locale, Record<WebsiteBuildType, n
 
 /** Migrating an existing site costs 2× the base build price. */
 export const MIGRATION_MULTIPLIER = 2
+
+/**
+ * AUTHORITATIVE one-time build price in BRL — the only amount the checkout
+ * endpoint (`/api/checkout/build`) ever sends to Mercado Pago. The pt-BR
+ * display prices equal these values; en-US display prices are a separate USD
+ * reference. Guarded by `website-builds.unit.test.ts` so the two cannot drift.
+ */
+export const WEBSITE_BUILD_BASE_PRICE_BRL: Record<WebsiteBuildType, number> = {
+  website: 3000,
+  ecommerce: 6000,
+}
+
+/** One-time build price in BRL (checkout currency), including the kind multiplier. */
+export function websiteBuildPriceBRL(type: WebsiteBuildType, kind: WebsiteBuildKind): number {
+  const base = WEBSITE_BUILD_BASE_PRICE_BRL[type]
+  return kind === 'migration' ? base * MIGRATION_MULTIPLIER : base
+}
+
+export function isWebsiteBuildType(value: unknown): value is WebsiteBuildType {
+  return typeof value === 'string' && (WEBSITE_BUILD_TYPES as readonly string[]).includes(value)
+}
+
+export function isWebsiteBuildKind(value: unknown): value is WebsiteBuildKind {
+  return typeof value === 'string' && (WEBSITE_BUILD_KINDS as readonly string[]).includes(value)
+}
+
+/** Build names per locale and type (single source for UI and checkout titles). */
+export const WEBSITE_BUILD_NAMES: Record<Locale, Record<WebsiteBuildType, string>> = {
+  'en-US': { website: 'Website Development', ecommerce: 'Ecommerce Website Development' },
+  'pt-BR': { website: 'Desenvolvimento de Site', ecommerce: 'Desenvolvimento de Site E-commerce' },
+}
+
+const MIGRATION_SUFFIX: Record<Locale, string> = {
+  'en-US': ' (Migration)',
+  'pt-BR': ' (Migração)',
+}
+
+/** Checkout item title, e.g. "Ecommerce Website Development (Migration)". */
+export function websiteBuildTitle(locale: Locale, type: WebsiteBuildType, kind: WebsiteBuildKind): string {
+  return kind === 'migration' ? `${WEBSITE_BUILD_NAMES[locale][type]}${MIGRATION_SUFFIX[locale]}` : WEBSITE_BUILD_NAMES[locale][type]
+}
+
+/** Deterministic Mercado Pago `external_reference`, e.g. "website-build:website:new". */
+export function websiteBuildExternalReference(type: WebsiteBuildType, kind: WebsiteBuildKind): string {
+  return `website-build:${type}:${kind}`
+}
 
 export function websiteBuildPrice(locale: Locale, type: WebsiteBuildType, kind: WebsiteBuildKind): number {
   const base = WEBSITE_BUILD_BASE_PRICE[locale][type]

@@ -1,10 +1,15 @@
-# Mercado Pago Subscriptions
+# Mercado Pago Checkout
 
-Monthly mix-and-match subscriptions via Mercado Pago's **hosted subscription
-checkout**. Customers select recurring services, see the monthly total, enter
-their email, and are redirected completely off this site to Mercado Pago, where
-the subscription is created, paid, and managed. **Mercado Pago is the system of
-record for subscriptions and billing** — there is no local billing database.
+Two hosted-checkout flows, both with **Mercado Pago as the system of record**
+(there is no local billing database):
+
+1. **Subscriptions** — monthly mix-and-match services via Mercado Pago's hosted
+   *subscription* checkout. Customers select recurring services, see the
+   monthly total, enter their email, and are redirected to Mercado Pago, where
+   the subscription is created, paid, and managed.
+2. **One-time website builds** — the web-development page's flipper configurator
+   charges a fixed one-time price through Checkout Pro, and the hosting
+   subscription below it recurs monthly.
 
 ```text
 Service selector (Monte seu pacote)
@@ -20,6 +25,19 @@ Browser is redirected to Mercado Pago's hosted checkout
 Customer authorizes the payment method on Mercado Pago
     ↓
 Customer returns to /pt-br/checkout/complete
+```
+
+```text
+Website build flippers (tipo + migração)
+    ↓  POST /api/checkout/build
+Server validates type + kind (never trusts a client amount)
+    ↓  POST https://api.mercadopago.com/checkout/preferences
+Mercado Pago creates a one-time Checkout Pro preference
+    ↓  returns id + init_point (sandbox-aware)
+Browser is redirected to Mercado Pago's hosted payment checkout
+    ↓
+Customer pays once; Mercado Pago redirects to /pt-br/checkout/complete?payment_id=…
+    ↓  GET /v1/payments/{payment_id} verifies status === "approved"
 ```
 
 The design principle:
@@ -46,12 +64,20 @@ Mercado Pago:  customer + subscription + checkout + payments + recurring billing
 - **Mercado Pago client:** `src/lib/server/mercadoPago.ts` — all MP API access
   is isolated here. Creates subscriptions without an associated plan via
   `POST /preapproval` (`status: "pending"` = hosted checkout, pending-payment
-  model), validates the returned `init_point` (HTTPS + Mercado Pago hostname),
-  and exposes a sanitized `getSubscription()` proxy.
-- **Endpoint:** `src/routes/api/checkout/subscription/+server.ts` (POST).
-- **UI:** `src/lib/components/pages/SubscribeSection.svelte` mounted on the
-  services gateway (`/services/`, `/pt-br/servicos/`) and on each subscribable
-  service page (EN + PT).
+  model), creates one-time Checkout Pro preferences via
+  `POST /checkout/preferences`, validates every returned `init_point` (HTTPS +
+  Mercado Pago hostname), and exposes sanitized `getSubscription()` /
+  `getPayment()` proxies for the return page.
+- **Endpoints:** `src/routes/api/checkout/subscription/+server.ts` (POST,
+  monthly) and `src/routes/api/checkout/build/+server.ts` (POST, one-time
+  website build).
+- **UI:** `src/lib/components/pages/SubscribeSection.svelte` (monthly
+  configurator) mounted on the services gateway (`/services/`,
+  `/pt-br/servicos/`) and on each subscribable service page (EN + PT), and
+  `src/lib/components/pages/WebsiteBuildPricing.svelte` (one-time build
+  purchase with the type/migration flippers). Option-card CTAs on service
+  pages scroll to the relevant pricing section (`#builds` / `#subscribe`)
+  instead of opening mailto links.
 - **No local billing database.** No ORM. No payment tables. No webhooks (see
   below).
 
@@ -75,6 +101,20 @@ AR/BR/CL/CO/MX/PE/UY — there is no USD subscription checkout from this
 (Brazilian) account. English pages are informational (USD amounts shown as a
 reference); an English checkout via **Stripe is planned future work** and is
 not implemented here.
+
+### One-time website build pricing
+
+| Choice | BRL (checkout) | USD reference |
+|---|---|---|
+| Website — new | R$ 3.000 | $750 |
+| Website — migration | R$ 6.000 | $1,500 |
+| Ecommerce — new | R$ 6.000 | $1,500 |
+| Ecommerce — migration | R$ 12.000 | $3,000 |
+
+The authoritative BRL table lives in `WEBSITE_BUILD_BASE_PRICE_BRL`
+(`src/lib/website-builds.ts`); the pt-BR display prices must equal it
+(guarded by `website-builds.unit.test.ts`). The en-US prices are a separate
+USD reference and are never billed (no USD checkout yet).
 
 ---
 
@@ -204,6 +244,45 @@ returned:
 
 Unexpected errors are re-thrown so the server logs them (Sentry/Netlify logs).
 
+### `POST /api/checkout/build` (one-time website build)
+
+Request:
+
+```json
+{
+  "type": "ecommerce",
+  "kind": "migration",
+  "idempotencyKey": "00000000-0000-4000-8000-000000000000",
+  "locale": "pt-BR"
+}
+```
+
+- `type` — `website` or `ecommerce` (unknown values are rejected).
+- `kind` — `new` or `migration` (migration bills 2×).
+- `idempotencyKey` — UUID v4, same duplicate-submission guard as subscriptions.
+- `locale` — only selects the item-title language; **no amount field exists** —
+  the server derives the one-time BRL price from `type` + `kind`.
+
+Server procedure:
+
+1. Validate `type`/`kind` and the idempotency key.
+2. Derive the authoritative amount from `WEBSITE_BUILD_BASE_PRICE_BRL` × the
+   migration multiplier (browser manipulation cannot change the billed amount).
+3. Build the item title (e.g. `Desenvolvimento de Site E-commerce (Migração)`)
+   and `external_reference` (e.g. `website-build:ecommerce:migration`,
+   deterministic, no PII).
+4. `POST https://api.mercadopago.com/checkout/preferences` with one item,
+   `back_urls` (all three states → `/pt-br/checkout/complete/`),
+   `auto_return: "approved"`.
+5. Validate the returned `init_point` (HTTPS, Mercado Pago host; sandbox-aware
+   via `sandbox_init_point` when the sandbox token matches) and respond.
+
+Response: `{ "checkoutUrl": "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=…" }`
+
+Error responses reuse the subscription codes plus `invalid_build` (400). The
+UI only renders the purchase button on pt-BR pages (Mercado Pago bills BRL);
+en-US pages show the informational email CTA until the Stripe checkout lands.
+
 ---
 
 ## Return page
@@ -212,14 +291,22 @@ Unexpected errors are re-thrown so the server logs them (Sentry/Netlify logs).
 prerendered: a server load function (`+page.server.ts`) verifies the redirect
 before claiming success.
 
-Mercado Pago's hosted checkout appends `preapproval_id` to the `back_url`; the
-load function calls `getSubscription(preapproval_id)` (live API, no local
-state) and renders one of:
+Mercado Pago's hosted checkouts append identifiers to the `back_url`; the
+load function verifies them live against the API (no local state):
 
-- **confirmed** — only when the preapproval status is `authorized`
-  (`Sua assinatura foi processada.` plus the subscription reference);
-- **pending** — any other status (`paused`, `cancelled`, ...) — the page never
-  claims success for these;
+- **subscriptions** — `preapproval_id` → `getSubscription()` (see below);
+- **one-time builds** — `payment_id` (legacy `collection_id`) → `getPayment()`
+  (`GET /v1/payments/{id}`).
+
+It renders one of:
+
+- **confirmed** — subscription: only when the preapproval status is
+  `authorized`; payment: only when the payment status is `approved`
+  (`Sua assinatura foi processada.` / `Seu pagamento foi aprovado.` plus the
+  reference);
+- **pending / cancelled / payment_unconfirmed** — any other status — the page
+  never claims success for these (a one-time payment that is not `approved`
+  renders `payment_unconfirmed`);
 - **rate_limited** — too many verification requests from the same client in a
   short window (throttled with the same per-IP limiter as subscription
   creation; the page asks the customer to wait and retry);
@@ -231,10 +318,12 @@ parameters as proof of payment on its own — the status is fetched from Mercado
 Pago. The page stays `noindex` and transient.
 
 Abuse protection runs before any outbound call: requests carrying a
-`preapproval_id` are throttled per client IP (same in-memory limiter and
-bucket as `POST /api/checkout/subscription`), and identifiers that fail a
-conservative shape check (only `[A-Za-z0-9_-]`, max 128 chars) are rejected
-without touching the Mercado Pago API.
+`preapproval_id` or `payment_id` are throttled per client IP (same in-memory
+limiter; separate buckets `subscriptionVerify` and `paymentVerify`, and
+`buildCreate` for the build endpoint, so traffic on one entry point never
+exhausts another's budget), and identifiers that fail a conservative shape
+check (only `[A-Za-z0-9_-]`, max 128 chars) are rejected without touching the
+Mercado Pago API.
 
 ## Webhooks
 
@@ -271,7 +360,8 @@ understandable inside Mercado Pago without any local database.
 ## Security checklist
 
 - Server-side pricing only — browser manipulation cannot change the billed
-  amount (covered by integration tests, including a literal `total: 1` attack).
+  amount, for subscriptions or for one-time builds (covered by integration
+  tests, including literal `total: 1` / `amount: 1` attacks).
 - Strict service-id / config validation; quote-only and inactive services are
   rejected.
 - Access token is server-only (`src/lib/server/mercadoPago.ts`), never exposed.
@@ -315,11 +405,16 @@ Coverage highlights:
 
 - Pricing: one/multiple/all services, invalid + inactive ids, quote-only
   rejection, ad-spend rule at/below/above the R$ 500 minimum, zero totals,
-  `reason`/`external_reference` shapes.
+  `reason`/`external_reference` shapes; build prices for every type × kind
+  combo against `WEBSITE_BUILD_BASE_PRICE_BRL` (including the pt-BR display
+  sync guard).
 - Checkout: valid creation, invalid email/json/spend/idempotency-key, MP
   401/5xx/timeout, missing `init_point`, hostile `init_point` host, duplicate
-  submission (same idempotency key), and the end-to-end tamper test proving the
-  server price reaches Mercado Pago (`subscription-flow.integration.test.ts`).
+  submission (same idempotency key), the end-to-end tamper test proving the
+  server price reaches Mercado Pago (`subscription-flow.integration.test.ts`),
+  and the build endpoint's invalid type/kind rejection + server-priced
+  preference (`build.integration.test.ts`). Return page: subscription and
+  payment verification, malformed-id rejection, per-bucket rate limits.
 
 ## Troubleshooting
 

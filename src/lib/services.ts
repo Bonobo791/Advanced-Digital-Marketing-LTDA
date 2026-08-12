@@ -20,6 +20,9 @@ export type ServiceOption = {
   items: string[]
   cta: string
   subject: string
+  /** Same-page pricing/checkout section this CTA scrolls to (e.g. '#subscribe').
+   *  When unset, the CTA keeps its mailto link. */
+  pricingAnchor?: string
 }
 
 export type ServiceStep = { jp: string; title: string; text: string }
@@ -46,6 +49,9 @@ export type ServiceContent = {
   contactSub: string
   bookCall: string
   seeOptions: string
+  /** Default pricing section anchor for this service's option CTAs (e.g.
+   *  '#subscribe'). Services without a pricing section keep mailto CTAs. */
+  pricingAnchor?: string
 }
 
 export const SERVICE_ROUTES: Record<ServiceId, Record<Locale, string>> = {
@@ -222,6 +228,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       contactSub: 'One email starts it. We reply within one business day with next steps and a straight answer on whether we can help.',
       bookCall: 'Book a strategy call',
       seeOptions: 'See the options',
+      pricingAnchor: '#subscribe',
     },
     geo: {
       navLabel: 'GEO',
@@ -362,6 +369,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Talk retainers',
           subject: 'Build retainer inquiry',
+          pricingAnchor: '#subscribe',
         },
       ],
       optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
@@ -380,6 +388,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       contactSub: 'One email starts it. We reply within one business day with next steps and a straight answer on whether we can help.',
       bookCall: 'Book a strategy call',
       seeOptions: 'See the options',
+      pricingAnchor: '#builds',
     },
     'paid-search': {
       navLabel: 'Paid Search',
@@ -459,6 +468,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       contactSub: 'One email starts it. We reply within one business day with next steps and a straight answer on whether we can help.',
       bookCall: 'Book a strategy call',
       seeOptions: 'See the options',
+      pricingAnchor: '#subscribe',
     },
     'meta-ads': {
       navLabel: 'Meta Ads',
@@ -538,6 +548,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       contactSub: 'One email starts it. We reply within one business day with next steps and a straight answer on whether we can help.',
       bookCall: 'Book a strategy call',
       seeOptions: 'See the options',
+      pricingAnchor: '#subscribe',
     },
     'ai-automation': {
       navLabel: 'AI Automation',
@@ -667,6 +678,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       contactSub: 'Um e-mail começa tudo. Respondemos em até um dia útil com os próximos passos e uma resposta direta sobre se podemos ajudar.',
       bookCall: 'Agendar uma conversa',
       seeOptions: 'Ver as opções',
+      pricingAnchor: '#subscribe',
     },
     geo: {
       navLabel: 'GEO',
@@ -807,6 +819,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Falar sobre mensalidade',
           subject: 'Build retainer inquiry',
+          pricingAnchor: '#subscribe',
         },
       ],
       optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
@@ -825,6 +838,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       contactSub: 'Um e-mail começa tudo. Respondemos em até um dia útil com os próximos passos e uma resposta direta sobre se podemos ajudar.',
       bookCall: 'Agendar uma conversa',
       seeOptions: 'Ver as opções',
+      pricingAnchor: '#builds',
     },
     'paid-search': {
       navLabel: 'Google Ads',
@@ -904,6 +918,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       contactSub: 'Um e-mail começa tudo. Respondemos em até um dia útil com os próximos passos e uma resposta direta sobre se podemos ajudar.',
       bookCall: 'Agendar uma conversa',
       seeOptions: 'Ver as opções',
+      pricingAnchor: '#subscribe',
     },
     'meta-ads': {
       navLabel: 'Meta Ads',
@@ -983,6 +998,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       contactSub: 'Um e-mail começa tudo. Respondemos em até um dia útil com os próximos passos e uma resposta direta sobre se podemos ajudar.',
       bookCall: 'Agendar uma conversa',
       seeOptions: 'Ver as opções',
+      pricingAnchor: '#subscribe',
     },
     'ai-automation': {
       navLabel: 'Automação com IA',

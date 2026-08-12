@@ -36,6 +36,16 @@ export function isValidPreapprovalId(value: string): boolean {
 }
 
 /**
+ * Mercado Pago payment ids (Checkout Pro) are decimal strings of varying
+ * length; the same conservative shape guard as preapproval ids applies.
+ */
+const PAYMENT_ID_RE = /^[A-Za-z0-9_-]{1,128}$/
+
+export function isValidPaymentId(value: string): boolean {
+  return PAYMENT_ID_RE.test(value)
+}
+
+/**
  * Back URL for the hosted checkout. The production hostname is never
  * hard-coded: it comes from PUBLIC_SITE_URL, falling back to the site's
  * canonical origin constant. The fallback is loud (logged on the server).
