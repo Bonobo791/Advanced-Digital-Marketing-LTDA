@@ -1,12 +1,12 @@
-node_modules
-reports
-dist
+/node_modules
+/reports
+/dist
 .svelte-kit
 .netlify
 /build
 .DS_Store
 vite.config.ts.timestamp-*
-new-assets
+/new-assets
 reasonix.toml
 .env
 .env.local
