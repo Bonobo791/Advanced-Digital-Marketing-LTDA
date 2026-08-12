@@ -135,6 +135,14 @@ in API responses, HTML, or logs. Do **not** add a Mercado Pago public key —
 this redirect flow needs none. Do not prefix any of these with `PUBLIC_` for
 `import.meta.env` access.
 
+**Client ID / Client Secret are not needed** (prod or dev). Mercado Pago only
+uses them for OAuth-based integrations — the `client_credentials` grant to
+mint an Access Token programmatically (`POST /oauth/token`) or the
+authorization-code flow for marketplace/third-party access. This integration
+uses the static Access Token from the panel directly and performs no OAuth;
+the codebase never reads these values. (Test credentials do not even expose a
+Client ID/Secret pair.)
+
 > Note: local `.env` files are gitignored. The current dev `.env` follows the
 > dev row above (test token in both variables — the account resolves to a
 > seller **test user**, `TESTUSER...`, tagged `test_user` in
