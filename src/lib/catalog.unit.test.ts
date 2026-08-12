@@ -16,7 +16,7 @@ import { SERVICE_CONTENT } from './services'
 
 describe('catalog integrity', () => {
   it('defines every advertised service id in the catalog', () => {
-    expect(CATALOG_SERVICE_IDS.length).toBe(Object.keys(SERVICES).length)
+    expect(CATALOG_SERVICE_IDS).toHaveLength(Object.keys(SERVICES).length)
     for (const id of CATALOG_SERVICE_IDS) {
       expect(SERVICES[id]).toBeDefined()
       expect(SERVICES[id].id).toBe(id)

@@ -24,7 +24,8 @@ export class ClientAddressError extends Error {
 export function clientIpAddress(getClientAddress: () => string): string {
   try {
     const address = getClientAddress()
-    if (address && address.trim()) return address.trim()
+    const trimmed = address?.trim()
+    if (trimmed) return trimmed
   } catch {
     // Fall through to the loud failure below.
   }

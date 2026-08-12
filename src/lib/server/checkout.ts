@@ -5,14 +5,17 @@
  */
 import { SITE_ORIGIN } from '$lib/locale'
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+// Linear-time shape: the local and domain-run classes cannot match the literal
+// separators ('@' and '.'), so each separator has exactly one match position
+// and the engine never backtracks over overlapping repetitions.
+const EMAIL_RE = /^[^\s@]+@[^\s@.]+\.[^\s@]{2,}$/
 
 /**
  * Basic email shape validation (max length per RFC 5321).
  *
- * The 254-character length guard below is load-bearing: it MUST stay in front
- * of `EMAIL_RE.test`, bounding the regex's worst-case backtracking on long
- * inputs. Do not reorder or drop it.
+ * The 254-character length guard below MUST stay in front of `EMAIL_RE.test`,
+ * enforcing the RFC 5321 maximum address length (the regex itself is linear,
+ * so it needs no bounding for backtracking).
  */
 export function isValidEmail(value: unknown): value is string {
   return typeof value === 'string' && value.length <= 254 && EMAIL_RE.test(value)

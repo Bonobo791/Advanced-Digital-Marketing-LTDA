@@ -17,6 +17,6 @@ export function normalizePath(pathname: string): string {
   const path = pathname.startsWith('/') ? pathname : `/${pathname}`
   if (path === '/') return path
   let end = path.length
-  while (end > 1 && path.charCodeAt(end - 1) === 47 /* '/' */) end -= 1
+  while (end > 1 && path.codePointAt(end - 1) === 47 /* '/' */) end -= 1
   return path.slice(0, end)
 }

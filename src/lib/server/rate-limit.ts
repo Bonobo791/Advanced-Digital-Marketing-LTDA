@@ -89,7 +89,8 @@ export function checkRateLimit(bucketKey: string, now: number = Date.now()): Rat
 function makeRoom(now: number): void {
   const windowStart = now - WINDOW_MS
   for (const [bucketKey, timestamps] of buckets) {
-    if (timestamps[timestamps.length - 1] <= windowStart) {
+    const last = timestamps.at(-1)
+    if (last !== undefined && last <= windowStart) {
       buckets.delete(bucketKey)
       return
     }

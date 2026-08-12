@@ -259,61 +259,24 @@ describe('checkoutBackUrl', () => {
     expect(checkoutBackUrl()).toBe('https://example.com/pt-br/checkout/complete/')
   })
 
-  it('falls back to the canonical origin loudly when PUBLIC_SITE_URL is missing', () => {
-    vi.stubEnv('PUBLIC_SITE_URL', '')
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    try {
-      const url = checkoutBackUrl()
-      expect(url).toBe('https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/')
-      expect(errorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('PUBLIC_SITE_URL is not set'),
-      )
-    } finally {
-      errorSpy.mockRestore()
-    }
-  })
-
-  it('falls back to the canonical origin when PUBLIC_SITE_URL is malformed', () => {
+  // [configured PUBLIC_SITE_URL, expected server log fragment]
+  it.each([
+    // Missing: nothing is configured at all.
+    ['', 'PUBLIC_SITE_URL is not set'],
     // 'not-a-url' has no scheme — `new URL` would throw and crash checkout.
-    vi.stubEnv('PUBLIC_SITE_URL', 'not-a-url')
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    try {
-      const url = checkoutBackUrl()
-      expect(url).toBe('https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/')
-      expect(errorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('PUBLIC_SITE_URL is malformed'),
-      )
-    } finally {
-      errorSpy.mockRestore()
-    }
-  })
-
-  it('falls back to the canonical origin when PUBLIC_SITE_URL is not HTTPS', () => {
+    ['not-a-url', 'PUBLIC_SITE_URL is malformed'],
     // Syntactically valid but http: — Mercado Pago requires a public HTTPS
     // back_url, so the configured value must not be used.
-    vi.stubEnv('PUBLIC_SITE_URL', 'http://example.com')
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    try {
-      const url = checkoutBackUrl()
-      expect(url).toBe('https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/')
-      expect(errorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('PUBLIC_SITE_URL is not a public HTTPS URL'),
-      )
-    } finally {
-      errorSpy.mockRestore()
-    }
-  })
-
-  it('falls back to the canonical origin when PUBLIC_SITE_URL is a loopback host', () => {
+    ['http://example.com', 'PUBLIC_SITE_URL is not a public HTTPS URL'],
     // https on localhost is valid URL syntax but never a public origin.
-    vi.stubEnv('PUBLIC_SITE_URL', 'https://localhost:5173')
+    ['https://localhost:5173', 'PUBLIC_SITE_URL is not a public HTTPS URL'],
+  ])('falls back to the canonical origin when PUBLIC_SITE_URL is %s', (configured, expectedLog) => {
+    vi.stubEnv('PUBLIC_SITE_URL', configured)
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
       const url = checkoutBackUrl()
       expect(url).toBe('https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/')
-      expect(errorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('PUBLIC_SITE_URL is not a public HTTPS URL'),
-      )
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining(expectedLog))
     } finally {
       errorSpy.mockRestore()
     }
