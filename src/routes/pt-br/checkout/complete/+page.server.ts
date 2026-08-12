@@ -2,7 +2,7 @@ import type { PageServerLoad } from './$types'
 import { isValidPreapprovalId } from '$lib/server/checkout'
 import { MercadoPagoError, getSubscription } from '$lib/server/mercadoPago'
 import { ClientAddressError, clientIpAddress } from '$lib/server/client-ip'
-import { checkRateLimit } from '$lib/server/rate-limit'
+import { checkRateLimit, rateLimitKey } from '$lib/server/rate-limit'
 
 // The return page must verify the redirect server-side (it reads the
 // preapproval_id query param), so it cannot be prerendered.
@@ -23,21 +23,31 @@ export type CompletionState =
  * pending/error state instead of an unconditional success claim.
  *
  * Abuse protection runs before the outbound call: this page is unauthenticated
- * and every request carrying a nonempty `preapproval_id` triggers a paid
+ * and every request carrying a well-formed `preapproval_id` triggers a paid
  * Mercado Pago API call, so requests are throttled per client IP with the same
- * limiter used by subscription creation, and identifiers that fail the shape
- * check are rejected without touching the API.
+ * limiter used by subscription creation. The shape check runs first so
+ * malformed identifiers are rejected without touching the API or consuming
+ * rate-limit budget.
  */
-export const load: PageServerLoad = async ({ url, request, getClientAddress }): Promise<CompletionState> => {
+export const load: PageServerLoad = async ({ url, getClientAddress }): Promise<CompletionState> => {
   const preapprovalId = url.searchParams.get('preapproval_id')
   if (!preapprovalId) return { state: 'missing' }
+
+  // Cheap shape check first (no outbound call): malformed identifiers are
+  // rejected without consuming rate-limit budget, so a scripted flood of junk
+  // cannot exhaust the bucket that guards the paid API call below. Same
+  // validate-then-throttle ordering as the subscription endpoint.
+  if (!isValidPreapprovalId(preapprovalId)) {
+    console.warn(`[checkout] rejecting malformed preapproval_id (${preapprovalId.length} chars)`)
+    return { state: 'error' }
+  }
 
   // Throttle before any outbound call. Fails loud when no client address is
   // resolvable — pooling unidentified clients into one bucket would 429
   // unrelated customers (same rule as the subscription endpoint).
   let clientAddress: string
   try {
-    clientAddress = clientIpAddress(getClientAddress, request)
+    clientAddress = clientIpAddress(getClientAddress)
   } catch (error) {
     if (error instanceof ClientAddressError) {
       console.error('[checkout] cannot determine client IP for completion verification; refusing request')
@@ -45,15 +55,10 @@ export const load: PageServerLoad = async ({ url, request, getClientAddress }): 
     }
     throw error
   }
-  const rateLimit = checkRateLimit(clientAddress)
+  const rateLimit = checkRateLimit(rateLimitKey('subscriptionVerify', clientAddress))
   if (!rateLimit.allowed) {
     console.warn('[checkout] completion verification rate limit exceeded')
     return { state: 'rate_limited' }
-  }
-
-  if (!isValidPreapprovalId(preapprovalId)) {
-    console.warn(`[checkout] rejecting malformed preapproval_id (${preapprovalId.length} chars)`)
-    return { state: 'error' }
   }
 
   let subscription

@@ -3,9 +3,11 @@
  * entry points: POST /api/checkout/subscription and the
  * /pt-br/checkout/complete/ return page. Shared so both behave identically.
  *
- * Prefers the platform-provided address (adapter-netlify populates
- * `getClientAddress`); falls back to the first `x-forwarded-for` hop, then
- * `x-real-ip`.
+ * Only the platform-provided address (adapter-netlify populates
+ * `getClientAddress` from the trusted connection info Netlify sets itself) is
+ * accepted. Proxy headers like `x-forwarded-for` and `x-real-ip` are
+ * client-controllable, so trusting them would let an attacker rotate the
+ * rate-limit key at will and bypass the throttle.
  *
  * Fails loudly when no address is available (AGENTS.md: no silent fallbacks) —
  * returning a shared placeholder like 'unknown' would pool every unidentified
@@ -19,19 +21,12 @@ export class ClientAddressError extends Error {
   }
 }
 
-export function clientIpAddress(
-  getClientAddress: () => string,
-  request: Request,
-): string {
+export function clientIpAddress(getClientAddress: () => string): string {
   try {
     const address = getClientAddress()
-    if (address && address.trim()) return address
+    if (address && address.trim()) return address.trim()
   } catch {
-    // Fall through to the proxy headers below.
+    // Fall through to the loud failure below.
   }
-  const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-  if (forwarded) return forwarded
-  const realIp = request.headers.get('x-real-ip')?.trim()
-  if (realIp) return realIp
   throw new ClientAddressError()
 }

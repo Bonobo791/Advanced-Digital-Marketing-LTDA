@@ -216,39 +216,35 @@ describe('POST /api/checkout/subscription', () => {
     }
   })
 
-  it('still rate-limits via proxy headers when getClientAddress throws', async () => {
+  it('never trusts spoofable proxy headers when getClientAddress throws', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
-      const event = (forwardedFor?: string, realIp?: string) => {
-        const headers: Record<string, string> = { 'content-type': 'application/json' }
-        if (forwardedFor !== undefined) headers['x-forwarded-for'] = forwardedFor
-        if (realIp !== undefined) headers['x-real-ip'] = realIp
-        return {
-          request: new Request('http://localhost/api/checkout/subscription', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(validBody),
-          }),
-          getClientAddress: (): string => {
-            throw new Error('adapter provides no client address')
-          },
-        } as Parameters<typeof POST>[0]
-      }
+      const event = (headers: Record<string, string> = {}) => ({
+        request: new Request('http://localhost/api/checkout/subscription', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...headers },
+          body: JSON.stringify(validBody),
+        }),
+        getClientAddress: (): string => {
+          throw new Error('adapter provides no client address')
+        },
+      }) as Parameters<typeof POST>[0]
 
-      // x-forwarded-for first hop is used.
-      expect((await POST(event('203.0.113.7, 10.0.0.1'))).status).toBe(200)
-      // x-real-ip is used when x-forwarded-for is absent.
-      expect((await POST(event(undefined, '203.0.113.8'))).status).toBe(200)
-      // The proxy-derived IPs are NOT pooled with the resolvable-IP bucket:
-      // exhausting one forwarded IP does not affect a different forwarded IP.
-      for (let i = 0; i < 10; i += 1) {
-        expect((await POST(event('198.51.100.9'))).status).toBe(200)
+      // x-forwarded-for and x-real-ip are client-controllable: they must never
+      // become the rate-limit key. When the platform address is unavailable,
+      // every request fails loud with 503 instead of trusting those headers.
+      for (const forwardedFor of ['203.0.113.7, 10.0.0.1', '198.51.100.9', '198.51.100.10']) {
+        const response = await POST(event({ 'x-forwarded-for': forwardedFor }))
+        expect(response.status).toBe(503)
+        expect(await response.json()).toEqual({ error: 'client_address_unavailable' })
       }
-      expect((await POST(event('198.51.100.9'))).status).toBe(429)
-      expect((await POST(event('198.51.100.10'))).status).toBe(200)
+      expect((await POST(event({ 'x-real-ip': '203.0.113.8' }))).status).toBe(503)
 
-      // The fail-loud path logged nothing (no unidentified pooling).
-      expect(errorSpy).not.toHaveBeenCalled()
+      // The refusal is logged loudly (AGENTS.md: no silent fallbacks).
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('cannot determine client IP for rate limiting'),
+      )
+      expect(mockCreateSubscription).not.toHaveBeenCalled()
     } finally {
       errorSpy.mockRestore()
     }

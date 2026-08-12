@@ -4,7 +4,7 @@ import type { Locale } from '$lib/locale'
 import { PricingError, computeMonthlyQuote } from '$lib/server/pricing'
 import { MercadoPagoError, createSubscription } from '$lib/server/mercadoPago'
 import { checkoutBackUrl, isValidEmail } from '$lib/server/checkout'
-import { checkRateLimit } from '$lib/server/rate-limit'
+import { checkRateLimit, rateLimitKey } from '$lib/server/rate-limit'
 import { ClientAddressError, clientIpAddress } from '$lib/server/client-ip'
 
 // API routes run as Netlify Functions; the root layout's prerender/trailingSlash
@@ -69,7 +69,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
   // IP (best-effort per serverless instance; see rate-limit.ts).
   let clientAddress: string
   try {
-    clientAddress = clientIpAddress(getClientAddress, request)
+    clientAddress = clientIpAddress(getClientAddress)
   } catch (error) {
     if (error instanceof ClientAddressError) {
       // Fail loudly (AGENTS.md): without a client address we cannot rate-limit,
@@ -80,7 +80,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
     }
     throw error
   }
-  const rateLimit = checkRateLimit(clientAddress)
+  const rateLimit = checkRateLimit(rateLimitKey('subscriptionCreate', clientAddress))
   if (!rateLimit.allowed) {
     console.warn('[checkout] rate limit exceeded; rejecting subscription creation')
     return json({ error: 'rate_limited' }, { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } })

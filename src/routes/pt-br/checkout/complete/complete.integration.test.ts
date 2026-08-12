@@ -105,6 +105,23 @@ describe('checkout/complete load', () => {
       }
     })
 
+    it('does not let a flood of malformed ids consume the rate-limit budget', async () => {
+      // Shape check runs before the throttle, so junk never counts against
+      // the window: after exceeding the window with malformed ids, a valid
+      // request from the same IP is still allowed.
+      mockGetSubscription.mockResolvedValue(authorizedSubscription)
+      for (let i = 0; i < 20; i++) {
+        expect(await load(loadArgs('?preapproval_id=bad%20id') as never)).toEqual({
+          state: 'error',
+        })
+      }
+      expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toEqual({
+        state: 'confirmed',
+        subscriptionId: 'sub-42',
+      })
+      expect(mockGetSubscription).toHaveBeenCalledTimes(1)
+    })
+
     it('accepts legitimate identifier shapes', () => {
       // Hex-shaped ids (as seen in Mercado Pago responses) and short ids both pass.
       expect(isValidPreapprovalId('2c9380848b6e4d3a018b7041a2e6158c')).toBe(true)
