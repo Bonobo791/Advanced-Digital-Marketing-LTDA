@@ -37,13 +37,22 @@ export function isValidPreapprovalId(value: string): boolean {
  * hard-coded: it comes from PUBLIC_SITE_URL, falling back to the site's
  * canonical origin constant. The fallback is loud (logged on the server).
  *
- * A malformed, non-HTTPS, or loopback PUBLIC_SITE_URL must never crash
- * checkout or reach Mercado Pago — Mercado Pago requires a public HTTPS
- * back_url, so any such value activates the canonical-origin fallback
- * instead. The configured value is never echoed in logs — only the variable
- * name is.
+ * A malformed, non-HTTPS, loopback, or otherwise non-public PUBLIC_SITE_URL
+ * (including IP literals such as 192.168.x) must never crash checkout or
+ * reach Mercado Pago — Mercado Pago requires a public HTTPS back_url, so any
+ * such value activates the canonical-origin fallback instead. The configured
+ * value is never echoed in logs — only the variable name is.
  */
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1', '[::1]'])
+
+// IP literals (IPv4 dotted-quad, any IPv6 form) are never public HTTPS
+// *domains* — Mercado Pago requires a public domain as back_url, and a
+// literal would be unreachable or a private RFC1918/link-local/ULA address.
+const IPV4_LITERAL_RE = /^\d{1,3}(?:\.\d{1,3}){3}$/
+
+function isIpLiteral(hostname: string): boolean {
+  return IPV4_LITERAL_RE.test(hostname) || hostname.includes(':')
+}
 
 /** A host Mercado Pago will accept as a back_url origin — public, non-loopback. */
 function isPublicHostname(hostname: string): boolean {
@@ -52,7 +61,10 @@ function isPublicHostname(hostname: string): boolean {
     host.length > 0 &&
     !LOOPBACK_HOSTS.has(host) &&
     !host.endsWith('.localhost') &&
-    !host.endsWith('.local')
+    !host.endsWith('.local') &&
+    // RFC1918/link-local/ULA literals (192.168.x, 10.x, 172.16-31.x,
+    // 169.254.x, fc00::/7, …) are all caught by rejecting IP literals.
+    !isIpLiteral(host)
   )
 }
 

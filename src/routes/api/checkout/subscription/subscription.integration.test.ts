@@ -318,6 +318,29 @@ describe('checkoutBackUrl', () => {
       errorSpy.mockRestore()
     }
   })
+
+  it.each([
+    'https://192.168.1.10',
+    'https://10.0.0.5',
+    'https://172.16.0.1',
+    'https://169.254.0.1',
+    'https://[::1]',
+    'https://[fc00::1]',
+  ])('falls back to the canonical origin for non-public IP literals (%s)', (configured) => {
+    // RFC1918 / link-local / loopback literals are syntactically valid URLs
+    // but never public HTTPS domains — Mercado Pago must never receive them.
+    vi.stubEnv('PUBLIC_SITE_URL', configured)
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const url = checkoutBackUrl()
+      expect(url).toBe('https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/')
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('PUBLIC_SITE_URL is not a public HTTPS URL'),
+      )
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
 })
 
 describe('isValidEmail', () => {

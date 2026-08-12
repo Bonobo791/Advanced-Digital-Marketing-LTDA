@@ -5,12 +5,14 @@ import {
   SERVICES,
   adSpendFeeBRL,
   formatBRL,
+  formatOptionPrice,
   formatPrice,
   formatUSD,
   getService,
   isServiceId,
   isSubscribable,
 } from './catalog'
+import { SERVICE_CONTENT } from './services'
 
 describe('catalog integrity', () => {
   it('defines every advertised service id in the catalog', () => {
@@ -117,6 +119,41 @@ describe('formatPrice', () => {
 
   it('converts BRL to USD at the 5:1 reference rate when no USD reference exists', () => {
     expect(formatPrice('en-US', 500)).toBe('$100.00')
+  })
+})
+
+describe('formatOptionPrice', () => {
+  it('shows whole BRL on pt-BR pages and the whole USD reference on en-US pages', () => {
+    expect(formatOptionPrice('pt-BR', 3500)).toBe('R$\u00A03.500')
+    expect(formatOptionPrice('en-US', 3500)).toBe('$700')
+    expect(formatOptionPrice('en-US', 6800)).toBe('$1,360')
+    expect(formatOptionPrice('pt-BR', 2400)).toBe('R$\u00A02.400')
+  })
+})
+
+describe('option-card pricing stays in sync with the catalog', () => {
+  it('keeps the Backlinks option card at the catalog price (one product, one price)', () => {
+    // Codex P1 (3762692710): the Backlinks option card and the Backlinks
+    // subscription are the same product — if they ever diverge again this
+    // test fails loudly instead of billing a different amount than advertised.
+    const option = SERVICE_CONTENT['en-US']['technical-seo'].options.find(
+      (o) => o.name === 'Backlinks',
+    )
+    const catalogPricing = SERVICES.backlinks.pricing
+    expect(option?.priceBRL).toBe(
+      catalogPricing.kind === 'fixed' ? catalogPricing.monthlyBRL : null,
+    )
+  })
+
+  it('stores the same BRL amount in both locales (no copied currency strings)', () => {
+    for (const service of Object.keys(SERVICE_CONTENT['en-US']) as (keyof typeof SERVICE_CONTENT['en-US'])[]) {
+      const en = SERVICE_CONTENT['en-US'][service].options
+      const pt = SERVICE_CONTENT['pt-BR'][service].options
+      expect(pt).toHaveLength(en.length)
+      for (let i = 0; i < en.length; i++) {
+        expect(pt[i].priceBRL).toBe(en[i].priceBRL)
+      }
+    }
   })
 })
 

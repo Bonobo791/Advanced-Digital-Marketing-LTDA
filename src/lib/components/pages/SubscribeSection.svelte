@@ -336,7 +336,7 @@
       {/each}
     </div>
 
-    <div class="sub-total">
+    <div class="sub-total" aria-live="polite" aria-atomic="true">
       <span>{text.total}</span>
       <b>{formatPrice(locale, totalBRL)}<small>{text.perMonth}</small></b>
     </div>

@@ -12,6 +12,7 @@ export type CompletionState =
   | { state: 'missing' }
   | { state: 'confirmed'; subscriptionId: string }
   | { state: 'pending'; subscriptionId: string }
+  | { state: 'cancelled'; subscriptionId: string }
   | { state: 'rate_limited' }
   | { state: 'error' }
 
@@ -78,6 +79,12 @@ export const load: PageServerLoad = async ({ url, getClientAddress }): Promise<C
   if (subscription.status === 'authorized') {
     return { state: 'confirmed', subscriptionId: subscription.id }
   }
-  // pending / paused / cancelled — never claim success for these.
+  // Paused/cancelled are terminal — the subscription will never progress to
+  // authorization, so claiming it is 'still being processed' would be wrong.
+  // Only genuinely progressing statuses get the pending state.
+  if (subscription.status === 'paused' || subscription.status === 'cancelled') {
+    return { state: 'cancelled', subscriptionId: subscription.id }
+  }
+  // pending (or any other non-terminal status) — never claim success.
   return { state: 'pending', subscriptionId: subscription.id }
 }

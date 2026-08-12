@@ -55,11 +55,21 @@ describe('checkout/complete load', () => {
     expect(mockGetSubscription).toHaveBeenCalledWith('sub-42')
   })
 
-  it('never claims success for a non-authorized status', async () => {
-    for (const status of ['pending', 'paused', 'cancelled']) {
+  it('reserves pending for statuses that can still progress', async () => {
+    mockGetSubscription.mockResolvedValue({ ...authorizedSubscription, status: 'pending' })
+    expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toEqual({
+      state: 'pending',
+      subscriptionId: 'sub-42',
+    })
+  })
+
+  it('reports terminal paused/cancelled statuses distinctly instead of pending', async () => {
+    // A paused or cancelled subscription will never progress to authorization,
+    // so the page must not claim it is 'still being processed'.
+    for (const status of ['paused', 'cancelled']) {
       mockGetSubscription.mockResolvedValue({ ...authorizedSubscription, status })
       expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toEqual({
-        state: 'pending',
+        state: 'cancelled',
         subscriptionId: 'sub-42',
       })
     }

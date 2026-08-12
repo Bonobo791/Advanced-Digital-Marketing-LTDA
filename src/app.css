@@ -852,6 +852,9 @@ img { display: block; max-width: 100%; }
   --index-ink: #121212;
   --index-paper: #f2efe9;
   --index-verm: #e83828;
+  /* Text-safe vermilion for error copy on the light (#f2efe9) panels:
+     #e83828 only reaches 3.64:1 there; this passes WCAG AA for normal text. */
+  --index-verm-deep: #b3261e;
   --index-ink60: rgba(18, 18, 18, .62);
   --index-paper55: rgba(242, 239, 233, .55);
   --index-paper35: rgba(242, 239, 233, .32);
@@ -1166,7 +1169,7 @@ img { display: block; max-width: 100%; }
 .sub-checkout input,
 .sub-checkout .btn { width: 100%; max-width: 100%; }
 .sub-email { display: grid; gap: 6px; }
-.sub-error { color: var(--index-verm); font-size: 14px; }
+.sub-error { color: var(--index-verm-deep); font-size: 14px; }
 .sub-note { max-width: 46em; color: var(--index-ink60); font-size: 13px; }
 .sub-coming-soon { margin-bottom: 18px; }
 

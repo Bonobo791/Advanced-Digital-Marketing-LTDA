@@ -19,9 +19,11 @@
       ? 'foi processada.'
       : data.state === 'pending'
         ? 'está sendo processada.'
-        : data.state === 'rate_limited'
-          ? 'não pôde ser confirmada agora.'
-          : 'não pôde ser confirmada.',
+        : data.state === 'cancelled'
+          ? 'não está mais ativa.'
+          : data.state === 'rate_limited'
+            ? 'não pôde ser confirmada agora.'
+            : 'não pôde ser confirmada.',
   )
 
   const subtext = $derived(
@@ -29,9 +31,11 @@
       ? 'Sua assinatura foi processada pelo Mercado Pago. Você receberá os detalhes da assinatura e do pagamento pelo Mercado Pago.'
       : data.state === 'pending'
         ? 'Estamos processando sua assinatura. A confirmação pode levar alguns minutos — você receberá os detalhes por e-mail.'
-        : data.state === 'rate_limited'
-          ? 'Muitas tentativas de verificação em pouco tempo. Aguarde alguns minutos e abra o link da assinatura novamente.'
-          : 'Não foi possível confirmar sua assinatura. Verifique o link usado ou tente novamente pelo site.',
+        : data.state === 'cancelled'
+          ? 'Sua assinatura está pausada ou cancelada. Para retomá-la ou tirar dúvidas, entre em contato pelo e-mail de confirmação do Mercado Pago.'
+          : data.state === 'rate_limited'
+            ? 'Muitas tentativas de verificação em pouco tempo. Aguarde alguns minutos e abra o link da assinatura novamente.'
+            : 'Não foi possível confirmar sua assinatura. Verifique o link usado ou tente novamente pelo site.',
   )
 </script>
 

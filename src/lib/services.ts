@@ -9,7 +9,12 @@ export type ServiceOption = {
   flag?: string
   jp: string
   name: string
-  price: string
+  /** Price in BRL — the site's authoritative currency. en-US renders the USD
+   *  reference at the catalog's 5:1 rate (BRL_USD_REFERENCE_RATE). `null`
+   *  means no fixed price and renders `priceLabel` instead (e.g. 'Free'). */
+  priceBRL: number | null
+  /** Locale label rendered when priceBRL is null (e.g. 'Free', 'Quote only'). */
+  priceLabel?: string
   per: string
   desc: string
   items: string[]
@@ -152,7 +157,8 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '監査',
           name: 'The Audit',
-          price: 'Free',
+          priceBRL: null,
+          priceLabel: 'Free',
           per: 'No strings attached',
           desc: 'A complete technical diagnosis with a prioritized fix list, so you know exactly what is blocking you and in what order to attack it.',
           items: [
@@ -170,7 +176,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           flag: 'Most chosen',
           jp: '設計',
           name: 'Content Development',
-          price: '$3,500',
+          priceBRL: 3500,
           per: 'Per month · 3-month minimum',
           desc: 'Pages, articles and service copy written to answer the questions your buyers actually ask, structured so crawlers and AI engines both get it.',
           items: [
@@ -186,7 +192,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '検索',
           name: 'Backlinks',
-          price: '$1,900',
+          priceBRL: 3000,
           per: 'Per month · 3-month minimum',
           desc: 'Authority earned from sites that matter: outreach, digital PR and linkable assets, with the source and the rationale reported for every placement.',
           items: [
@@ -232,7 +238,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '監査',
           name: 'The Citation Audit',
-          price: '$2,400',
+          priceBRL: 2400,
           per: 'One time · 2 weeks',
           desc: 'Where the answer engines already quote you, where they should, and exactly what is blocking it.',
           items: [
@@ -249,7 +255,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           flag: 'Most chosen',
           jp: '実装',
           name: 'Citation Sprint',
-          price: '$6,800',
+          priceBRL: 6800,
           per: 'One time · 4 weeks',
           desc: 'The audit plus the build: entity pages, answer-first content and llms.txt, shipped and re-checked.',
           items: [
@@ -265,7 +271,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '計測',
           name: 'Visibility Retainer',
-          price: '$2,900',
+          priceBRL: 2900,
           per: 'Per month · 6-month minimum',
           desc: 'Continuous entity and content work so your citation share grows, and holds.',
           items: [
@@ -311,7 +317,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '監査',
           name: 'The Build Audit',
-          price: '$2,400',
+          priceBRL: 2400,
           per: 'One time · 2 weeks',
           desc: 'A technical diagnosis of your current site or stack, with the fix list and rebuild options priced.',
           items: [
@@ -328,7 +334,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           flag: 'Most chosen',
           jp: '実装',
           name: 'Build Sprint',
-          price: '$6,800',
+          priceBRL: 6800,
           per: 'One time · 4 weeks',
           desc: 'Design and build of a focused marketing site, engineered to rank from launch.',
           items: [
@@ -344,7 +350,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '計測',
           name: 'Build Retainer',
-          price: '$2,900',
+          priceBRL: 2900,
           per: 'Per month · 6-month minimum',
           desc: 'Continuous development after launch: releases, experiments and CRO iteration.',
           items: [
@@ -390,7 +396,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '監査',
           name: 'The Account Audit',
-          price: '$2,400',
+          priceBRL: 2400,
           per: 'One time · 2 weeks',
           desc: 'A full account diagnosis: structure, keywords, landing pages and wasted spend, with the fixes ranked.',
           items: [
@@ -407,7 +413,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           flag: 'Most chosen',
           jp: '実装',
           name: 'Launch Sprint',
-          price: '$6,800',
+          priceBRL: 6800,
           per: 'One time · 4 weeks',
           desc: 'The restructure shipped: new account architecture, campaigns, landing pages and tracking.',
           items: [
@@ -423,7 +429,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '計測',
           name: 'Paid Retainer',
-          price: '$2,900',
+          priceBRL: 2900,
           per: 'Per month · 6-month minimum',
           desc: 'Managed spend with weekly optimization, reported against the organic numbers.',
           items: [
@@ -469,7 +475,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '監査',
           name: 'The Meta Audit',
-          price: '$2,400',
+          priceBRL: 2400,
           per: 'One time · 2 weeks',
           desc: 'A full account diagnosis: structure, audiences, creative, tracking and wasted spend, with the fixes ranked.',
           items: [
@@ -486,7 +492,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           flag: 'Most chosen',
           jp: '実装',
           name: 'Meta Launch',
-          price: '$6,800',
+          priceBRL: 6800,
           per: 'One time · 4 weeks',
           desc: 'The restructure shipped: new campaigns, audiences, creative and tracking, launched and reporting.',
           items: [
@@ -502,7 +508,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '計測',
           name: 'Meta Retainer',
-          price: '$2,900',
+          priceBRL: 2900,
           per: 'Per month · 6-month minimum',
           desc: 'Managed spend with weekly optimization, reported against the organic numbers.',
           items: [
@@ -547,7 +553,8 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '自動',
           name: 'Custom Automation',
-          price: 'Quote only',
+          priceBRL: null,
+          priceLabel: 'Quote only',
           per: 'Scoped per project',
           desc: 'Agents, integrations and internal tools that remove repetitive work from your operations.',
           items: [
@@ -595,7 +602,8 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '監査',
           name: 'A Auditoria',
-          price: 'Grátis',
+          priceBRL: null,
+          priceLabel: 'Grátis',
           per: 'Sem compromisso',
           desc: 'Um diagnóstico técnico completo com uma lista priorizada de correções, para você saber exatamente o que está te bloqueando e em que ordem atacar.',
           items: [
@@ -613,7 +621,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           flag: 'Mais escolhido',
           jp: '設計',
           name: 'Desenvolvimento de Conteúdo',
-          price: '$3,500',
+          priceBRL: 3500,
           per: 'Por mês · mínimo de 3 meses',
           desc: 'Páginas, artigos e textos de serviço escritos para responder às perguntas que seus compradores realmente fazem, estruturados para crawlers e motores de IA entenderem.',
           items: [
@@ -629,7 +637,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '検索',
           name: 'Backlinks',
-          price: '$1,900',
+          priceBRL: 3000,
           per: 'Por mês · mínimo de 3 meses',
           desc: 'Autoridade conquistada de sites que importam: divulgação, relações públicas digitais e ativos linkáveis, com fonte e justificativa reportadas para cada colocação.',
           items: [
@@ -675,7 +683,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '監査',
           name: 'Auditoria de Citações',
-          price: '$2,400',
+          priceBRL: 2400,
           per: 'Pagamento único · 2 semanas',
           desc: 'Onde os motores de resposta já te citam, onde deveriam e exatamente o que está bloqueando.',
           items: [
@@ -692,7 +700,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           flag: 'Mais escolhido',
           jp: '実装',
           name: 'Sprint de Citações',
-          price: '$6,800',
+          priceBRL: 6800,
           per: 'Pagamento único · 4 semanas',
           desc: 'A auditoria mais a construção: páginas de entidade, conteúdo answer-first e llms.txt, entregues e re-verificados.',
           items: [
@@ -708,7 +716,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '計測',
           name: 'Mensal de Visibilidade',
-          price: '$2,900',
+          priceBRL: 2900,
           per: 'Por mês · mínimo de 6 meses',
           desc: 'Trabalho contínuo de entidades e conteúdo para sua participação em citações crescer e se manter.',
           items: [
@@ -754,7 +762,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '監査',
           name: 'Auditoria de Build',
-          price: '$2,400',
+          priceBRL: 2400,
           per: 'Pagamento único · 2 semanas',
           desc: 'Um diagnóstico técnico do seu site ou stack atual, com a lista de correções e as opções de reconstrução precificadas.',
           items: [
@@ -771,7 +779,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           flag: 'Mais escolhido',
           jp: '実装',
           name: 'Sprint de Build',
-          price: '$6,800',
+          priceBRL: 6800,
           per: 'Pagamento único · 4 semanas',
           desc: 'Design e construção de um site de marketing focado, projetado para ranquear desde o lançamento.',
           items: [
@@ -787,7 +795,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '計測',
           name: 'Mensal de Build',
-          price: '$2,900',
+          priceBRL: 2900,
           per: 'Por mês · mínimo de 6 meses',
           desc: 'Desenvolvimento contínuo após o lançamento: releases, experimentos e iteração de conversão.',
           items: [
@@ -833,7 +841,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '監査',
           name: 'Auditoria de Conta',
-          price: '$2,400',
+          priceBRL: 2400,
           per: 'Pagamento único · 2 semanas',
           desc: 'Um diagnóstico completo da conta: estrutura, palavras-chave, landing pages e gasto desperdiçado, com as correções priorizadas.',
           items: [
@@ -850,7 +858,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           flag: 'Mais escolhido',
           jp: '実装',
           name: 'Sprint de Lançamento',
-          price: '$6,800',
+          priceBRL: 6800,
           per: 'Pagamento único · 4 semanas',
           desc: 'A reestruturação entregue: nova arquitetura de conta, campanhas, landing pages e rastreamento.',
           items: [
@@ -866,7 +874,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '計測',
           name: 'Mensal de Mídia',
-          price: '$2,900',
+          priceBRL: 2900,
           per: 'Por mês · mínimo de 6 meses',
           desc: 'Gasto gerenciado com otimização semanal, reportado contra os números orgânicos.',
           items: [
@@ -912,7 +920,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '監査',
           name: 'Auditoria Meta',
-          price: '$2,400',
+          priceBRL: 2400,
           per: 'Pagamento único · 2 semanas',
           desc: 'Um diagnóstico completo da conta: estrutura, públicos, criativos, rastreamento e gasto desperdiçado, com as correções priorizadas.',
           items: [
@@ -929,7 +937,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           flag: 'Mais escolhido',
           jp: '実装',
           name: 'Sprint Meta',
-          price: '$6,800',
+          priceBRL: 6800,
           per: 'Pagamento único · 4 semanas',
           desc: 'A reestruturação entregue: novas campanhas, públicos, criativos e rastreamento, lançados e reportando.',
           items: [
@@ -945,7 +953,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '計測',
           name: 'Mensal Meta',
-          price: '$2,900',
+          priceBRL: 2900,
           per: 'Por mês · mínimo de 6 meses',
           desc: 'Gasto gerenciado com otimização semanal, reportado contra os números orgânicos.',
           items: [
@@ -990,7 +998,8 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
         {
           jp: '自動',
           name: 'Automação Sob Medida',
-          price: 'Sob consulta',
+          priceBRL: null,
+          priceLabel: 'Sob consulta',
           per: 'Escopado por projeto',
           desc: 'Agentes, integrações e ferramentas internas que removem trabalho repetitivo das suas operações.',
           items: [

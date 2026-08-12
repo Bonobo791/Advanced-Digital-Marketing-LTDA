@@ -172,3 +172,27 @@ export function formatUSD(value: number): string {
 export function formatPrice(locale: Locale, brl: number, usd?: number): string {
   return locale === 'pt-BR' ? formatBRL(brl) : formatUSD(usd ?? brl / BRL_USD_REFERENCE_RATE)
 }
+
+const brlWholeFormatter = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+  maximumFractionDigits: 0,
+})
+const usdWholeFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0,
+})
+
+/**
+ * Formats an option-card price (src/lib/services.ts) in the locale's
+ * currency: BRL on pt-BR pages, the USD reference at the 5:1 rate on en-US
+ * pages. Whole values, matching the option-card style. BRL is authoritative —
+ * option prices are stored once as `priceBRL` so the two locales can never
+ * drift apart again.
+ */
+export function formatOptionPrice(locale: Locale, priceBRL: number): string {
+  return locale === 'pt-BR'
+    ? brlWholeFormatter.format(priceBRL)
+    : usdWholeFormatter.format(priceBRL / BRL_USD_REFERENCE_RATE)
+}
