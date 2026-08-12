@@ -50,7 +50,7 @@
     'en-US': {
       kicker: 'Subscribe',
       heading: 'Build your monthly package.',
-      lead: 'Pick the services you want, see the monthly total, and pay through Mercado Pago. Prices are shown in USD for reference; the checkout is billed in BRL.',
+      lead: 'Pick the services you want and watch the monthly total update as you go. Prices are shown in USD for reference; the checkout is billed in BRL.',
       adSpendLabel: 'Monthly ad spend (R$)',
       adSpendHint: '10% of spend, $100 minimum',
       perMonth: '/mo',
@@ -272,7 +272,10 @@
               type="checkbox"
               checked={selected.has(id)}
               onchange={() => toggle(id)}
-              disabled={submitting || locale !== 'pt-BR'}
+              // Selection is a display-only calculator on every locale (the
+              // checkout form itself only renders on pt-BR); disabling it on
+              // en-US made the ad-spend total impossible to explore there.
+              disabled={submitting}
             />
             <span class="sub-name">
               <b>{service.name[locale]}</b>
@@ -291,7 +294,7 @@
                 placeholder="0"
                 value={spends[id] ?? ''}
                 oninput={(e) => (spends[id] = (e.currentTarget as HTMLInputElement).value)}
-                disabled={submitting || locale !== 'pt-BR'}
+                disabled={submitting}
               />
               <small>{text.adSpendHint}</small>
             </label>
