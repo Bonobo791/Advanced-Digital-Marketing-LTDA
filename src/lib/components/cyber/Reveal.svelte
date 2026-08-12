@@ -29,18 +29,27 @@
           io.disconnect()
         }
       },
-      { threshold: 0.3 },
+      { threshold: 0.3, rootMargin: '0px 0px 12% 0px' },
     )
     io.observe(el)
-    return () => io.disconnect()
+
+    const initialFrame = requestAnimationFrame(() => {
+      const rect = el.getBoundingClientRect()
+      if (rect.top < window.innerHeight && rect.bottom > 0) {
+        inView = true
+        io.disconnect()
+      }
+    })
+
+    return () => {
+      cancelAnimationFrame(initialFrame)
+      io.disconnect()
+    }
   })
 </script>
 
-<div
-  bind:this={el}
-  class="reveal {className}"
-  class:reveal-in={inView}
-  style="--reveal-y: {y}px; transition-delay: {delay * 1000}ms"
->
-  {@render children()}
+<div bind:this={el} class="reveal-shell {className}">
+  <div class="reveal" class:reveal-in={inView} style="--reveal-y: {y}px; transition-delay: {delay * 1000}ms">
+    {@render children()}
+  </div>
 </div>

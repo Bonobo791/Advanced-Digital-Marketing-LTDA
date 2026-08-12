@@ -26,5 +26,5 @@
 </script>
 
 <div aria-hidden="true" class="h-px w-full bg-white/10 {className}">
-  <div bind:this={el} class="rule-line h-px w-full bg-[#00e5ff]/40" class:rule-in={inView}></div>
+  <div bind:this={el} class="rule-line h-px w-full bg-[#e83828]/65" class:rule-in={inView}></div>
 </div>

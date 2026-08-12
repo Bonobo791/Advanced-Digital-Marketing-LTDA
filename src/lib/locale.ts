@@ -1,0 +1,225 @@
+export const SITE_ORIGIN = 'https://advanceddigitalmarketingltda.com'
+
+export const LOCALES = ['en-US', 'pt-BR'] as const
+export type Locale = (typeof LOCALES)[number]
+
+export const PAGE_IDS = ['home', 'about', 'contact'] as const
+export type PageId = (typeof PAGE_IDS)[number]
+
+export const LOCALE_ROUTES: Record<PageId, Record<Locale, string>> = {
+  home: { 'en-US': '/', 'pt-BR': '/pt-br/' },
+  about: { 'en-US': '/about/', 'pt-BR': '/pt-br/sobre/' },
+  contact: { 'en-US': '/contact/', 'pt-BR': '/pt-br/contato/' },
+}
+
+export const PAGE_JP: Record<PageId, string> = {
+  home: '先進デジタルマーケティング',
+  about: '運営者',
+  contact: '連絡',
+}
+
+export const PAGE_META: Record<Locale, Record<PageId, { title: string; description: string }>> = {
+  'en-US': {
+    home: {
+      title: 'Advanced Digital Marketing LTDA | SEO and GEO engineering',
+      description: 'SEO, GEO, paid search, and web engineering for US businesses from São Paulo.',
+    },
+    about: {
+      title: 'About Andrew Philip Weilbacher | Advanced Digital Marketing LTDA',
+      description: 'Meet Andrew Weilbacher, founder and lead engineer at Advanced Digital Marketing LTDA.',
+    },
+    contact: {
+      title: 'Contact | Advanced Digital Marketing LTDA',
+      description: 'Contact Advanced Digital Marketing LTDA to discuss SEO, GEO, paid media, or web engineering.',
+    },
+  },
+  'pt-BR': {
+    home: {
+      title: 'Advanced Digital Marketing LTDA | SEO local e visibilidade em respostas de IA',
+      description: 'Engenharia de busca para empresas brasileiras que precisam ser encontradas no Google, no Maps e nas respostas de IA.',
+    },
+    about: {
+      title: 'Sobre Andrew Philip Weilbacher | Engenharia de busca em São Paulo',
+      description: 'Conheça o fundador e engenheiro-chefe por trás de SEO local, sites, GEO e mídia paga para empresas brasileiras.',
+    },
+    contact: {
+      title: 'Contato | SEO local e visibilidade em IA',
+      description: 'Fale sobre como sua empresa pode aparecer no Google, no Maps e nas respostas de IA.',
+    },
+  },
+}
+
+export const CHROME_COPY: Record<Locale, {
+  navigation: Record<PageId, string>
+  services: string
+  servicesAll: string
+  navigationLabel: string
+  bookCall: string
+  menu: string
+  close: string
+  footerSummary: string
+  footerNavigate: string
+  footerContact: string
+  footerBase: string
+  footerTagline: string
+  languageLabel: string
+}> = {
+  'en-US': {
+    navigation: { home: 'Home', about: 'About', contact: 'Contact' },
+    services: 'Services',
+    servicesAll: 'All services',
+    navigationLabel: 'Primary navigation',
+    bookCall: 'Book a call',
+    menu: 'Menu',
+    close: 'Close',
+    footerSummary: 'Search, paid media, and web engineering for businesses that need to be found by people and answer engines alike.',
+    footerNavigate: 'Navigate',
+    footerContact: 'Contact',
+    footerBase: 'CNPJ 68.425.709/0001-72 · São Paulo, Brazil',
+    footerTagline: 'SEO / GEO engineering',
+    languageLabel: 'Language',
+  },
+  'pt-BR': {
+    navigation: { home: 'Início', about: 'Sobre', contact: 'Contato' },
+    services: 'Serviços',
+    servicesAll: 'Todos os serviços',
+    navigationLabel: 'Navegação principal',
+    bookCall: 'Agende uma conversa',
+    menu: 'Menu',
+    close: 'Fechar',
+    footerSummary: 'SEO, mídia paga e engenharia web para empresas que precisam ser encontradas por pessoas e respostas de IA.',
+    footerNavigate: 'Navegue',
+    footerContact: 'Contato',
+    footerBase: 'CNPJ 68.425.709/0001-72 · São Paulo, Brasil',
+    footerTagline: 'Engenharia de SEO / GEO',
+    languageLabel: 'Idioma',
+  },
+}
+
+/**
+ * Localized gateway routes listing all services. Not part of PAGE_IDS (they
+ * render no nav entry of their own), but they must route through locale
+ * helpers so the language switcher, edge geo handling and nav work on them.
+ */
+export const SERVICES_INDEX_ROUTES: Record<Locale, string> = {
+  'en-US': '/services/',
+  'pt-BR': '/pt-br/servicos/',
+}
+
+/** Title/description metadata for the services index (one entry per locale). */
+export const SERVICES_INDEX_META: Record<Locale, { title: string; description: string }> = {
+  'en-US': {
+    title: 'Services | Advanced Digital Marketing LTDA',
+    description:
+      'SEO, GEO, paid media, web and AI automation by Advanced Digital Marketing — subscribe monthly to the mix that fits, or engage per project.',
+  },
+  'pt-BR': {
+    title: 'Serviços | Advanced Digital Marketing LTDA',
+    description:
+      'SEO, GEO, mídia paga, web e automação com IA pela Advanced Digital Marketing — assine mensalmente a combinação que faz sentido para você, ou contrate por projeto.',
+  },
+}
+
+/** Returns the locale of a services-gateway pathname, if any. */
+export function servicesIndexForPath(pathname: string): Locale | undefined {
+  const normalized = normalizePath(pathname)
+  if (normalized === '/services') return 'en-US'
+  if (normalized === '/pt-br/servicos') return 'pt-BR'
+  return undefined
+}
+
+/** True for any checkout route (currently only the pt-BR return page). */
+export function isCheckoutPath(pathname: string): boolean {
+  const normalized = normalizePath(pathname)
+  return normalized.startsWith('/pt-br/checkout')
+}
+
+export function pageForPath(pathname: string): PageId | undefined {
+  const normalized = normalizePath(pathname)
+
+  return PAGE_IDS.find((page) =>
+    LOCALES.some((locale) => normalizePath(LOCALE_ROUTES[page][locale]) === normalized),
+  )
+}
+
+export function localeForPath(pathname: string): Locale {
+  const normalized = normalizePath(pathname)
+  return normalized === '/pt-br' || normalized.startsWith('/pt-br/') ? 'pt-BR' : 'en-US'
+}
+
+import { SERVICE_ROUTES, serviceForPath } from './services.ts'
+import { normalizePath } from './path.ts'
+
+export { normalizePath }
+
+export function localizedPath(pathname: string, locale: Locale) {
+  const page = pageForPath(pathname)
+  if (page) return LOCALE_ROUTES[page][locale]
+  const servicesLocale = servicesIndexForPath(pathname)
+  if (servicesLocale) return SERVICES_INDEX_ROUTES[locale]
+  const service = serviceForPath(pathname)
+  return service ? SERVICE_ROUTES[service][locale] : undefined
+}
+
+export function absoluteUrl(pathname: string) {
+  return new URL(pathname, SITE_ORIGIN).toString()
+}
+
+export function navigationForLocale(locale: Locale) {
+  return PAGE_IDS.map((page) => ({
+    to: LOCALE_ROUTES[page][locale],
+    label: CHROME_COPY[locale].navigation[page],
+    jp: PAGE_JP[page],
+  }))
+}
+
+export function homeSectionsForLocale(locale: Locale) {
+  return locale === 'pt-BR'
+    ? [
+        { to: '/pt-br/#services', label: 'Serviços', jp: 'サービス' },
+        { to: '/pt-br/#process', label: 'Processo', jp: '工程' },
+        { to: '/pt-br/#why', label: 'Por que nós', jp: '強み' },
+        { to: '/pt-br/#people', label: 'Pessoas', jp: '人' },
+        { to: '/pt-br/#contact', label: 'Contato', jp: '連絡' },
+      ]
+    : [
+        { to: '/#services', label: 'Services', jp: 'サービス' },
+        { to: '/#process', label: 'Process', jp: '工程' },
+        { to: '/#why', label: 'Why us', jp: '強み' },
+        { to: '/#people', label: 'People', jp: '人' },
+        { to: '/#contact', label: 'Contact', jp: '連絡' },
+      ]
+}
+
+export function browserPrefersPortuguese(languages: readonly string[]) {
+  return languages.some((language) => language.toLowerCase().startsWith('pt'))
+}
+
+type LocaleRequest = {
+  method: string
+  pathname: string
+  search: string
+  language?: string
+  country?: string
+}
+
+export type LocaleDecision =
+  | { type: 'redirect'; location: string }
+  | { type: 'next'; geoBr?: boolean }
+
+export function decideLocaleRequest({ method, pathname, search, language, country }: LocaleRequest): LocaleDecision {
+  if (method !== 'GET' && method !== 'HEAD') return { type: 'next' }
+  if (localeForPath(pathname) === 'pt-BR') return { type: 'next' }
+
+  const page = pageForPath(pathname)
+  if ((page && page !== 'home') || servicesIndexForPath(pathname) || serviceForPath(pathname)) {
+    return { type: 'next', geoBr: language !== 'en-US' && country?.toUpperCase() === 'BR' }
+  }
+
+  if (normalizePath(pathname) !== '/') return { type: 'next' }
+  if (language === 'pt-BR') {
+    return { type: 'redirect', location: `${LOCALE_ROUTES.home['pt-BR']}${search}` }
+  }
+
+  return { type: 'next', geoBr: language !== 'en-US' && country?.toUpperCase() === 'BR' }
+}

@@ -1,95 +1,182 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { browser } from '$app/environment'
   import { page } from '$app/state'
-  import { fly } from 'svelte/transition'
-  import { expoOut } from 'svelte/easing'
-  import { LINKS, MAILTO } from '$lib/constants'
-  import Scramble from '../cyber/Scramble.svelte'
+  import { EMAIL, JP, PORTUGUESE_EMAIL, PT_MAILTO, MAILTO } from '$lib/constants'
+  import { CHROME_COPY, homeSectionsForLocale, localeForPath, LOCALE_ROUTES, navigationForLocale, normalizePath, SERVICES_INDEX_ROUTES } from '$lib/locale'
+  import { serviceForPath, serviceNavigation } from '$lib/services'
+  import LanguageSwitcher from './LanguageSwitcher.svelte'
 
   let open = $state(false)
-  let reduced = $state(false)
+  let hidden = $state(false)
+  let svcOpen = $state(false)
+  let pathname = $derived(normalizePath(page.url.pathname))
+  let locale = $derived(localeForPath(page.url.pathname))
+  let copy = $derived(CHROME_COPY[locale])
+  let localeMailto = $derived(locale === 'pt-BR' ? PT_MAILTO : MAILTO)
+  let localeEmail = $derived(locale === 'pt-BR' ? PORTUGUESE_EMAIL : EMAIL)
+  let isHome = $derived(pathname === normalizePath(LOCALE_ROUTES.home[locale]))
+  let links = $derived(isHome ? homeSectionsForLocale(locale).filter((l) => !l.to.includes('#services')) : navigationForLocale(locale))
+  let serviceNav = $derived([
+    {
+      id: 'services-index',
+      to: SERVICES_INDEX_ROUTES[locale],
+      label: copy.servicesAll,
+      jp: '業務',
+    },
+    ...serviceNavigation(locale),
+  ])
+  let currentService = $derived(serviceForPath(pathname))
 
-  let pathname = $derived(page.url.pathname.replace(/\/+$/, '') || '/')
+  // The services-gateway entry has no ServiceId, so aria-current for it must
+  // use the plain pathname comparison; service entries use `currentService`.
+  const currentNav = (item: { id: string; to: string }) =>
+    item.id === 'services-index'
+      ? pathname === normalizePath(item.to)
+        ? 'page'
+        : undefined
+      : currentService === item.id
+        ? 'page'
+        : undefined
+
+  let menuRoot = $state<HTMLDivElement | undefined>()
+  let menuButton = $state<HTMLButtonElement | undefined>()
+
+  const onMenuKeydown = (e: KeyboardEvent) => {
+    if (e.key !== 'Tab' || !menuRoot) return
+    const focusables = Array.from(menuRoot.querySelectorAll<HTMLElement>('a[href], button'))
+    if (focusables.length === 0) return
+    const first = focusables[0]
+    const last = focusables[focusables.length - 1]
+    const active = document.activeElement
+    if (e.shiftKey && (active === first || active === menuRoot)) {
+      e.preventDefault()
+      last.focus()
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault()
+      first.focus()
+    }
+  }
+
+  const svcToggle = (e: MouseEvent) => {
+    e.stopPropagation()
+    svcOpen = !svcOpen
+  }
 
   $effect(() => {
-    if (pathname) open = false
+    if (pathname) {
+      open = false
+      svcOpen = false
+    }
+  })
+
+  $effect(() => {
+    if (!browser) return
+    document.body.classList.toggle('menu-lock', open)
+    return () => {
+      document.body.classList.remove('menu-lock')
+    }
+  })
+
+  // Focus the first interactive element when the mobile menu opens, and close
+  // the menu when the viewport grows back to desktop (releasing menu-lock).
+  $effect(() => {
+    if (!browser) return
+    if (open && menuRoot) {
+      menuRoot.querySelector<HTMLElement>('a[href], button')?.focus()
+    }
   })
 
   onMount(() => {
-    reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    let lastY = window.scrollY
+    let frame = 0
+    const onScroll = () => {
+      if (frame) return
+      frame = requestAnimationFrame(() => {
+        const y = window.scrollY
+        const delta = y - lastY
+        hidden = y > 140 && delta > 4
+        if (delta < -4 || y <= 140) hidden = false
+        lastY = y
+        frame = 0
+      })
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    const desktop = window.matchMedia('(min-width: 901px)')
+    const onDesktop = (e: MediaQueryListEvent) => {
+      if (e.matches) open = false
+    }
+    if (desktop.addEventListener) desktop.addEventListener('change', onDesktop)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (desktop.removeEventListener) desktop.removeEventListener('change', onDesktop)
+      if (frame) cancelAnimationFrame(frame)
+      document.body.classList.remove('menu-lock')
+    }
   })
 </script>
 
-<header class="fixed inset-x-0 top-0 z-[60] border-b border-white/10 bg-[#0a0a0b]/85 backdrop-blur-md">
-  <div class="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-6 md:px-12">
-    <a href="/" class="font-mono2 text-sm font-bold tracking-[0.18em] text-[#f2f2f2]" aria-label="Advanced Digital Marketing LTDA - home">
-      ADM<span class="text-[#00e5ff]">//</span>LTDA
+<header class="editorial-nav" class:editorial-nav--hidden={hidden && !open}>
+  <div class="editorial-nav__inner">
+    <a class="editorial-brand" href={LOCALE_ROUTES.home[locale]} aria-label={`Advanced Digital Marketing LTDA ${copy.navigation.home}`}>
+      <span class="editorial-brand__seal font-jp" aria-hidden="true">{JP.seal}</span><span>ADM</span>
     </a>
 
-    <nav class="hidden items-center gap-8 md:flex" aria-label="Primary">
-      {#each LINKS as l (l.to)}
-        {@const active = pathname === l.to}
-        <a
-          href={l.to}
-          class="font-mono2 text-[12px] uppercase tracking-[0.18em] {active
-            ? 'text-[#00e5ff]'
-            : 'text-white/60 hover:text-white'}"
-          aria-current={active ? 'page' : undefined}
-        >
-          <Scramble text={l.label} />
-        </a>
+    <nav class="editorial-nav__links" aria-label={copy.navigationLabel}>
+      <div class="nav-svc" class:open={svcOpen}>
+        <button class="nav-svc-btn" type="button" aria-haspopup="true" aria-expanded={svcOpen} onclick={svcToggle}>{copy.services} <span class="caret" aria-hidden="true"></span></button>
+        <div class="svc-menu">
+          {#each serviceNav as s (s.to)}
+            <a href={s.to} aria-current={currentNav(s)}><span class="jp font-jp">{s.jp}</span>{s.label}</a>
+          {/each}
+        </div>
+      </div>
+      {#each links as link (link.to)}
+        <a href={link.to} aria-current={!isHome && pathname === normalizePath(link.to) ? 'page' : undefined}>{link.label}</a>
       {/each}
-      <a
-        href={MAILTO}
-        class="chamfer-sm bg-[#00e5ff] px-5 py-2.5 font-mono2 text-[12px] font-bold uppercase tracking-[0.14em] text-[#04181c] hover:bg-[#5cf0ff]"
-      >
-        Start a project
-      </a>
     </nav>
 
-    <button
-      class="flex h-10 w-10 items-center justify-center text-white md:hidden"
-      onclick={() => (open = !open)}
-      aria-label={open ? 'Close menu' : 'Open menu'}
-      aria-expanded={open}
-    >
-      {#if open}
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true">
-          <path d="M6 6l12 12M18 6L6 18" />
-        </svg>
-      {:else}
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true">
-          <path d="M4 7h16M4 12h16M4 17h16" />
-        </svg>
-      {/if}
+    <div class="editorial-nav__actions">
+      <LanguageSwitcher />
+    </div>
+
+    <button type="button" class="editorial-menu-button" aria-expanded={open} aria-controls="mobile-city-menu" bind:this={menuButton} onclick={() => (open = !open)}>
+      <span>{open ? copy.close : copy.menu}</span>
     </button>
   </div>
-
-  {#if open}
-    <nav
-      aria-label="Mobile"
-      class="border-t border-white/10 bg-[#0a0a0b] md:hidden"
-      in:fly={{ y: reduced ? 0 : -8, duration: reduced ? 0 : 200, easing: expoOut, opacity: reduced ? 1 : 0 }}
-      out:fly={{ y: reduced ? 0 : -8, duration: reduced ? 0 : 120, easing: expoOut, opacity: reduced ? 1 : 0 }}
-    >
-      <div class="flex flex-col gap-1 px-6 py-4">
-        {#each LINKS as l (l.to)}
-          {@const active = pathname === l.to}
-          <a
-            href={l.to}
-            class="py-3 font-mono2 text-[13px] uppercase tracking-[0.18em] {active ? 'text-[#00e5ff]' : 'text-white/70'}"
-            aria-current={active ? 'page' : undefined}
-          >
-            {l.label}
-          </a>
-        {/each}
-        <a
-          href={MAILTO}
-          class="chamfer-sm mt-2 inline-flex w-fit bg-[#00e5ff] px-5 py-2.5 font-mono2 text-[12px] font-bold uppercase tracking-[0.14em] text-[#04181c]"
-        >
-          Start a project
-        </a>
-      </div>
-    </nav>
-  {/if}
 </header>
+
+<svelte:window
+  onclick={(e) => {
+    if (svcOpen && e.target instanceof Element && !e.target.closest('.nav-svc')) svcOpen = false
+  }}
+  onkeydown={(e) => {
+    if (e.key !== 'Escape') return
+    svcOpen = false
+    if (open) {
+      open = false
+      // Restore focus to the toggle instead of dropping to the document body.
+      menuButton?.focus()
+    }
+  }}
+/>
+
+{#if open}
+  <div id="mobile-city-menu" class="editorial-mobile-menu" role="dialog" aria-label={copy.navigationLabel} tabindex="-1" bind:this={menuRoot} onkeydown={onMenuKeydown}>
+    <nav aria-label={copy.navigationLabel}>
+      {#each links as link (link.to)}
+        <a href={link.to} onclick={() => (open = false)} aria-current={!isHome && pathname === normalizePath(link.to) ? 'page' : undefined}><span>{link.label}</span><small class="font-jp">{link.jp}</small></a>
+      {/each}
+      {#each serviceNav as s (s.to)}
+        <a href={s.to} onclick={() => (open = false)} aria-current={currentNav(s)}><span>{s.label}</span><small class="font-jp">{s.jp}</small></a>
+      {/each}
+    </nav>
+
+    <div class="editorial-mobile-menu__footer">
+      <LanguageSwitcher />
+      <a class="button button--solid" href={localeMailto} onclick={() => (open = false)}>{copy.bookCall}</a>
+      <div>{localeEmail}</div><div>{copy.footerTagline}</div>
+    </div>
+  </div>
+{/if}

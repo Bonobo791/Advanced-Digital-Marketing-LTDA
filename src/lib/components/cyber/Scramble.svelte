@@ -11,17 +11,34 @@
 
   const GLYPHS = '!<>-_/[]{}=+*^?#010101'
 
-  const initialText = text
-  let display = $state(initialText)
+  // Display starts as the plain text; the animation writes into it.
+  let display = $state(initialText())
   let frame = $state<number | null>(null)
   let reduced = $state(false)
+  let el: HTMLSpanElement
 
-  $effect(() => {
-    display = text
-  })
+  function initialText(): string {
+    return text
+  }
 
   onMount(() => {
     reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (!reduced) {
+      const io = new IntersectionObserver(
+        (entries) => {
+          if (entries[0]?.isIntersecting) {
+            run()
+            io.disconnect()
+          }
+        },
+        { threshold: 0.8 },
+      )
+      io.observe(el)
+      return () => {
+        io.disconnect()
+        if (frame !== null) cancelAnimationFrame(frame)
+      }
+    }
     return () => {
       if (frame !== null) cancelAnimationFrame(frame)
     }
@@ -47,4 +64,4 @@
   }
 </script>
 
-<span class={className} onmouseenter={run} role="presentation">{display}</span>
+<span bind:this={el} class={className} onmouseenter={run} role="presentation">{display || text}</span>

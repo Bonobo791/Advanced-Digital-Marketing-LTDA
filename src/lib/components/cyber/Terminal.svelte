@@ -57,28 +57,28 @@
   })
 </script>
 
-<div class="bracketed chamfer border border-white/10 bg-[#101014] {className}">
+<div class="bracketed chamfer border border-white/10 bg-[#0c1526]/95 {className}">
   <span class="bk bk-tl"></span><span class="bk bk-tr"></span><span class="bk bk-bl"></span><span class="bk bk-br"></span>
   <div class="flex items-center gap-2 border-b border-white/10 px-4 py-2.5">
-    <span class="h-1.5 w-1.5 bg-[#00e5ff]"></span>
+    <span class="h-1.5 w-1.5 bg-[#e83828]"></span>
     <span class="font-mono2 text-[11px] uppercase tracking-[0.22em] text-white/50">{title}</span>
   </div>
   <div class="px-4 py-4 font-mono2 text-[13px] leading-[1.9] text-white/80">
     {#each typed as l, i (i)}
       <div>
-        {#if l?.prompt}<span class="text-[#00e5ff]">{l.prompt} </span>{/if}{l?.text}
+        {#if l?.prompt}<span class="text-[#e83828]">{l.prompt} </span>{/if}{l?.text}
       </div>
     {/each}
     {#if !done && active}
       <div>
-        {#if active.prompt}<span class="text-[#00e5ff]">{active.prompt} </span>{/if}{current}<span
+        {#if active.prompt}<span class="text-[#e83828]">{active.prompt} </span>{/if}{current}<span
           class="cursor-block"
         ></span>
       </div>
     {/if}
     {#if done}
       <div>
-        <span class="text-[#00e5ff]">&gt; </span><span class="cursor-block"></span>
+        <span class="text-[#e83828]">&gt; </span><span class="cursor-block"></span>
       </div>
     {/if}
   </div>

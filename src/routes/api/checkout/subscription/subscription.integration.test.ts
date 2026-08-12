@@ -1,0 +1,320 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { POST } from './+server'
+import { MercadoPagoError, createSubscription } from '$lib/server/mercadoPago'
+import { checkoutBackUrl, isValidEmail } from '$lib/server/checkout'
+import { resetRateLimitBuckets } from '$lib/server/rate-limit'
+
+vi.mock('$lib/server/mercadoPago', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('$lib/server/mercadoPago')>()
+  return { ...actual, createSubscription: vi.fn() }
+})
+
+const mockCreateSubscription = vi.mocked(createSubscription)
+
+const requestEvent = (body: unknown) =>
+  ({
+    request: new Request('http://localhost/api/checkout/subscription', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+    getClientAddress: () => '127.0.0.1',
+  }) as Parameters<typeof POST>[0]
+
+const UUID = '00000000-0000-4000-8000-000000000000'
+
+const validBody = {
+  email: 'customer@example.com',
+  serviceIds: ['seo-content', 'hosting'],
+  idempotencyKey: UUID,
+  config: {},
+}
+
+describe('POST /api/checkout/subscription', () => {
+  beforeEach(() => {
+    vi.stubEnv('PUBLIC_SITE_URL', 'https://advanceddigitalmarketingltda.com')
+    resetRateLimitBuckets()
+    mockCreateSubscription.mockReset()
+    mockCreateSubscription.mockResolvedValue({
+      id: 'sub-1',
+      checkoutUrl: 'https://www.mercadopago.com.br/subscriptions/checkout?preapproval_id=sub-1',
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    resetRateLimitBuckets()
+  })
+
+  it('creates the subscription with the server-computed total and returns the checkout URL', async () => {
+    const response = await POST(requestEvent(validBody))
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      checkoutUrl: 'https://www.mercadopago.com.br/subscriptions/checkout?preapproval_id=sub-1',
+    })
+    expect(mockCreateSubscription).toHaveBeenCalledWith({
+      email: 'customer@example.com',
+      reason: 'Conteúdo SEO + Hospedagem',
+      externalReference: 'seo-content+hosting',
+      amountBRL: 2300,
+      backUrl: 'https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/',
+      idempotencyKey: UUID,
+    })
+  })
+
+  it('never trusts a client-supplied total — the Mercado Pago amount is the server price', async () => {
+    const response = await POST(
+      requestEvent({
+        ...validBody,
+        total: 1,
+        serviceIds: ['paid-search'],
+        config: { 'paid-search': { monthlyAdSpend: 10000 } },
+      }),
+    )
+    expect(response.status).toBe(200)
+    expect(mockCreateSubscription).toHaveBeenCalledWith(
+      expect.objectContaining({ amountBRL: 1000 }), // 10% of R$10,000 spend
+    )
+  })
+
+  it('rejects an invalid email without calling Mercado Pago', async () => {
+    for (const email of ['', 'not-an-email', 'a@b', 'x@y.c', 'spaces in@email.com']) {
+      const response = await POST(requestEvent({ ...validBody, email }))
+      expect(response.status).toBe(400)
+      expect(await response.json()).toEqual({ error: 'invalid_email' })
+    }
+    expect(mockCreateSubscription).not.toHaveBeenCalled()
+  })
+
+  it('rejects malformed JSON', async () => {
+    const event = {
+      request: new Request('http://localhost/api/checkout/subscription', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{not json',
+      }),
+    } as Parameters<typeof POST>[0]
+    const response = await POST(event)
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'invalid_json' })
+  })
+
+  it('rejects unknown, quote-only and empty selections', async () => {
+    const cases: Array<[unknown, string]> = [
+      [['not-a-service'], 'invalid_service'],
+      [['seo-content', 'nope'], 'invalid_service'],
+      [['ai-automation'], 'quote_only_service'],
+      [[], 'no_services_selected'],
+      // >32 service ids is rejected before pricing, even when every id is valid.
+      [Array.from({ length: 33 }, () => 'seo-content'), 'invalid_service'],
+    ]
+    for (const [serviceIds, code] of cases) {
+      const response = await POST(requestEvent({ ...validBody, serviceIds }))
+      expect(response.status).toBe(400)
+      expect(await response.json()).toEqual({ error: code })
+    }
+    expect(mockCreateSubscription).not.toHaveBeenCalled()
+  })
+
+  it('rejects invalid ad-spend configuration', async () => {
+    const response = await POST(
+      requestEvent({
+        ...validBody,
+        serviceIds: ['meta-ads'],
+        config: { 'meta-ads': { monthlyAdSpend: 'lots' } },
+      }),
+    )
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'invalid_ad_spend' })
+  })
+
+  it('requires a UUID v4 idempotency key (duplicate-submission guard)', async () => {
+    for (const idempotencyKey of [undefined, '', 'attempt-1', 'x'.repeat(129), 'not-a-uuid']) {
+      const response = await POST(requestEvent({ ...validBody, idempotencyKey }))
+      expect(response.status).toBe(400)
+      expect(await response.json()).toEqual({ error: 'invalid_idempotency_key' })
+    }
+    expect(mockCreateSubscription).not.toHaveBeenCalled()
+  })
+
+  it('maps Mercado Pago failures to stable status codes without leaking internals', async () => {
+    const cases: Array<[MercadoPagoError, number]> = [
+      [new MercadoPagoError('unauthorized', 'x'), 502],
+      [new MercadoPagoError('api_error', 'x'), 502],
+      [new MercadoPagoError('invalid_response', 'x'), 502],
+      [new MercadoPagoError('missing_init_point', 'x'), 502],
+      [new MercadoPagoError('invalid_init_point', 'x'), 502],
+      [new MercadoPagoError('timeout', 'x'), 503],
+      [new MercadoPagoError('missing_credentials', 'x'), 503],
+    ]
+    for (const [error, status] of cases) {
+      mockCreateSubscription.mockRejectedValueOnce(error)
+      const response = await POST(requestEvent(validBody))
+      expect(response.status).toBe(status)
+      const body = (await response.json()) as Record<string, unknown>
+      expect(body).toEqual({ error: error.code })
+      expect(JSON.stringify(body)).not.toContain('Bearer')
+      expect(JSON.stringify(body)).not.toContain(error.message)
+    }
+  })
+
+  it('re-throws unexpected errors (server logs them)', async () => {
+    mockCreateSubscription.mockRejectedValueOnce(new Error('boom'))
+    await expect(POST(requestEvent(validBody))).rejects.toThrow('boom')
+  })
+
+  it('rejects repeated requests from the same IP with 429 after the window fills', async () => {
+    // 10 allowed per window; the 11th is throttled BEFORE createSubscription.
+    for (let i = 0; i < 10; i += 1) {
+      const ok = await POST(requestEvent(validBody))
+      expect(ok.status).toBe(200)
+    }
+    expect(mockCreateSubscription).toHaveBeenCalledTimes(10)
+
+    const rejected = await POST(requestEvent(validBody))
+    expect(rejected.status).toBe(429)
+    expect(await rejected.json()).toEqual({ error: 'rate_limited' })
+    expect(mockCreateSubscription).toHaveBeenCalledTimes(10)
+
+    // A different IP is unaffected.
+    const otherIp = {
+      request: new Request('http://localhost/api/checkout/subscription', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(validBody),
+      }),
+      getClientAddress: () => '10.0.0.2',
+    } as Parameters<typeof POST>[0]
+    const ok = await POST(otherIp)
+    expect(ok.status).toBe(200)
+  })
+
+  it('fails loudly when no client IP is resolvable, instead of pooling unidentified clients', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const event = {
+        request: new Request('http://localhost/api/checkout/subscription', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(validBody),
+        }),
+        getClientAddress: (): string => {
+          throw new Error('adapter provides no client address')
+        },
+      } as Parameters<typeof POST>[0]
+
+      const response = await POST(event)
+      expect(response.status).toBe(503)
+      expect(await response.json()).toEqual({ error: 'client_address_unavailable' })
+      expect(mockCreateSubscription).not.toHaveBeenCalled()
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('cannot determine client IP for rate limiting'),
+      )
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
+  it('never trusts spoofable proxy headers when getClientAddress throws', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const event = (headers: Record<string, string> = {}) => ({
+        request: new Request('http://localhost/api/checkout/subscription', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...headers },
+          body: JSON.stringify(validBody),
+        }),
+        getClientAddress: (): string => {
+          throw new Error('adapter provides no client address')
+        },
+      }) as Parameters<typeof POST>[0]
+
+      // x-forwarded-for and x-real-ip are client-controllable: they must never
+      // become the rate-limit key. When the platform address is unavailable,
+      // every request fails loud with 503 instead of trusting those headers.
+      for (const forwardedFor of ['203.0.113.7, 10.0.0.1', '198.51.100.9', '198.51.100.10']) {
+        const response = await POST(event({ 'x-forwarded-for': forwardedFor }))
+        expect(response.status).toBe(503)
+        expect(await response.json()).toEqual({ error: 'client_address_unavailable' })
+      }
+      expect((await POST(event({ 'x-real-ip': '203.0.113.8' }))).status).toBe(503)
+
+      // The refusal is logged loudly (AGENTS.md: no silent fallbacks).
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('cannot determine client IP for rate limiting'),
+      )
+      expect(mockCreateSubscription).not.toHaveBeenCalled()
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+})
+
+describe('checkoutBackUrl', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  it('builds the back URL from PUBLIC_SITE_URL', () => {
+    vi.stubEnv('PUBLIC_SITE_URL', 'https://example.com')
+    expect(checkoutBackUrl()).toBe('https://example.com/pt-br/checkout/complete/')
+  })
+
+  // [configured PUBLIC_SITE_URL, expected server log fragment]
+  it.each([
+    // Missing: nothing is configured at all.
+    ['', 'PUBLIC_SITE_URL is not set'],
+    // 'not-a-url' has no scheme — `new URL` would throw and crash checkout.
+    ['not-a-url', 'PUBLIC_SITE_URL is malformed'],
+    // Syntactically valid but http: — Mercado Pago requires a public HTTPS
+    // back_url, so the configured value must not be used.
+    ['http://example.com', 'PUBLIC_SITE_URL is not a public HTTPS URL'],
+    // https on localhost is valid URL syntax but never a public origin.
+    ['https://localhost:5173', 'PUBLIC_SITE_URL is not a public HTTPS URL'],
+  ])('falls back to the canonical origin when PUBLIC_SITE_URL is %s', (configured, expectedLog) => {
+    vi.stubEnv('PUBLIC_SITE_URL', configured)
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const url = checkoutBackUrl()
+      expect(url).toBe('https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/')
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining(expectedLog))
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
+  it.each([
+    'https://192.168.1.10',
+    'https://10.0.0.5',
+    'https://172.16.0.1',
+    'https://169.254.0.1',
+    'https://[::1]',
+    'https://[fc00::1]',
+  ])('falls back to the canonical origin for non-public IP literals (%s)', (configured) => {
+    // RFC1918 / link-local / loopback literals are syntactically valid URLs
+    // but never public HTTPS domains — Mercado Pago must never receive them.
+    vi.stubEnv('PUBLIC_SITE_URL', configured)
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const url = checkoutBackUrl()
+      expect(url).toBe('https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/')
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('PUBLIC_SITE_URL is not a public HTTPS URL'),
+      )
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+})
+
+describe('isValidEmail', () => {
+  it('accepts well-formed addresses and rejects everything else', () => {
+    expect(isValidEmail('ada@example.com')).toBe(true)
+    expect(isValidEmail('ada+tag@sub.example.co')).toBe(true)
+    expect(isValidEmail('')).toBe(false)
+    expect(isValidEmail('ada@')).toBe(false)
+    expect(isValidEmail('@example.com')).toBe(false)
+    expect(isValidEmail('ada example.com')).toBe(false)
+    expect(isValidEmail(42)).toBe(false)
+    expect(isValidEmail(`${'a'.repeat(250)}@example.com`)).toBe(false)
+  })
+})
