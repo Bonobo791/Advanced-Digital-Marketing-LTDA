@@ -120,22 +120,27 @@ USD reference and are never billed (no USD checkout yet).
 
 ## Environment variables
 
-| Variable | Required | Purpose |
+Both checkout flows (subscriptions and one-time website builds) read the same
+three server-only variables from `process.env` inside
+`src/lib/server/mercadoPago.ts`; they are never exposed to the browser.
+
+| Variable | Dev (sandbox) | Prod (live) |
 |---|---|---|
-| `MERCADO_PAGO_ACCESS_TOKEN` | Yes | Server-only Mercado Pago access token. Both production and test credentials are `APP_USR-...` (the environment is whichever section of the panel they came from). Never expose client-side. |
-| `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN` | For sandbox | When it equals the access token, sandbox mode is detected. Note: the Subscriptions API returns only `init_point` (there is no `sandbox_init_point` for preapprovals) — the checkout environment is resolved server-side from the preapproval. |
-| `PUBLIC_SITE_URL` | Yes (prod) | Base URL used for the `back_url` redirect back to `/pt-br/checkout/complete/`. Must be a public HTTPS domain Mercado Pago accepts — non-HTTPS schemes and loopback hosts (`localhost`, `127.0.0.1`, `0.0.0.0`, `::1`) are rejected in code, and `*.netlify.app` is rejected by MP with `400 invalid_field_content`. Falls back to the `SITE_ORIGIN` constant with a loud server-side warning if unset, malformed, or not a public HTTPS URL (the configured value is never echoed in logs). |
+| `MERCADO_PAGO_ACCESS_TOKEN` | **Test** Access Token from the panel's *Credenciais de teste* section (also `APP_USR-...` — the environment is the panel section, not the prefix). | **Production** Access Token from *Credenciais de produção*. |
+| `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN` | Set to the **same test token** — exact equality with the access token is how sandbox mode is detected (`selectInitPoint` then uses `sandbox_init_point`, which Checkout Pro returns). | **Do not set** (or set to a different value). If it equals the production token, every real customer is redirected to the sandbox checkout and payments fail. |
+| `PUBLIC_SITE_URL` | Any public HTTPS domain MP accepts — the production domain works for local testing (`localhost`/`*.netlify.app` are rejected by MP). | `https://advanceddigitalmarketingltda.com` — base for the `back_url` redirect to `/pt-br/checkout/complete/`. Falls back to the `SITE_ORIGIN` constant with a loud server-side warning if unset/malformed/not public HTTPS. |
 
 The token is read only inside `src/lib/server/mercadoPago.ts` and never appears
 in API responses, HTML, or logs. Do **not** add a Mercado Pago public key —
 this redirect flow needs none. Do not prefix any of these with `PUBLIC_` for
 `import.meta.env` access.
 
-> Note: local `.env` files are gitignored. For local development, set
-> `MERCADO_PAGO_ACCESS_TOKEN` to the **test** Access Token from the panel's
-> "Credenciais de teste" section (also `APP_USR-...`) — do **not** copy
-> production credentials into a local `.env`. `MERCADO_PAGO_WEBHOOK_SECRET`
-> and `PUBLIC_KEY` in `.env` are unused by this flow.
+> Note: local `.env` files are gitignored. The current dev `.env` follows the
+> dev row above (test token in both variables — the account resolves to a
+> seller **test user**, `TESTUSER...`, tagged `test_user` in
+> `GET /users/me`). `MERCADO_PAGO_WEBHOOK_SECRET` and `PUBLIC_KEY` in `.env`
+> are unused by this flow (the `PUBLIC_KEY` belongs to a different
+> application — ignore it).
 
 ---
 
@@ -159,16 +164,31 @@ this redirect flow needs none. Do not prefix any of these with `PUBLIC_` for
 2. Set `MERCADO_PAGO_ACCESS_TOKEN` and `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN` to
    the **same** test Access Token, and `PUBLIC_SITE_URL` to a public HTTPS
    domain accepted by Mercado Pago (see the environment-variable note above).
-3. **Sandbox requires the buyer to be a test user**: the `payer_email` entered
-   in the subscribe form must be a test account on `@testuser.com` (create
-   buyer test users in the panel under Test accounts). A real email makes
-   Mercado Pago return `500` on `/preapproval`.
-4. Run `npm run test` (all Mercado Pago calls are mocked — no real requests).
-5. For a live sandbox end-to-end check, run `npm run dev`, enter a `@testuser.com`
-   email in the pt-BR configurator, and submit; the browser is redirected via
-   `init_point` to Mercado Pago's subscription checkout, where the subscription
-   is created in **test** mode and paid with test cards
-   (e.g. `5031 4332 1540 6351`).
+3. Run `npm run test` (all Mercado Pago calls are mocked — no real requests).
+4. For a live sandbox end-to-end check, run `npm run dev` and use a **real
+   browser** (the sandbox checkout's invisible reCAPTCHA blocks automated
+   browsers):
+   - **Subscription flow** — enter a `@testuser.com` email in the pt-BR
+     configurator (sandbox requires the buyer to be a test account; a real
+     email makes Mercado Pago return `500` on `/preapproval`) and submit.
+   - **Website build flow** — click *Comprar site* and pay as a guest
+     ("Sem conta Mercado Pago") with a current test card (no test-user email
+     needed for Checkout Pro).
+
+### Current test cards (Brazil, 2026)
+
+The card list changes — always re-check
+[Cartões de teste](https://www.mercadopago.com.br/developers/pt/docs/your-integrations/test/cards).
+Verified working with this account:
+
+| Result | Card | Holder name | CPF | Expiry | CVV |
+|---|---|---|---|---|---|
+| Approved | `5480 8328 0103 3311` (Mastercard) or `4235 6477 2802 5682` (Visa) | `APRO` | `12345678909` | `11/30` | `123` |
+| Declined | any of the above | `OTHE` | `12345678909` | `11/30` | `123` |
+
+> The previously documented card `5031 4332 1540 6351` is **no longer
+> accepted** by Mercado Pago (rejected live with "Não é possível pagar com
+> este cartão"). Do not use it.
 
 Production credentials are used only when `MERCADO_PAGO_ACCESS_TOKEN` is a
 production token. **Never run a real (non-sandbox) checkout in development.**
@@ -432,10 +452,11 @@ Coverage highlights:
     sandbox test user. In sandbox, the buyer email must be a test account on
     `@testuser.com`; a real email makes MP fail with 500.
 - **Redirecting to sandbox unexpectedly:** `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN`
-  equals the access token — intended in test environments, remove in prod. The
-  Subscriptions API only ever returns `init_point`, so this variable does not
-  change which checkout URL is used; the environment is determined by the
-  credential itself.
+  equals the access token — intended in test environments, remove in prod. For
+  Checkout Pro (website builds) the equality is what selects
+  `sandbox_init_point`, so in prod it must not equal the production token. For
+  Subscriptions the API only ever returns `init_point`; the environment there
+  is determined by the credential itself.
 - **Back URL wrong:** set `PUBLIC_SITE_URL` to a public HTTPS domain Mercado
   Pago accepts (e.g. `https://advanceddigitalmarketingltda.com` — not
   `localhost` or `*.netlify.app`); otherwise the canonical `SITE_ORIGIN`

@@ -1185,6 +1185,12 @@ img { display: block; max-width: 100%; }
 
 /* ─── One-time website builds (WebsiteBuildPricing) ───────────────────── */
 .build-panel .sec-lead { max-width: 46em; }
+
+/* The one-time website build panel and the monthly subscription panel are one
+   pricing block (web-development page + services index): tighten the default
+   128px section rhythm so both sets of options read together. */
+.build-panel + .subscribe-panel { padding-top: 0; }
+.service-page .build-panel { padding-bottom: 64px; }
 .build-row { margin-top: 32px; }
 .build-info { min-width: 0; }
 .build-name { display: block; font-family: 'ADM Display', sans-serif; font-size: 1.15rem; letter-spacing: -0.01em; text-transform: uppercase; }
