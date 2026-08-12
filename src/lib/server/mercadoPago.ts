@@ -43,6 +43,15 @@ export type CreateSubscriptionInput = {
   idempotencyKey: string
 }
 
+export type CheckoutPaymentMethods = {
+  /** Mercado Pago payment-type ids to exclude, e.g. `prepaid_card`. */
+  excludedPaymentTypes: readonly string[]
+  /** Maximum number of installments offered to the buyer (credit card). */
+  maxInstallments: number
+  /** Installments preselected in the checkout — 1 means full payment (à vista). */
+  defaultInstallments: number
+}
+
 export type CreateCheckoutPreferenceInput = {
   title: string
   /** One-time amount in BRL — always the server-computed build price. */
@@ -50,6 +59,13 @@ export type CreateCheckoutPreferenceInput = {
   externalReference: string
   backUrls: { success: string; failure: string; pending: string }
   idempotencyKey: string
+  /**
+   * Which payment methods the hosted checkout offers (exclusions + credit
+   * installments). Required on purpose: omitting it would silently fall back
+   * to Checkout Pro's default "all methods" behavior (AGENTS.md: no silent
+   * fallbacks).
+   */
+  paymentMethods: CheckoutPaymentMethods
 }
 
 export type SubscriptionCreated = {
@@ -268,6 +284,12 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
  * the hosted checkout URL. The amount is always the server-computed build
  * price (BRL); Mercado Pago handles the payment and redirects back through
  * `back_urls` with `auto_return: "approved"`.
+ *
+ * `paymentMethods` narrows the hosted checkout to the configured methods and
+ * credit-card installments: `excluded_payment_types` removes every offered
+ * type outside the policy, `installments` caps the maximum number of
+ * installments (parcelado), and `default_installments: 1` preselects à vista.
+ * Mercado Pago's wallet (`account_money`) cannot be excluded by preference.
  */
 export async function createCheckoutPreference(input: CreateCheckoutPreferenceInput): Promise<SubscriptionCreated> {
   const record = await postMercadoPagoJson(
@@ -281,6 +303,11 @@ export async function createCheckoutPreference(input: CreateCheckoutPreferenceIn
           currency_id: 'BRL',
         },
       ],
+      payment_methods: {
+        excluded_payment_types: input.paymentMethods.excludedPaymentTypes.map((id) => ({ id })),
+        installments: input.paymentMethods.maxInstallments,
+        default_installments: input.paymentMethods.defaultInstallments,
+      },
       back_urls: input.backUrls,
       auto_return: 'approved',
       external_reference: input.externalReference,

@@ -3,6 +3,7 @@ import {
   MIGRATION_MULTIPLIER,
   WEBSITE_BUILD_BASE_PRICE,
   WEBSITE_BUILD_BASE_PRICE_BRL,
+  WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS,
   WEBSITE_BUILD_NAMES,
   WEBSITE_BUILD_TYPES,
   formatBuildPrice,
@@ -93,6 +94,22 @@ describe('website build guards and checkout metadata', () => {
       for (const type of WEBSITE_BUILD_TYPES) {
         expect(websiteBuildTitle(locale, type, 'new')).toBe(WEBSITE_BUILD_NAMES[locale][type])
       }
+    }
+  })
+})
+
+describe('WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS (Checkout Pro policy)', () => {
+  it('preselects à vista within the allowed installment range', () => {
+    expect(WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS.defaultInstallments).toBeGreaterThanOrEqual(1)
+    expect(WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS.defaultInstallments).toBeLessThanOrEqual(
+      WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS.maxInstallments,
+    )
+  })
+
+  it('only excludes non-empty Mercado Pago payment-type ids', () => {
+    expect(WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS.excludedPaymentTypes.length).toBeGreaterThan(0)
+    for (const id of WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS.excludedPaymentTypes) {
+      expect(id.length).toBeGreaterThan(0)
     }
   })
 })

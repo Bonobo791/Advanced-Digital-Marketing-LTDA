@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { isSandboxAccessToken } from './sandbox'
+import { WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS } from '$lib/website-builds'
 import {
   CHECKOUT_PRO_PREFERENCES_ENDPOINT,
   PAYMENTS_ENDPOINT,
@@ -309,6 +310,7 @@ describe('createCheckoutPreference', () => {
       pending: 'https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/',
     },
     idempotencyKey: 'attempt-123',
+    paymentMethods: WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS,
   }
 
   it('creates the Checkout Pro preference with the server-computed amount and returns the checkout URL', async () => {
@@ -327,6 +329,11 @@ describe('createCheckoutPreference', () => {
     expect(headers['X-Idempotency-Key']).toBe('attempt-123')
     expect(JSON.parse(String(captured?.init?.body))).toEqual({
       items: [{ title: input.title, quantity: 1, unit_price: 12000, currency_id: 'BRL' }],
+      payment_methods: {
+        excluded_payment_types: WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS.excludedPaymentTypes.map((id) => ({ id })),
+        installments: WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS.maxInstallments,
+        default_installments: WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS.defaultInstallments,
+      },
       back_urls: input.backUrls,
       auto_return: 'approved',
       external_reference: 'website-build:ecommerce:migration',
@@ -348,6 +355,26 @@ describe('createCheckoutPreference', () => {
     )
     const created = await createCheckoutPreference(input)
     expect(created.checkoutUrl).toContain('www.mercadopago.com.br')
+  })
+
+  it('maps the payment-methods policy to the Checkout Pro payment_methods block', async () => {
+    let captured: { url: string; init?: RequestInit } | undefined
+    stubFetch((url, init) => {
+      captured = { url: String(url), init }
+      return jsonResponse({ id: 'pref-5', init_point: 'https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=pref-5' })
+    })
+
+    await createCheckoutPreference({
+      ...input,
+      paymentMethods: { excludedPaymentTypes: ['prepaid_card', 'atm'], maxInstallments: 6, defaultInstallments: 1 },
+    })
+
+    const body = JSON.parse(String(captured?.init?.body)) as Record<string, unknown>
+    expect(body.payment_methods).toEqual({
+      excluded_payment_types: [{ id: 'prepaid_card' }, { id: 'atm' }],
+      installments: 6,
+      default_installments: 1,
+    })
   })
 
   it('fails loudly when the access token is missing (no request is made)', async () => {

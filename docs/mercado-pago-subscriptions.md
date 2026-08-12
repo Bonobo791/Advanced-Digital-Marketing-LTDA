@@ -116,6 +116,23 @@ The authoritative BRL table lives in `WEBSITE_BUILD_BASE_PRICE_BRL`
 (guarded by `website-builds.unit.test.ts`). The en-US prices are a separate
 USD reference and are never billed (no USD checkout yet).
 
+### Payment methods (hosted Checkout Pro)
+
+The one-time build preference carries an explicit `payment_methods` block
+(`WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS` in `src/lib/website-builds.ts`,
+server-side only — the browser never sends it):
+
+- **Offered methods:** credit card (`credit_card`), debit card
+  (`debit_card`), Pix / bank transfer (`bank_transfer`) and boleto
+  (`ticket`).
+- **Credit installments:** à vista is preselected
+  (`default_installments: 1`); buyers may split the payment into up to
+  12 installments (`installments: 12`).
+- **Exclusions:** `excluded_payment_types: [{ "id": "prepaid_card" }]`
+  removes every other Checkout Pro payment type. Mercado Pago's wallet
+  (`account_money`, "Dinheiro em conta") **cannot be excluded by
+  preference** and stays available.
+
 ---
 
 ## Environment variables
@@ -300,7 +317,9 @@ Server procedure:
    and `external_reference` (e.g. `website-build:ecommerce:migration`,
    deterministic, no PII).
 4. `POST https://api.mercadopago.com/checkout/preferences` with one item,
-   `back_urls` (all three states → `/pt-br/checkout/complete/`),
+   the `payment_methods` block (offered methods + à vista/parcelado policy,
+   see [Payment methods](#payment-methods-hosted-checkout-pro)), `back_urls`
+   (all three states → `/pt-br/checkout/complete/`),
    `auto_return: "approved"`.
 5. Validate the returned `init_point` (HTTPS, Mercado Pago host; sandbox-aware
    via `sandbox_init_point` when the sandbox token matches) and respond.

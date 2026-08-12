@@ -38,6 +38,29 @@ export const WEBSITE_BUILD_BASE_PRICE_BRL: Record<WebsiteBuildType, number> = {
   ecommerce: 6000,
 }
 
+/**
+ * Payment-method policy for the one-time build checkout (Checkout Pro hosted
+ * checkout). Maps to the preference's `payment_methods` block:
+ *
+ * - Offered methods: credit card (`credit_card` — à vista by default, or
+ *   parcelado up to `maxInstallments`), debit card (`debit_card`), Pix /
+ *   bank transfer (`bank_transfer`), and boleto (`ticket`).
+ * - Mercado Pago's wallet (`account_money`, "Dinheiro em conta") cannot be
+ *   excluded by preference and therefore stays available.
+ * - `excludedPaymentTypes` removes every other Checkout Pro payment type
+ *   (Brazil: `prepaid_card`) from the hosted checkout.
+ *
+ * Values are server-side policy; the browser never sends them.
+ */
+export const WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS = {
+  /** Maximum credit-card installments offered (parcelado). */
+  maxInstallments: 12,
+  /** Installments preselected in the hosted checkout — 1 means à vista. */
+  defaultInstallments: 1,
+  /** Checkout Pro payment types excluded from the hosted checkout. */
+  excludedPaymentTypes: ['prepaid_card'],
+} as const
+
 /** One-time build price in BRL (checkout currency), including the kind multiplier. */
 export function websiteBuildPriceBRL(type: WebsiteBuildType, kind: WebsiteBuildKind): number {
   const base = WEBSITE_BUILD_BASE_PRICE_BRL[type]
