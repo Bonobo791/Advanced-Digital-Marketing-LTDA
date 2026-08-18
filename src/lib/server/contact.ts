@@ -215,6 +215,15 @@ function markProcessed(token: string, expiresAtMs: number, now: number): boolean
   return true
 }
 
+/**
+ * Removes a token from the processed set so a failed owner notification can
+ * be retried on the next verification click instead of losing the lead.
+ */
+function unmarkProcessed(token: string): void {
+  const hash = createHash('sha256').update(token).digest('hex')
+  processedVerifications.delete(hash)
+}
+
 /** Test hook: clears processed-token state. Never called from production paths. */
 export function resetProcessedVerifications(): void {
   processedVerifications.clear()
@@ -247,11 +256,14 @@ export async function verifyContactRequest(token: string, now: number = Date.now
       })
     } catch (error) {
       // The address is verified; only the notification failed. Fail loud on
-      // the server log, never turn the visitor's valid link into an error.
+      // the server log, never turn the visitor's valid link into an error —
+      // and unmark the token so a later click retries the notification
+      // instead of permanently losing the lead on this instance.
+      unmarkProcessed(token)
       if (error instanceof MailjetError) {
-        console.error(`[contact] owner notification failed after verification: ${error.code}`)
+        console.error(`[contact] owner notification failed after verification; will retry on next click: ${error.code}`)
       } else {
-        console.error('[contact] owner notification failed after verification', error)
+        console.error('[contact] owner notification failed after verification; will retry on next click', error)
       }
     }
   }

@@ -1,6 +1,12 @@
 import type { PageServerLoad } from './$types'
 import { isValidPaymentId, isValidPreapprovalId } from '$lib/server/checkout'
-import { MercadoPagoError, getPayment, getSubscription } from '$lib/server/mercadoPago'
+import {
+  MercadoPagoError,
+  getPayment,
+  getSubscription,
+  type PaymentStatus,
+} from '$lib/server/mercadoPago'
+import { WEBSITE_BUILD_KINDS, WEBSITE_BUILD_TYPES, websiteBuildExternalReference, websiteBuildPriceBRL } from '$lib/website-builds'
 import { ClientAddressError, clientIpAddress } from '$lib/server/client-ip'
 import { checkRateLimit, rateLimitKey } from '$lib/server/rate-limit'
 
@@ -152,8 +158,41 @@ async function verifyPayment(
 
   if (!payment) return { state: 'error' }
 
+  if (payment.status === 'approved' && !isWebsiteBuildPayment(payment)) {
+    // The payment is real and approved but is not bound to a checkout this
+    // server created (wrong external_reference, amount or currency). Showing
+    // "development will begin" for it would be a false claim, so refuse the
+    // success state and log loudly instead.
+    console.warn(
+      `[checkout] approved payment ${payment.id} does not match a server-created website build ` +
+        `(external_reference=${payment.externalReference}, amount=${payment.transactionAmount}, currency=${payment.currencyId}); refusing success claim`,
+    )
+    return { state: 'error' }
+  }
   if (payment.status === 'approved') {
     return { state: 'payment_confirmed', paymentId: payment.id }
   }
   return { state: 'payment_unconfirmed', paymentId: payment.id }
+}
+
+/**
+ * True only when an approved payment is bound to a checkout this server
+ * actually created: the Mercado Pago `external_reference` must be one of the
+ * deterministic website-build references and the charged amount/currency must
+ * equal the authoritative server-side BRL price. An approved payment for
+ * anything else never shows the website-build success claim.
+ */
+function isWebsiteBuildPayment(payment: PaymentStatus): boolean {
+  if (payment.currencyId !== 'BRL' || payment.externalReference === null) return false
+  for (const type of WEBSITE_BUILD_TYPES) {
+    for (const kind of WEBSITE_BUILD_KINDS) {
+      if (
+        payment.externalReference === websiteBuildExternalReference(type, kind) &&
+        payment.transactionAmount === websiteBuildPriceBRL(type, kind)
+      ) {
+        return true
+      }
+    }
+  }
+  return false
 }

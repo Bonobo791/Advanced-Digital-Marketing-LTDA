@@ -225,6 +225,45 @@ describe('checkout/complete load — one-time payments (Checkout Pro)', () => {
     })
   })
 
+  it('never claims a website-build success for an approved payment bound to another product', async () => {
+    // An approved payment whose external_reference/amount/currency do not match
+    // a server-created website-build checkout must not show the success claim.
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const mismatches = [
+        { externalReference: 'unrelated:product:1', transactionAmount: 3000, currencyId: 'BRL' },
+        { externalReference: 'website-build:website:new', transactionAmount: 2999, currencyId: 'BRL' },
+        { externalReference: 'website-build:website:new', transactionAmount: 3000, currencyId: 'USD' },
+        { externalReference: null, transactionAmount: 3000, currencyId: 'BRL' },
+      ]
+      for (const patch of mismatches) {
+        mockGetPayment.mockResolvedValue({ ...approvedPayment, ...patch })
+        expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
+          state: 'error',
+        })
+      }
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('does not match a server-created website build'))
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('confirms every server-created build price/kind combination', async () => {
+    const combos = [
+      { externalReference: 'website-build:website:new', transactionAmount: 3000 },
+      { externalReference: 'website-build:website:migration', transactionAmount: 6000 },
+      { externalReference: 'website-build:ecommerce:new', transactionAmount: 6000 },
+      { externalReference: 'website-build:ecommerce:migration', transactionAmount: 12000 },
+    ]
+    for (const patch of combos) {
+      mockGetPayment.mockResolvedValue({ ...approvedPayment, ...patch })
+      expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
+        state: 'payment_confirmed',
+        paymentId: '1234567890',
+      })
+    }
+  })
+
   it('never claims success for a payment Mercado Pago has not approved', async () => {
     for (const status of ['rejected', 'pending', 'in_process', 'refunded', 'cancelled', 'charged_back']) {
       mockGetPayment.mockResolvedValue({ ...approvedPayment, status })

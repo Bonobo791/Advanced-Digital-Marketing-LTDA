@@ -139,6 +139,28 @@ describe('verifyContactRequest', () => {
       errorSpy.mockRestore()
     }
   })
+
+  it('retries the owner notification on a later click after a transient failure', async () => {
+    // markProcessed must not permanently suppress the notification: when the
+    // first send fails, the token is unmarked so the next verification click
+    // retries instead of losing the verified lead on this instance.
+    const { MailjetError } = await import('./mailjet')
+    mockSend.mockRejectedValueOnce(new MailjetError('api_error', 'MailJet down'))
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const { token } = createContactToken(validSubmission, NOW, SECRET)
+      const first = await verifyContactRequest(token, NOW + 60_000)
+      expect(first.status).toBe('verified')
+      expect(mockSend).toHaveBeenCalledTimes(1)
+
+      const second = await verifyContactRequest(token, NOW + 120_000)
+      expect(second.status).toBe('verified')
+      expect(mockSend).toHaveBeenCalledTimes(2)
+      expect(errorSpy).toHaveBeenCalledTimes(1)
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
 })
 
 describe('contact helpers', () => {
