@@ -40,6 +40,7 @@ export const RATE_LIMIT_BUCKETS = {
   subscriptionVerify: 'subscription-verify',
   buildCreate: 'build-create',
   paymentVerify: 'payment-verify',
+  contactSubmit: 'contact-submit',
 } as const
 
 export type RateLimitBucket = keyof typeof RATE_LIMIT_BUCKETS

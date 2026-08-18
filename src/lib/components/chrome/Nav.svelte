@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import { browser } from '$app/environment'
   import { page } from '$app/state'
-  import { EMAIL, JP, PORTUGUESE_EMAIL, PT_MAILTO, MAILTO } from '$lib/constants'
+  import { EMAIL, JP, PORTUGUESE_EMAIL } from '$lib/constants'
   import { CHROME_COPY, homeSectionsForLocale, localeForPath, LOCALE_ROUTES, navigationForLocale, normalizePath, SERVICES_INDEX_ROUTES } from '$lib/locale'
   import { serviceForPath, serviceNavigation } from '$lib/services'
   import LanguageSwitcher from './LanguageSwitcher.svelte'
@@ -13,7 +13,6 @@
   let pathname = $derived(normalizePath(page.url.pathname))
   let locale = $derived(localeForPath(page.url.pathname))
   let copy = $derived(CHROME_COPY[locale])
-  let localeMailto = $derived(locale === 'pt-BR' ? PT_MAILTO : MAILTO)
   let localeEmail = $derived(locale === 'pt-BR' ? PORTUGUESE_EMAIL : EMAIL)
   let isHome = $derived(pathname === normalizePath(LOCALE_ROUTES.home[locale]))
   let links = $derived(isHome ? homeSectionsForLocale(locale).filter((l) => !l.to.includes('#services')) : navigationForLocale(locale))
@@ -175,7 +174,7 @@
 
     <div class="editorial-mobile-menu__footer">
       <LanguageSwitcher />
-      <a class="button button--solid" href={localeMailto} onclick={() => (open = false)}>{copy.bookCall}</a>
+      <a class="button button--solid" href={LOCALE_ROUTES.contact[locale]} onclick={() => (open = false)}>{copy.bookCall}</a>
       <div>{localeEmail}</div><div>{copy.footerTagline}</div>
     </div>
   </div>

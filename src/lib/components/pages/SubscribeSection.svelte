@@ -21,10 +21,9 @@
     type CatalogServiceId,
   } from '$lib/catalog'
   import { parseBRLInput } from '$lib/brl'
-  import { EMAIL } from '$lib/constants'
   import { fireBeginCheckout } from '$lib/client/analytics'
   import { fetchCheckoutUrl } from '$lib/client/checkout'
-  import type { Locale } from '$lib/locale'
+  import { LOCALE_ROUTES, type Locale } from '$lib/locale'
 
   let {
     locale,
@@ -333,7 +332,7 @@
       </form>
     {:else}
       <p class="sub-note sub-coming-soon">{text.comingSoon}</p>
-      <a class="btn btn-ghost-ink" href={`mailto:${EMAIL}`}>{text.emailUs}</a>
+      <a class="btn btn-ghost-ink" href={LOCALE_ROUTES.contact[locale]}>{text.emailUs}</a>
     {/if}
   </div>
 </section>

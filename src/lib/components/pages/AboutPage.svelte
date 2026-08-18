@@ -2,16 +2,15 @@
   import portrait from '$lib/assets/andrew-portrait-v3-full.png'
   import Kanji from '$lib/components/chrome/Kanji.svelte'
   import MotionHeading from '$lib/components/chrome/MotionHeading.svelte'
-  import { JP, MAILTO, PAGE_COPY, PT_MAILTO, WHATSAPP_AVAILABLE, WHATSAPP_URL } from '$lib/constants'
-  import type { Locale } from '$lib/locale'
+  import { JP, PAGE_COPY } from '$lib/constants'
+  import { LOCALE_ROUTES, type Locale } from '$lib/locale'
 
   let { locale }: { locale: Locale } = $props()
 
   let content = $derived(PAGE_COPY[locale].about)
-  let showWhatsapp = $derived(WHATSAPP_AVAILABLE)
-  let localeMailto = $derived(locale === 'pt-BR' ? PT_MAILTO : MAILTO)
-  let ctaHref = $derived(showWhatsapp ? WHATSAPP_URL : localeMailto)
-  let ctaLabel = $derived(showWhatsapp ? content.whatsapp : content.bookCall)
+  // Single contact channel: the opt-in contact form page.
+  let ctaHref = $derived(LOCALE_ROUTES.contact[locale])
+  let ctaLabel = $derived(content.bookCall)
 </script>
 
 <section class="editorial-subhero">

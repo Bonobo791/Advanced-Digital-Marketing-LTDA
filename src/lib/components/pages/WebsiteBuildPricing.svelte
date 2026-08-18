@@ -22,9 +22,8 @@
     type WebsiteBuildKind,
     type WebsiteBuildType,
   } from '$lib/website-builds'
-  import type { Locale } from '$lib/locale'
+  import { LOCALE_ROUTES, type Locale } from '$lib/locale'
   import { words } from '$lib/text'
-  import { EMAIL } from '$lib/constants'
   import { fetchCheckoutUrl } from '$lib/client/checkout'
   import { fireBeginCheckout } from '$lib/client/analytics'
 
@@ -180,7 +179,7 @@
           <p class="build-note">{text.hostingNote}</p>
         {:else}
           <p class="sub-note sub-coming-soon">{text.comingSoon}</p>
-          <a class="btn btn-ghost-ink" href={`mailto:${EMAIL}?subject=${encodeURIComponent('Website build request')}`}>{text.emailCta}</a>
+          <a class="btn btn-ghost-ink" href={LOCALE_ROUTES.contact[locale]}>{text.emailCta}</a>
           <p class="build-note">{text.hostingNote}</p>
         {/if}
       </div>
