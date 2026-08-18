@@ -14,24 +14,40 @@
     return setupReveals()
   })
 
+  // Which flow a state belongs to, so error/rate-limit pages keep the right
+  // subject instead of defaulting to "Sua assinatura" for payment failures.
+  const flowKind = $derived(
+    data.state === 'confirmed' || data.state === 'pending' || data.state === 'cancelled'
+      ? 'subscription'
+      : data.state === 'payment_confirmed' || data.state === 'payment_pending' || data.state === 'payment_unconfirmed'
+        ? 'payment'
+        : data.state === 'error' || data.state === 'rate_limited'
+          ? data.kind
+          : null,
+  )
+
   // Subject + headline read as one sentence: "Sua assinatura foi processada."
   // (subscriptions) or "Seu pagamento foi aprovado." (one-time builds).
-  const subject = $derived(data.state === 'payment_confirmed' || data.state === 'payment_unconfirmed' ? 'Seu pagamento' : 'Sua assinatura')
+  const subject = $derived(
+    flowKind === 'payment' ? 'Seu pagamento' : flowKind === 'subscription' ? 'Sua assinatura' : 'Sua solicitação',
+  )
 
   const headline = $derived(
     data.state === 'confirmed'
       ? 'foi processada.'
       : data.state === 'payment_confirmed'
         ? 'foi aprovado.'
-        : data.state === 'pending'
-          ? 'está sendo processada.'
-          : data.state === 'payment_unconfirmed'
-            ? 'não foi concluído.'
-            : data.state === 'cancelled'
-              ? 'não está mais ativa.'
-              : data.state === 'rate_limited'
-                ? 'não pôde ser confirmado agora.'
-                : 'não pôde ser confirmado.',
+        : data.state === 'payment_pending'
+          ? 'está sendo processado.'
+          : data.state === 'pending'
+            ? 'está sendo processada.'
+            : data.state === 'payment_unconfirmed'
+              ? 'não foi concluído.'
+              : data.state === 'cancelled'
+                ? 'não está mais ativa.'
+                : data.state === 'rate_limited'
+                  ? 'não pôde ser confirmado agora.'
+                  : 'não pôde ser confirmado.',
   )
 
   const subtext = $derived(
@@ -39,21 +55,23 @@
       ? 'Sua assinatura foi processada pelo Mercado Pago. Você receberá os detalhes da assinatura e do pagamento pelo Mercado Pago.'
       : data.state === 'payment_confirmed'
         ? 'Seu pagamento foi aprovado pelo Mercado Pago. Vamos começar o desenvolvimento do seu site — você receberá os próximos passos por e-mail.'
-        : data.state === 'pending'
-          ? 'Estamos processando sua assinatura. A confirmação pode levar alguns minutos — você receberá os detalhes por e-mail.'
-          : data.state === 'payment_unconfirmed'
-            ? 'Seu pagamento não foi confirmado pelo Mercado Pago. Se você tentou pagar e foi redirecionado, tente novamente pelo site ou entre em contato conosco.'
-            : data.state === 'cancelled'
-              ? 'Sua assinatura está pausada ou cancelada. Para retomá-la ou tirar dúvidas, entre em contato pelo e-mail de confirmação do Mercado Pago.'
-              : data.state === 'rate_limited'
-                ? 'Muitas tentativas de verificação em pouco tempo. Aguarde alguns minutos e abra o link novamente.'
-                : 'Não foi possível confirmar seu pagamento. Verifique o link usado ou tente novamente pelo site.',
+        : data.state === 'payment_pending'
+          ? 'Seu pagamento está sendo processado pelo Mercado Pago. Assim que a confirmação chegar, começaremos o desenvolvimento do seu site — você receberá os próximos passos por e-mail.'
+          : data.state === 'pending'
+            ? 'Estamos processando sua assinatura. A confirmação pode levar alguns minutos — você receberá os detalhes por e-mail.'
+            : data.state === 'payment_unconfirmed'
+              ? 'Seu pagamento não foi confirmado pelo Mercado Pago. Se você tentou pagar e foi redirecionado, tente novamente pelo site ou entre em contato conosco.'
+              : data.state === 'cancelled'
+                ? 'Sua assinatura está pausada ou cancelada. Para retomá-la ou tirar dúvidas, entre em contato pelo e-mail de confirmação do Mercado Pago.'
+                : data.state === 'rate_limited'
+                  ? 'Muitas tentativas de verificação em pouco tempo. Aguarde alguns minutos e abra o link novamente.'
+                  : 'Não foi possível confirmar seu pagamento. Verifique o link usado ou tente novamente pelo site.',
   )
 
   const referenceLabel = $derived(
     data.state === 'confirmed'
       ? 'Referência da assinatura'
-      : data.state === 'payment_confirmed'
+      : data.state === 'payment_confirmed' || data.state === 'payment_pending'
         ? 'Referência do pagamento'
         : undefined,
   )
@@ -61,7 +79,7 @@
   const referenceValue = $derived(
     data.state === 'confirmed'
       ? data.subscriptionId
-      : data.state === 'payment_confirmed'
+      : data.state === 'payment_confirmed' || data.state === 'payment_pending'
         ? data.paymentId
         : undefined,
   )

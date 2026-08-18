@@ -30,7 +30,14 @@ export async function submitContactForm(endpoint: string, body: unknown): Promis
     if (parsed.ok !== true) {
       return { ok: false }
     }
-    return { ok: true, expiresInHours: typeof parsed.expiresInHours === 'number' ? parsed.expiresInHours : 72 }
+    // A 200 success must carry the server-computed expiry; inventing a
+    // fallback would silently show wrong copy (AGENTS.md: no silent
+    // fallbacks). Treat a malformed success as a failure, logged loudly.
+    if (typeof parsed.expiresInHours !== 'number') {
+      console.error('[contact] malformed success response from the contact endpoint', parsed)
+      return { ok: false }
+    }
+    return { ok: true, expiresInHours: parsed.expiresInHours }
   } catch (error) {
     // Fail loudly on the client log; keep the generic message user-facing.
     console.error(`[contact] request to ${endpoint} failed`, error)

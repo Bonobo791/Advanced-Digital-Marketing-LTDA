@@ -90,6 +90,17 @@ describe('verifyContactToken', () => {
     expect(verifyContactToken(tampered, NOW).status).toBe('invalid')
   })
 
+  it('rejects a valid signature with junk appended (non-canonical hex)', () => {
+    // Buffer.from(value, 'hex') silently stops at the first invalid character,
+    // so a canonical check is required: a valid signature followed by junk must
+    // not compare equal.
+    const token = signed()
+    const dot = token.indexOf('.')
+    const nonCanonical = token.slice(0, dot + 1) + token.slice(dot + 1) + 'zz'
+    vi.stubEnv('CONTACT_FORM_TOKEN_SECRET', SECRET)
+    expect(verifyContactToken(nonCanonical, NOW).status).toBe('invalid')
+  })
+
   it('reports expired tokens after the TTL', () => {
     const token = signed()
     vi.stubEnv('CONTACT_FORM_TOKEN_SECRET', SECRET)

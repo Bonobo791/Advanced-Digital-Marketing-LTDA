@@ -21,8 +21,10 @@ export type ServiceOption = {
   cta: string
   subject: string
   /** Same-page pricing/checkout section this CTA scrolls to (e.g. '#subscribe').
-   *  When unset, the CTA keeps its mailto link. */
-  pricingAnchor?: string
+   *  Unset falls back to the service default and then to the contact form.
+   *  Explicit `null` forces the contact form — for one-time/free options that
+   *  have no pricing section and must never land on the recurring checkout. */
+  pricingAnchor?: string | null
 }
 
 export type ServiceStep = { jp: string; title: string; text: string }
@@ -176,6 +178,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Start with the audit',
           subject: 'Audit request',
+          pricingAnchor: null,
         },
 
         {
@@ -417,6 +420,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Start with the account audit',
           subject: 'Account audit request',
+          pricingAnchor: null,
         },
         {
           flag: 'Most chosen',
@@ -434,6 +438,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Book the sprint',
           subject: 'Launch sprint request',
+          pricingAnchor: null,
         },
         {
           jp: '計測',
@@ -497,6 +502,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Start with the Meta audit',
           subject: 'Meta audit request',
+          pricingAnchor: null,
         },
         {
           flag: 'Most chosen',
@@ -514,6 +520,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Book the sprint',
           subject: 'Meta launch request',
+          pricingAnchor: null,
         },
         {
           jp: '計測',
@@ -626,6 +633,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Começar com a auditoria',
           subject: 'Audit request',
+          pricingAnchor: null,
         },
 
         {
@@ -867,6 +875,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Começar com a auditoria de conta',
           subject: 'Account audit request',
+          pricingAnchor: null,
         },
         {
           flag: 'Mais escolhido',
@@ -884,6 +893,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Agendar o sprint',
           subject: 'Launch sprint request',
+          pricingAnchor: null,
         },
         {
           jp: '計測',
@@ -947,6 +957,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Começar com a auditoria Meta',
           subject: 'Meta audit request',
+          pricingAnchor: null,
         },
         {
           flag: 'Mais escolhido',
@@ -964,6 +975,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Agendar o sprint',
           subject: 'Meta launch request',
+          pricingAnchor: null,
         },
         {
           jp: '計測',

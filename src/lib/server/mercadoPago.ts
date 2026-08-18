@@ -380,17 +380,38 @@ async function getMercadoPagoJson(path: string): Promise<GetResult> {
  * subset of its state. Returns `undefined` when credentials are missing or the
  * subscription does not exist (404). Nothing is cached or persisted locally.
  */
+/**
+ * Mercado Pago returns some resource ids as JSON numbers (payments) and others
+ * as strings (preapprovals); normalize both to the stable string form used by
+ * the site (URLs and response bodies). Missing/empty ids return undefined.
+ */
+function recordIdOf(record: Record<string, unknown>): string | undefined {
+  const raw = record.id
+  if (typeof raw === 'string' && raw.length > 0) return raw
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) return String(raw)
+  return undefined
+}
+
+/**
+ * Fetches a subscription directly from Mercado Pago and returns a sanitized
+ * subset of its state. Returns `undefined` only when the preapproval does not
+ * exist (404). A missing access token throws `missing_credentials` loudly
+ * (AGENTS.md) instead of silently failing the customer's return page.
+ */
 export async function getSubscription(subscriptionId: string): Promise<SubscriptionStatus | undefined> {
-  if (!readCredentials().accessToken) return undefined
+  if (!readCredentials().accessToken) {
+    throw new MercadoPagoError('missing_credentials', 'Mercado Pago access token is not configured')
+  }
 
   const result = await getMercadoPagoJson(
     `${PREAPPROVAL_ENDPOINT}/${encodeURIComponent(subscriptionId)}`,
   )
   if (!result.found) return undefined
-  if (typeof result.record.id !== 'string' || !result.record.id) {
+  const id = recordIdOf(result.record)
+  if (!id) {
     throw new MercadoPagoError('invalid_response', 'Mercado Pago response is missing id')
   }
-  return mapSubscriptionStatus(result.record)
+  return mapSubscriptionStatus(result.record, id)
 }
 
 export type PaymentStatus = {
@@ -404,19 +425,23 @@ export type PaymentStatus = {
 
 /**
  * Fetches a one-time payment directly from Mercado Pago and returns a
- * sanitized subset of its state. Returns `undefined` when credentials are
- * missing or the payment does not exist (404). Nothing is cached or persisted
- * locally.
+ * sanitized subset of its state. Returns `undefined` only when the payment
+ * does not exist (404). A missing access token throws `missing_credentials`
+ * loudly (AGENTS.md) instead of silently failing the customer's return page.
+ * Nothing is cached or persisted locally.
  */
 export async function getPayment(paymentId: string): Promise<PaymentStatus | undefined> {
-  if (!readCredentials().accessToken) return undefined
+  if (!readCredentials().accessToken) {
+    throw new MercadoPagoError('missing_credentials', 'Mercado Pago access token is not configured')
+  }
 
   const result = await getMercadoPagoJson(`${PAYMENTS_ENDPOINT}/${encodeURIComponent(paymentId)}`)
   if (!result.found) return undefined
-  if (typeof result.record.id !== 'string' || !result.record.id) {
+  const id = recordIdOf(result.record)
+  if (!id) {
     throw new MercadoPagoError('invalid_response', 'Mercado Pago response is missing id')
   }
-  return mapPaymentStatus(result.record)
+  return mapPaymentStatus(result.record, id)
 }
 
 /**
@@ -424,9 +449,9 @@ export async function getPayment(paymentId: string): Promise<PaymentStatus | und
  * payment record. Only safe, typed fields are copied — everything else in the
  * response (card data, tokens, …) is dropped.
  */
-function mapPaymentStatus(record: Record<string, unknown>): PaymentStatus {
+function mapPaymentStatus(record: Record<string, unknown>, id: string): PaymentStatus {
   return {
-    id: record.id as string,
+    id,
     status: typeof record.status === 'string' ? record.status : null,
     statusDetail: typeof record.status_detail === 'string' ? record.status_detail : null,
     externalReference: typeof record.external_reference === 'string' ? record.external_reference : null,
@@ -440,14 +465,14 @@ function mapPaymentStatus(record: Record<string, unknown>): PaymentStatus {
  * preapproval record. Only safe, typed fields are copied — everything else in
  * the response (card ids, tokens, …) is dropped.
  */
-function mapSubscriptionStatus(record: Record<string, unknown>): SubscriptionStatus {
+function mapSubscriptionStatus(record: Record<string, unknown>, id: string): SubscriptionStatus {
   const recurring =
     typeof record.auto_recurring === 'object' && record.auto_recurring !== null
       ? (record.auto_recurring as Record<string, unknown>)
       : {}
 
   return {
-    id: record.id as string,
+    id,
     status: typeof record.status === 'string' ? record.status : null,
     reason: typeof record.reason === 'string' ? record.reason : null,
     externalReference: typeof record.external_reference === 'string' ? record.external_reference : null,

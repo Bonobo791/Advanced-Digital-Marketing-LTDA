@@ -250,11 +250,11 @@ describe('getSubscription', () => {
     })
   })
 
-  it('returns undefined for a missing token (no request is made)', async () => {
+  it('throws missing_credentials for a missing token (no request is made)', async () => {
     vi.stubEnv('MERCADO_PAGO_ACCESS_TOKEN', '')
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
-    await expect(getSubscription('s1')).resolves.toBeUndefined()
+    await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'missing_credentials' })
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
@@ -277,9 +277,10 @@ describe('getSubscription', () => {
     await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'timeout' })
   })
 
-  it('rejects a response without a string id instead of coercing it', async () => {
-    stubFetch(() => jsonResponse({ id: 123, status: 'authorized' }))
-    await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'invalid_response' })
+  it('normalizes numeric ids and rejects missing ids loudly', async () => {
+    stubFetch(() => jsonResponse({ id: 123456, status: 'authorized' }))
+    const normalized = await getSubscription('s1')
+    expect(normalized?.id).toBe('123456')
     stubFetch(() => jsonResponse({ status: 'authorized' }))
     await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'invalid_response' })
   })
@@ -448,11 +449,11 @@ describe('getPayment', () => {
     })
   })
 
-  it('returns undefined for a missing token (no request is made)', async () => {
+  it('throws missing_credentials for a missing token (no request is made)', async () => {
     vi.stubEnv('MERCADO_PAGO_ACCESS_TOKEN', '')
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
-    await expect(getPayment('123')).resolves.toBeUndefined()
+    await expect(getPayment('123')).rejects.toMatchObject({ code: 'missing_credentials' })
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
@@ -468,9 +469,31 @@ describe('getPayment', () => {
     await expect(getPayment('123')).rejects.toMatchObject({ code: 'unauthorized' })
   })
 
-  it('rejects a response without a string id instead of coercing it', async () => {
-    stubFetch(() => jsonResponse({ id: 123, status: 'approved' }))
-    await expect(getPayment('123')).rejects.toMatchObject({ code: 'invalid_response' })
+  it('accepts the numeric id Mercado Pago returns for payments and normalizes it', async () => {
+    // The Payments API represents payment ids as JSON numbers; rejecting them
+    // would make every real approved payment fail verification.
+    stubFetch(() =>
+      jsonResponse({
+        id: 1234567890,
+        status: 'approved',
+        status_detail: 'accredited',
+        external_reference: 'website-build:website:new',
+        transaction_amount: 3000,
+        currency_id: 'BRL',
+      }),
+    )
+    const status = await getPayment('1234567890')
+    expect(status).toEqual({
+      id: '1234567890',
+      status: 'approved',
+      statusDetail: 'accredited',
+      externalReference: 'website-build:website:new',
+      transactionAmount: 3000,
+      currencyId: 'BRL',
+    })
+  })
+
+  it('rejects a response without any id loudly', async () => {
     stubFetch(() => jsonResponse({ status: 'approved' }))
     await expect(getPayment('123')).rejects.toMatchObject({ code: 'invalid_response' })
   })

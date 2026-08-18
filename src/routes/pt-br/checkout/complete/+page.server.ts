@@ -18,11 +18,12 @@ export type CompletionState =
   | { state: 'missing' }
   | { state: 'confirmed'; subscriptionId: string }
   | { state: 'payment_confirmed'; paymentId: string }
+  | { state: 'payment_pending'; paymentId: string }
   | { state: 'payment_unconfirmed'; paymentId: string }
   | { state: 'pending'; subscriptionId: string }
   | { state: 'cancelled'; subscriptionId: string }
-  | { state: 'rate_limited' }
-  | { state: 'error' }
+  | { state: 'rate_limited'; kind: 'subscription' | 'payment' }
+  | { state: 'error'; kind: 'subscription' | 'payment' }
 
 /**
  * Verifies the checkout the customer was redirected from before claiming
@@ -81,16 +82,16 @@ async function verifySubscription(
   // validate-then-throttle ordering as the checkout endpoints.
   if (!isValidPreapprovalId(preapprovalId)) {
     console.warn(`[checkout] rejecting malformed preapproval_id (${preapprovalId.length} chars)`)
-    return { state: 'error' }
+    return { state: 'error', kind: 'subscription' }
   }
 
   const address = clientAddressOrError(getClientAddress)
-  if (!address.ok) return { state: 'error' }
+  if (!address.ok) return { state: 'error', kind: 'subscription' }
 
   const rateLimit = checkRateLimit(rateLimitKey('subscriptionVerify', address.address))
   if (!rateLimit.allowed) {
     console.warn('[checkout] completion verification rate limit exceeded')
-    return { state: 'rate_limited' }
+    return { state: 'rate_limited', kind: 'subscription' }
   }
 
   let subscription
@@ -100,12 +101,12 @@ async function verifySubscription(
     if (err instanceof MercadoPagoError) {
       // Loud on the server log; the customer still gets a truthful page.
       console.error(`[checkout] completion verification failed: ${err.code}`)
-      return { state: 'error' }
+      return { state: 'error', kind: 'subscription' }
     }
     throw err
   }
 
-  if (!subscription) return { state: 'error' }
+  if (!subscription) return { state: 'error', kind: 'subscription' }
 
   if (subscription.status === 'authorized') {
     return { state: 'confirmed', subscriptionId: subscription.id }
@@ -132,16 +133,16 @@ async function verifyPayment(
 ): Promise<CompletionState> {
   if (!isValidPaymentId(paymentId)) {
     console.warn(`[checkout] rejecting malformed payment_id (${paymentId.length} chars)`)
-    return { state: 'error' }
+    return { state: 'error', kind: 'payment' }
   }
 
   const address = clientAddressOrError(getClientAddress)
-  if (!address.ok) return { state: 'error' }
+  if (!address.ok) return { state: 'error', kind: 'payment' }
 
   const rateLimit = checkRateLimit(rateLimitKey('paymentVerify', address.address))
   if (!rateLimit.allowed) {
     console.warn('[checkout] payment verification rate limit exceeded')
-    return { state: 'rate_limited' }
+    return { state: 'rate_limited', kind: 'payment' }
   }
 
   let payment
@@ -151,12 +152,12 @@ async function verifyPayment(
     if (err instanceof MercadoPagoError) {
       // Loud on the server log; the customer still gets a truthful page.
       console.error(`[checkout] payment verification failed: ${err.code}`)
-      return { state: 'error' }
+      return { state: 'error', kind: 'payment' }
     }
     throw err
   }
 
-  if (!payment) return { state: 'error' }
+  if (!payment) return { state: 'error', kind: 'payment' }
 
   if (payment.status === 'approved' && !isWebsiteBuildPayment(payment)) {
     // The payment is real and approved but is not bound to a checkout this
@@ -167,10 +168,15 @@ async function verifyPayment(
       `[checkout] approved payment ${payment.id} does not match a server-created website build ` +
         `(external_reference=${payment.externalReference}, amount=${payment.transactionAmount}, currency=${payment.currencyId}); refusing success claim`,
     )
-    return { state: 'error' }
+    return { state: 'error', kind: 'payment' }
   }
   if (payment.status === 'approved') {
     return { state: 'payment_confirmed', paymentId: payment.id }
+  }
+  // Boleto and Pix are asynchronous: a customer redirected right after paying
+  // may still be awaiting confirmation. That is pending, not a failure.
+  if (payment.status === 'pending' || payment.status === 'in_process') {
+    return { state: 'payment_pending', paymentId: payment.id }
   }
   return { state: 'payment_unconfirmed', paymentId: payment.id }
 }

@@ -79,7 +79,14 @@ function sign(secret: string, encodedPayload: string): string {
   return createHmac('sha256', secret).update(encodedPayload).digest('hex')
 }
 
+// Full-length, even-length hex only: Buffer.from(value, 'hex') silently stops
+// at the first invalid character, so a valid signature with junk appended
+// would otherwise compare equal. Rejecting non-canonical signatures keeps the
+// token format strict (one token string per payload+MAC).
+const HEX_SIGNATURE_RE = /^(?:[0-9a-f]{2})+$/
+
 function safeEqualHex(a: string, b: string): boolean {
+  if (!HEX_SIGNATURE_RE.test(a) || !HEX_SIGNATURE_RE.test(b)) return false
   const left = Buffer.from(a, 'hex')
   const right = Buffer.from(b, 'hex')
   if (left.length !== right.length) return false

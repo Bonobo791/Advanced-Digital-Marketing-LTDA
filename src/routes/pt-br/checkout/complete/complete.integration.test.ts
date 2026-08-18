@@ -83,6 +83,7 @@ describe('checkout/complete load', () => {
       mockGetSubscription.mockRejectedValue(new MercadoPagoError('unauthorized', 'x'))
       expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toEqual({
         state: 'error',
+        kind: 'subscription',
       })
       expect(errorSpy).toHaveBeenCalledWith(
         expect.stringContaining('completion verification failed: unauthorized'),
@@ -96,6 +97,7 @@ describe('checkout/complete load', () => {
     mockGetSubscription.mockResolvedValue(undefined)
     expect(await load(loadArgs('?preapproval_id=nope') as never)).toEqual({
       state: 'error',
+      kind: 'subscription',
     })
   })
 
@@ -106,6 +108,7 @@ describe('checkout/complete load', () => {
         for (const bad of ['a b', 'id with spaces', 'x'.repeat(200), '<script>', 'id/../etc']) {
           expect(await load(loadArgs(`?preapproval_id=${encodeURIComponent(bad)}`) as never)).toEqual({
             state: 'error',
+            kind: 'subscription',
           })
         }
         expect(mockGetSubscription).not.toHaveBeenCalled()
@@ -125,6 +128,7 @@ describe('checkout/complete load', () => {
       for (let i = 0; i < 20; i++) {
         expect(await load(loadArgs('?preapproval_id=bad%20id') as never)).toEqual({
           state: 'error',
+          kind: 'subscription',
         })
       }
       expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toEqual({
@@ -155,6 +159,7 @@ describe('checkout/complete load', () => {
         }
         expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toEqual({
           state: 'rate_limited',
+          kind: 'subscription',
         })
         expect(mockGetSubscription).toHaveBeenCalledTimes(10)
         expect(warnSpy).toHaveBeenCalledWith(
@@ -175,7 +180,7 @@ describe('checkout/complete load', () => {
             throw new Error('adapter provides no client address')
           },
         }
-        expect(await load(args as never)).toEqual({ state: 'error' })
+        expect(await load(args as never)).toEqual({ state: 'error', kind: 'subscription' })
         expect(mockGetSubscription).not.toHaveBeenCalled()
         expect(errorSpy).toHaveBeenCalledWith(
           expect.stringContaining('cannot determine client IP'),
@@ -240,6 +245,7 @@ describe('checkout/complete load — one-time payments (Checkout Pro)', () => {
         mockGetPayment.mockResolvedValue({ ...approvedPayment, ...patch })
         expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
           state: 'error',
+          kind: 'payment',
         })
       }
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('does not match a server-created website build'))
@@ -265,10 +271,22 @@ describe('checkout/complete load — one-time payments (Checkout Pro)', () => {
   })
 
   it('never claims success for a payment Mercado Pago has not approved', async () => {
-    for (const status of ['rejected', 'pending', 'in_process', 'refunded', 'cancelled', 'charged_back']) {
+    for (const status of ['rejected', 'refunded', 'cancelled', 'charged_back']) {
       mockGetPayment.mockResolvedValue({ ...approvedPayment, status })
       expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
         state: 'payment_unconfirmed',
+        paymentId: '1234567890',
+      })
+    }
+  })
+
+  it('shows a pending state for asynchronous payments still awaiting confirmation', async () => {
+    // Boleto and Pix can legitimately redirect with pending/in_process; that
+    // is not a failure and must not be labeled 'não foi concluído'.
+    for (const status of ['pending', 'in_process']) {
+      mockGetPayment.mockResolvedValue({ ...approvedPayment, status })
+      expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
+        state: 'payment_pending',
         paymentId: '1234567890',
       })
     }
@@ -280,6 +298,7 @@ describe('checkout/complete load — one-time payments (Checkout Pro)', () => {
       mockGetPayment.mockRejectedValue(new MercadoPagoError('unauthorized', 'x'))
       expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
         state: 'error',
+        kind: 'payment',
       })
       expect(errorSpy).toHaveBeenCalledWith(
         expect.stringContaining('payment verification failed: unauthorized'),
@@ -293,6 +312,7 @@ describe('checkout/complete load — one-time payments (Checkout Pro)', () => {
     mockGetPayment.mockResolvedValue(undefined)
     expect(await load(loadArgs('?payment_id=nope') as never)).toEqual({
       state: 'error',
+      kind: 'payment',
     })
   })
 
@@ -302,6 +322,7 @@ describe('checkout/complete load — one-time payments (Checkout Pro)', () => {
       for (const bad of ['a b', 'id with spaces', 'x'.repeat(200), '<script>', 'id/../etc']) {
         expect(await load(loadArgs(`?payment_id=${encodeURIComponent(bad)}`) as never)).toEqual({
           state: 'error',
+          kind: 'payment',
         })
       }
       expect(mockGetPayment).not.toHaveBeenCalled()
@@ -323,6 +344,7 @@ describe('checkout/complete load — one-time payments (Checkout Pro)', () => {
       }
       expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
         state: 'rate_limited',
+        kind: 'payment',
       })
       expect(mockGetPayment).toHaveBeenCalledTimes(10)
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('rate limit exceeded'))
@@ -334,7 +356,10 @@ describe('checkout/complete load — one-time payments (Checkout Pro)', () => {
   it('does not let a flood of malformed ids consume the payment rate-limit budget', async () => {
     mockGetPayment.mockResolvedValue(approvedPayment)
     for (let i = 0; i < 20; i++) {
-      expect(await load(loadArgs('?payment_id=bad%20id') as never)).toEqual({ state: 'error' })
+      expect(await load(loadArgs('?payment_id=bad%20id') as never)).toEqual({
+        state: 'error',
+        kind: 'payment',
+      })
     }
     expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
       state: 'payment_confirmed',
