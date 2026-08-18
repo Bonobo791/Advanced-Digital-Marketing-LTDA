@@ -86,6 +86,18 @@ function safeEqualHex(a: string, b: string): boolean {
   return timingSafeEqual(left, right)
 }
 
+function isNonEmptyString(value: unknown, maxLength: number): value is string {
+  return typeof value === 'string' && value.length > 0 && value.length <= maxLength
+}
+
+function isLocale(value: unknown): value is Locale {
+  return value === 'en-US' || value === 'pt-BR'
+}
+
+function isEpochSeconds(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value)
+}
+
 function parsePayload(value: string): ContactTokenPayload | undefined {
   let parsed: unknown
   try {
@@ -96,12 +108,10 @@ function parsePayload(value: string): ContactTokenPayload | undefined {
   if (!Array.isArray(parsed) || parsed.length !== 6) return undefined
   const [version, email, name, locale, issuedAt, expiresAt] = parsed
   if (version !== CONTACT_TOKEN_VERSION) return undefined
-  if (typeof email !== 'string' || email.length === 0 || email.length > 254) return undefined
-  if (typeof name !== 'string' || name.length === 0 || name.length > 100) return undefined
-  if (locale !== 'en-US' && locale !== 'pt-BR') return undefined
-  if (typeof issuedAt !== 'number' || !Number.isSafeInteger(issuedAt)) return undefined
-  if (typeof expiresAt !== 'number' || !Number.isSafeInteger(expiresAt)) return undefined
-  if (expiresAt <= issuedAt) return undefined
+  if (!isNonEmptyString(email, 254)) return undefined
+  if (!isNonEmptyString(name, 100)) return undefined
+  if (!isLocale(locale)) return undefined
+  if (!isEpochSeconds(issuedAt) || !isEpochSeconds(expiresAt) || expiresAt <= issuedAt) return undefined
   return { email, name, locale, issuedAt, expiresAt }
 }
 
@@ -146,7 +156,7 @@ export function verifyContactToken(token: string, now: number = Date.now()): Con
   }
 
   const dot = token.indexOf('.')
-  if (dot <= 0 || dot === token.length - 1 || token.indexOf('.', dot + 1) !== -1) {
+  if (dot <= 0 || dot === token.length - 1 || token.includes('.', dot + 1)) {
     return { status: 'invalid' }
   }
   const encoded = token.slice(0, dot)

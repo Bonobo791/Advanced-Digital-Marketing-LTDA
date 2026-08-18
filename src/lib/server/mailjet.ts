@@ -135,19 +135,10 @@ function classifyAuthFailure(status: number, errorCode: string | undefined): Mai
 }
 
 /**
- * Sends one transactional message through MailJet Send API v3.1.
- *
- * Throws `MailjetError` with a machine-readable code on every failure;
- * success requires HTTP 200 AND `Status: "success"` on the (single) message —
- * a 200 response with `Status: "error"` is a rejected message, not a success.
- * The raw HTTP body is never surfaced to callers.
+ * Fetches the Send API with the configured timeout and classifies transport
+ * failures (timeouts vs everything else) into `MailjetError` codes.
  */
-export async function sendMailjetMessage(input: MailjetMessageInput): Promise<MailjetMessageResult> {
-  const { apiKey, apiSecret } = readCredentials()
-  if (!apiKey || !apiSecret) {
-    throw new MailjetError('missing_credentials', 'MailJet API credentials are not configured')
-  }
-
+async function sendRequest(input: MailjetMessageInput, apiKey: string, apiSecret: string): Promise<Response> {
   const body = {
     Messages: [
       {
@@ -164,13 +155,12 @@ export async function sendMailjetMessage(input: MailjetMessageInput): Promise<Ma
     // without delivering when enabled.
     ...(mailjetSandboxMode() ? { SandboxMode: true } : {}),
   }
-
-  let response: Response
+  const apiCredentials = `${apiKey}:${apiSecret}`
   try {
-    response = await fetch(MAILJET_SEND_ENDPOINT, {
+    return await fetch(MAILJET_SEND_ENDPOINT, {
       method: 'POST',
       headers: {
-        Authorization: `Basic ${Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')}`,
+        Authorization: `Basic ${Buffer.from(apiCredentials).toString('base64')}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
@@ -182,17 +172,24 @@ export async function sendMailjetMessage(input: MailjetMessageInput): Promise<Ma
     }
     throw new MailjetError('api_error', 'MailJet request failed')
   }
+}
 
-  if (response.status === 401 || response.status === 403) {
-    const errorCode = await readMailjetErrorCode(response)
-    const code = classifyAuthFailure(response.status, errorCode)
-    throw new MailjetError(code, code === 'sender_not_authorized' ? 'MailJet sender is not validated' : 'MailJet rejected the API credentials')
-  }
-  if (!response.ok) {
-    await readMailjetErrorCode(response)
-    throw new MailjetError('api_error', `MailJet returned HTTP ${response.status}`)
-  }
+/** Classifies a 401/403 auth/sender failure into the stable error for callers. */
+async function authFailure(response: Response): Promise<MailjetError> {
+  const errorCode = await readMailjetErrorCode(response)
+  const code = classifyAuthFailure(response.status, errorCode)
+  return new MailjetError(
+    code,
+    code === 'sender_not_authorized' ? 'MailJet sender is not validated' : 'MailJet rejected the API credentials',
+  )
+}
 
+/**
+ * Parses the send response and returns the single message record, throwing a
+ * stable `MailjetError` when the payload is malformed or the message was
+ * rejected. A 200 with `Status: "error"` is a rejected message, not success.
+ */
+async function readSendMessage(response: Response): Promise<Record<string, unknown>> {
   let parsed: unknown
   try {
     parsed = await response.json()
@@ -206,20 +203,53 @@ export async function sendMailjetMessage(input: MailjetMessageInput): Promise<Ma
   const record = parsed as Record<string, unknown>
   const messages = Array.isArray(record.Messages) ? (record.Messages as Record<string, unknown>[]) : []
   const message = messages[0]
-  if (!message || message.Status !== 'success') {
+  if (message?.Status !== 'success') {
     // HTTP 200 with a per-message error Status: log the embedded Errors
     // array server-side, keep the stable error code for callers.
-    const detail = JSON.stringify(message.Errors ?? '')
+    const detail = JSON.stringify(message?.Errors ?? '')
     const sanitized = detail.replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim()
     console.error(`[mailjet] message_rejected: ${sanitized.slice(0, 2000)}`)
     throw new MailjetError('message_rejected', 'MailJet rejected the message payload')
   }
+  return message
+}
 
-  // MailJet does not return the message id on the send response object
-  // itself; when present it lives on To[].MessageID (an integer in the API
-  // reference). Normalized to a string so callers get one stable type.
+/**
+ * MailJet does not return the message id on the send response object itself;
+ * when present it lives on To[].MessageID (an integer in the API reference).
+ * Normalized to a string so callers get one stable type.
+ */
+function messageIdOf(message: Record<string, unknown>): string | undefined {
   const to = Array.isArray(message.To) ? (message.To as Record<string, unknown>[]) : []
   const rawId = to[0]?.MessageID
-  const messageId = typeof rawId === 'string' ? rawId : typeof rawId === 'number' ? String(rawId) : undefined
-  return { messageId }
+  if (typeof rawId === 'string') return rawId
+  if (typeof rawId === 'number') return String(rawId)
+  return undefined
+}
+
+/**
+ * Sends one transactional message through MailJet Send API v3.1.
+ *
+ * Throws `MailjetError` with a machine-readable code on every failure;
+ * success requires HTTP 200 AND `Status: "success"` on the (single) message —
+ * a 200 response with `Status: "error"` is a rejected message, not a success.
+ * The raw HTTP body is never surfaced to callers.
+ */
+export async function sendMailjetMessage(input: MailjetMessageInput): Promise<MailjetMessageResult> {
+  const { apiKey, apiSecret } = readCredentials()
+  if (!apiKey || !apiSecret) {
+    throw new MailjetError('missing_credentials', 'MailJet API credentials are not configured')
+  }
+
+  const response = await sendRequest(input, apiKey, apiSecret)
+  if (response.status === 401 || response.status === 403) {
+    throw await authFailure(response)
+  }
+  if (!response.ok) {
+    await readMailjetErrorCode(response)
+    throw new MailjetError('api_error', `MailJet returned HTTP ${response.status}`)
+  }
+
+  const message = await readSendMessage(response)
+  return { messageId: messageIdOf(message) }
 }

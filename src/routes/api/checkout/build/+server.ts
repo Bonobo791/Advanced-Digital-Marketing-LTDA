@@ -13,8 +13,7 @@ import {
 } from '$lib/website-builds'
 import { MercadoPagoError, createCheckoutPreference } from '$lib/server/mercadoPago'
 import { checkoutBackUrl } from '$lib/server/checkout'
-import { checkRateLimit, rateLimitKey } from '$lib/server/rate-limit'
-import { ClientAddressError, clientIpAddress } from '$lib/server/client-ip'
+import { handleApiPost, upstreamErrorResponse } from '$lib/server/api-route'
 
 // API routes run as Netlify Functions; the root layout's prerender/trailingSlash
 // settings must not apply to them.
@@ -25,26 +24,11 @@ export const trailingSlash = 'ignore'
 // X-Idempotency-Key header stays in the format Mercado Pago expects.
 const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
-type ValidPayload = {
+interface ValidPayload {
   type: WebsiteBuildType
   kind: WebsiteBuildKind
   idempotencyKey: string
   locale: Locale
-}
-
-type ParseOutcome = { payload: Record<string, unknown> } | { response: Response }
-
-async function parseJsonBody(request: Request): Promise<ParseOutcome> {
-  let body: unknown
-  try {
-    body = await request.json()
-  } catch {
-    return { response: json({ error: 'invalid_json' }, { status: 400 }) }
-  }
-  if (typeof body !== 'object' || body === null) {
-    return { response: json({ error: 'invalid_json' }, { status: 400 }) }
-  }
-  return { payload: body as Record<string, unknown> }
 }
 
 type ValidationOutcome = { payload: ValidPayload } | { error: string }
@@ -64,23 +48,6 @@ function validatePayload(payload: Record<string, unknown>): ValidationOutcome {
   const locale: Locale = payload.locale === 'en-US' ? 'en-US' : 'pt-BR'
   return {
     payload: { type: payload.type, kind: payload.kind, idempotencyKey, locale },
-  }
-}
-
-type AddressOutcome = { address: string } | { response: Response }
-
-function resolveClientAddress(getClientAddress: () => string): AddressOutcome {
-  try {
-    return { address: clientIpAddress(getClientAddress) }
-  } catch (error) {
-    if (error instanceof ClientAddressError) {
-      // Fail loudly (AGENTS.md): without a client address we cannot rate-limit,
-      // and pooling unidentified clients into one bucket would 429 unrelated
-      // customers. Refuse the request instead of silently accepting it.
-      console.error('[checkout] cannot determine client IP for rate limiting; refusing request')
-      return { response: json({ error: 'client_address_unavailable' }, { status: 503 }) }
-    }
-    throw error
   }
 }
 
@@ -106,8 +73,7 @@ async function createPreferenceOrError(payload: ValidPayload): Promise<Response>
     return json({ checkoutUrl: created.checkoutUrl })
   } catch (error) {
     if (error instanceof MercadoPagoError) {
-      console.error(`[checkout] Mercado Pago preference creation failed: ${error.code}`)
-      return json({ error: error.code }, { status: mercadoPagoStatus(error.code) })
+      return upstreamErrorResponse(error, 'checkout', 'Mercado Pago preference creation')
     }
     throw error
   }
@@ -123,41 +89,13 @@ async function createPreferenceOrError(payload: ValidPayload): Promise<Response>
  * recomputed server-side from the authoritative BRL table in website-builds.ts;
  * a client-supplied amount is never accepted.
  */
-export const POST: RequestHandler = async ({ request, getClientAddress }) => {
-  const parsed = await parseJsonBody(request)
-  if ('response' in parsed) return parsed.response
-
-  const validated = validatePayload(parsed.payload)
-  if ('error' in validated) return json({ error: validated.error }, { status: 400 })
-
-  // Abuse protection: the request is validated but not yet billed — every
-  // accepted request here calls the paid Mercado Pago API. Throttle per client
-  // IP with the same limiter as subscription creation.
-  const resolved = resolveClientAddress(getClientAddress)
-  if ('response' in resolved) return resolved.response
-
-  const rateLimit = checkRateLimit(rateLimitKey('buildCreate', resolved.address))
-  if (!rateLimit.allowed) {
-    console.warn('[checkout] rate limit exceeded; rejecting build preference creation')
-    return json({ error: 'rate_limited' }, { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } })
-  }
-
-  return createPreferenceOrError(validated.payload)
-}
-
-function mercadoPagoStatus(code: MercadoPagoError['code']): number {
-  switch (code) {
-    case 'missing_credentials':
-    case 'timeout':
-      return 503
-    case 'unauthorized':
-    case 'api_error':
-    case 'invalid_response':
-    case 'missing_init_point':
-    case 'invalid_init_point':
-      return 502
-    default:
-      // A newly added MercadoPagoError code must still produce a valid status.
-      return 502
-  }
-}
+export const POST: RequestHandler = ({ request, getClientAddress }) =>
+  handleApiPost({
+    request,
+    getClientAddress,
+    logTag: 'checkout',
+    bucket: 'buildCreate',
+    rejectedWhat: 'build preference creation',
+    validate: validatePayload,
+    run: createPreferenceOrError,
+  })

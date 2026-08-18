@@ -106,7 +106,7 @@ describe('POST /api/contact/submit', () => {
   })
 
   it('maps MailJet failures to stable status codes without leaking internals', async () => {
-    const cases: Array<[MailjetError, number]> = [
+    const cases: [MailjetError, number][] = [
       [new MailjetError('unauthorized', 'x'), 502],
       [new MailjetError('sender_not_authorized', 'x'), 502],
       [new MailjetError('message_rejected', 'x'), 502],
@@ -127,7 +127,7 @@ describe('POST /api/contact/submit', () => {
 
   it('refuses with 503 server_misconfigured when the token secret is missing', async () => {
     vi.stubEnv('CONTACT_FORM_TOKEN_SECRET', '')
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     try {
       const response = await POST(requestEvent(validBody))
       expect(response.status).toBe(503)
@@ -162,7 +162,7 @@ describe('POST /api/contact/submit', () => {
   })
 
   it('fails loudly when no client IP is resolvable', async () => {
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     try {
       const event = {
         request: new Request('http://localhost/api/contact/submit', {
