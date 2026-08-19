@@ -13,14 +13,19 @@ export const POST: RequestHandler = async ({ request }) => {
     body,
     xSignature: request.headers.get('x-signature'),
     xRequestId: request.headers.get('x-request-id'),
+    // The signature manifest uses the URL query data.id (lowercased), which is
+    // what Mercado Pago actually signed — never the body id.
+    urlDataId: new URL(request.url).searchParams.get('data.id'),
   })
 
   if (!outcome.handled) {
-    // Loud on the server log, terse to the caller. MP retries non-2xx, which
-    // is what we want for a misconfigured secret (503) — but a bad signature
-    // is rejected outright (401).
+    // Loud on the server log, terse to the caller. MP retries non-2xx: a
+    // misconfigured secret (503) and a transient processing failure (500,
+    // event unmarked) should be retried; a bad signature / stale timestamp is
+    // rejected outright (401) — retrying would never succeed.
     console.error(`[mercadoPago-webhook] rejected webhook: ${outcome.code}`)
-    const status = outcome.code === 'missing_secret' ? 503 : 401
+    const status =
+      outcome.code === 'missing_secret' ? 503 : outcome.code === 'processing_failed' ? 500 : 401
     return json({ error: outcome.code }, { status })
   }
 

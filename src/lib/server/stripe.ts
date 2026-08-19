@@ -14,17 +14,14 @@
  */
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import {
-  ADS_SPEND_RULE,
   BRL_USD_REFERENCE_RATE,
-  CATALOG_SERVICE_IDS,
   SERVICES,
   adSpendFeeUSD,
-  isSubscribable,
   type CatalogService,
   type CatalogServiceId,
 } from '$lib/catalog'
 import type { Locale } from '$lib/locale'
-import { PricingError } from './pricing.ts'
+import { PricingError, buildQuote, monthlyAdSpendOf } from './pricing.ts'
 
 export const STRIPE_API = 'https://api.stripe.com'
 export const STRIPE_REQUEST_TIMEOUT_MS = 15_000
@@ -133,7 +130,7 @@ async function stripeRequest(path: string, init: RequestInit): Promise<Response>
       ...init,
       headers: {
         Authorization: `Bearer ${secretKey}`,
-        ...(init.headers ?? {}),
+        ...init.headers,
       },
       signal: AbortSignal.timeout(STRIPE_REQUEST_TIMEOUT_MS),
     })
@@ -239,79 +236,33 @@ export type UsdPriceQuote = {
   externalReference: string
 }
 
-const MAX_MONTHLY_AD_SPEND = 1_000_000
-
-function isValidAdSpend(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= MAX_MONTHLY_AD_SPEND
-}
-
-function resolveUsdLineItem(
-  id: CatalogServiceId,
-  service: CatalogService,
-  rawConfig: Record<string, unknown>,
-  locale: Locale,
-): UsdLineItem {
-  const name = service.name[locale]
-  if (service.pricing.kind === 'fixed') {
-    const monthlyUSD =
-      service.pricing.monthlyUSD ?? service.pricing.monthlyBRL / BRL_USD_REFERENCE_RATE
-    return { id, name, monthlyUSD: Math.round(monthlyUSD * 100) / 100 }
-  }
-  if (service.pricing.kind === 'ads-spend') {
-    const perService = rawConfig[id]
-    const monthlyAdSpend =
-      typeof perService === 'object' && perService !== null
-        ? (perService as Record<string, unknown>).monthlyAdSpend
-        : undefined
-    if (!isValidAdSpend(monthlyAdSpend)) {
-      throw new PricingError('invalid_ad_spend', `Invalid monthly ad spend for ${id}`)
-    }
-    return { id, name, monthlyUSD: adSpendFeeUSD(monthlyAdSpend) }
-  }
-  throw new PricingError('quote_only_service', `Service is quote-only: ${id}`)
-}
-
-/** Computes the authoritative USD monthly quote for the en-US Stripe checkout. */
+/**
+ * Computes the authoritative USD monthly quote for the en-US Stripe checkout.
+ * Runs the shared quote pipeline (buildQuote — the same validation, ordering,
+ * deduplication, zero-total guard, rounding and externalReference contract as
+ * the BRL path) with a USD amount resolver: stored USD references or the 5:1
+ * BRL conversion for fixed services, the US$ fee for ads-spend services.
+ */
 export function computeUsdMonthlyQuote(
   serviceIds: unknown,
   config: unknown,
   locale: Locale,
   catalog: Record<CatalogServiceId, CatalogService> = SERVICES,
 ): UsdPriceQuote {
-  if (!Array.isArray(serviceIds) || serviceIds.length === 0) {
-    throw new PricingError('no_services_selected', 'No services selected')
-  }
-  const rawConfig = typeof config === 'object' && config !== null ? (config as Record<string, unknown>) : {}
-
-  const selection = new Set<CatalogServiceId>()
-  for (const rawId of serviceIds) {
-    if (typeof rawId !== 'string' || !Object.hasOwn(catalog, rawId)) {
-      throw new PricingError('invalid_service', `Unknown service: ${String(rawId)}`)
+  const quote = buildQuote(serviceIds, config, locale, catalog, (id, service, rawConfig) => {
+    if (service.pricing.kind === 'fixed') {
+      const usd = service.pricing.monthlyUSD ?? service.pricing.monthlyBRL / BRL_USD_REFERENCE_RATE
+      return Math.round(usd * 100) / 100
     }
-    const id = rawId as CatalogServiceId
-    const service = catalog[id]
-    if (!service.active) throw new PricingError('service_unavailable', `Service unavailable: ${id}`)
-    if (!isSubscribable(service)) throw new PricingError('quote_only_service', `Service is quote-only: ${id}`)
-    selection.add(id)
-  }
-
-  const items: UsdLineItem[] = []
-  let totalUSD = 0
-  for (const id of CATALOG_SERVICE_IDS) {
-    if (!selection.has(id)) continue
-    const item = resolveUsdLineItem(id, catalog[id], rawConfig, locale)
-    items.push(item)
-    totalUSD += item.monthlyUSD
-  }
-  if (items.length === 0 || totalUSD <= 0) {
-    throw new PricingError('no_services_selected', 'Quote total is zero')
-  }
-  totalUSD = Math.round(totalUSD * 100) / 100
+    if (service.pricing.kind === 'ads-spend') return adSpendFeeUSD(monthlyAdSpendOf(rawConfig, id))
+    // quote-only services never reach this point (rejected in buildQuote).
+    throw new PricingError('quote_only_service', `Service is quote-only: ${id}`)
+  })
   return {
-    items,
-    totalUSD,
-    reason: items.map((item) => item.name).join(' + '),
-    externalReference: items.map((item) => item.id).join('+'),
+    items: quote.items.map((item) => ({ id: item.id, name: item.name, monthlyUSD: item.amount })),
+    totalUSD: quote.total,
+    reason: quote.reason,
+    externalReference: quote.externalReference,
   }
 }
 

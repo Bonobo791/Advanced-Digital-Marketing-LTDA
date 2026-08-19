@@ -15,7 +15,11 @@ export const POST: RequestHandler = async ({ request }) => {
 
   if (!outcome.handled) {
     console.error(`[stripe-webhook] rejected webhook: ${outcome.code}`)
-    const status = outcome.code === 'missing_secret' ? 503 : 400
+    // Stripe retries non-2xx: a misconfigured secret (503) and a transient
+    // processing failure (500, event unmarked) should be retried; a bad
+    // signature / stale timestamp / malformed event is rejected (400) — a
+    // retry would never succeed.
+    const status = outcome.code === 'missing_secret' ? 503 : outcome.code === 'processing_failed' ? 500 : 400
     return json({ error: outcome.code }, { status })
   }
 

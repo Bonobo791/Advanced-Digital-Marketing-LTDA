@@ -1,7 +1,10 @@
 import type { PageServerLoad } from './$types'
-import { StripeError, getCheckoutSession } from '$lib/server/stripe'
+import { StripeError, getCheckoutSession, type CheckoutSessionStatus } from '$lib/server/stripe'
 import { ClientAddressError, clientIpAddress } from '$lib/server/client-ip'
 import { checkRateLimit, rateLimitKey } from '$lib/server/rate-limit'
+import { getService } from '$lib/catalog'
+import { authoritativeSubscriptionTotalUSD } from '$lib/server/pricing'
+import { WEBSITE_BUILD_KINDS, WEBSITE_BUILD_TYPES, websiteBuildExternalReference, websiteBuildPrice } from '$lib/website-builds'
 
 // Stripe (en-US) return page: verifies the Checkout Session live against the
 // Stripe API before claiming success — the browser query params alone are
@@ -18,7 +21,11 @@ export type StripeCompletionState =
 
 const SESSION_ID_RE = /^[A-Za-z0-9_-]{1,128}$/
 
-export const load: PageServerLoad = async ({ url, getClientAddress }): Promise<StripeCompletionState> => {
+export const load: PageServerLoad = async ({ url, getClientAddress, setHeaders }): Promise<StripeCompletionState> => {
+  // The rendered state is session-specific and must never be cached by Bunny
+  // (same rule as the contact verification loaders).
+  setHeaders({ 'Cache-Control': 'private, no-store' })
+
   const sessionId = url.searchParams.get('session_id')
   if (!sessionId) return { state: 'missing' }
 
@@ -61,6 +68,16 @@ export const load: PageServerLoad = async ({ url, getClientAddress }): Promise<S
   }
 
   if (session.paymentStatus === 'paid') {
+    if (!isSiteStripeSession(session)) {
+      // The session is real and paid but not bound to a checkout this server
+      // created (wrong client_reference_id, amount or currency). Showing the
+      // success claim for it would be a false statement — refuse loudly.
+      console.warn(
+        `[checkout-stripe] paid session ${session.id} does not match a server-created checkout ` +
+          `(client_reference_id=${session.clientReferenceId}, amount=${session.amountTotal}, currency=${session.currency}); refusing success claim`,
+      )
+      return { state: 'error' }
+    }
     return { state: 'confirmed', sessionId: session.id, amountTotal: session.amountTotal, clientReferenceId: session.clientReferenceId }
   }
   if (session.status === 'open' || session.status === 'processing' || session.paymentStatus === 'processing') {
@@ -69,4 +86,30 @@ export const load: PageServerLoad = async ({ url, getClientAddress }): Promise<S
   // complete-but-unpaid (unpaid/abandoned/expired) is a truthful "not
   // confirmed", never a success claim.
   return { state: 'payment_unconfirmed', sessionId: session.id }
+}
+
+/**
+ * True only when a paid session is bound to a checkout this server created:
+ * the client_reference_id must be a deterministic website-build reference with
+ * the exact server-derived USD amount, or a valid catalog subscription package
+ * (fixed-price amounts must match exactly; ads-spend amounts must sit at or
+ * above the US$ 100 floor) in USD. A paid session for anything else never
+ * shows the success claim.
+ */
+function isSiteStripeSession(session: CheckoutSessionStatus): boolean {
+  if (session.currency !== 'usd' || session.clientReferenceId === null || session.amountTotal === null) return false
+  const reference = session.clientReferenceId
+
+  for (const type of WEBSITE_BUILD_TYPES) {
+    for (const kind of WEBSITE_BUILD_KINDS) {
+      if (reference === websiteBuildExternalReference(type, kind)) {
+        return session.amountTotal === websiteBuildPrice('en-US', type, kind)
+      }
+    }
+  }
+
+  const floor = authoritativeSubscriptionTotalUSD(reference)
+  if (floor === null) return false
+  const hasAdsSpend = reference.split('+').some((id) => getService(id)?.pricing.kind === 'ads-spend')
+  return hasAdsSpend ? session.amountTotal >= floor : session.amountTotal === floor
 }

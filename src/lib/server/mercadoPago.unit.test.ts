@@ -455,7 +455,6 @@ describe('getPayment', () => {
       externalReference: 'website-build:website:new',
       transactionAmount: 3000,
       currencyId: 'BRL',
-      payerEmail: 'customer@example.com',
     })
   })
 
@@ -500,7 +499,6 @@ describe('getPayment', () => {
       externalReference: 'website-build:website:new',
       transactionAmount: 3000,
       currencyId: 'BRL',
-      payerEmail: null,
     })
   })
 

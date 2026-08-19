@@ -17,6 +17,9 @@
   // back so they know which address the link went to.
   let successEmail = $state<string | undefined>(undefined)
   let successHours = $state(72)
+  // Native (no-JS) submission success: the server redirected back with
+  // ?sent=1 (the address is not echoed in the URL, so the copy is generic).
+  let sent = $state(false)
   // Optional subject carried from a service-option CTA (?subject=… on the
   // contact route): it travels through the verification token and lands in
   // the owner notification so the lead names the requested service. The
@@ -24,8 +27,13 @@
   let subject = $state<string | undefined>(undefined)
 
   onMount(() => {
-    const value = new URL(window.location.href).searchParams.get('subject')?.trim()
+    const params = new URL(window.location.href).searchParams
+    const value = params.get('subject')?.trim()
     if (value) subject = value.slice(0, 120)
+    // Native (no-JS) form flow: the server redirected back with the outcome.
+    if (params.get('sent') === '1') sent = true
+    const error = params.get('error')
+    if (error) errorMessage = errorMessageFor(error)
   })
 
   // Mirrors the server's linear shape check in $lib/server/checkout.ts.
@@ -106,11 +114,13 @@
   }
 </script>
 
-{#if successEmail}
+{#if sent || successEmail}
   <div class="contact-form__success" role="status">
     <p class="contact-form__success-title">{content.successTitle}</p>
     <p class="contact-form__success-lead">
-      {content.successLead.replace('{email}', successEmail).replace('{hours}', String(successHours))}
+      {successEmail
+        ? content.successLead.replace('{email}', successEmail).replace('{hours}', String(successHours))
+        : content.sentLead}
     </p>
   </div>
 {:else}

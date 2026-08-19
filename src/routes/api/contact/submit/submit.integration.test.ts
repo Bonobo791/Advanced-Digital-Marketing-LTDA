@@ -67,43 +67,46 @@ describe('POST /api/contact/submit', () => {
   it('accepts a native no-JavaScript form POST (urlencoded) end to end', async () => {
     // With JS off, ContactForm.svelte falls back to a native POST
     // (method=post + action=/api/contact/submit); the endpoint must accept
-    // urlencoded bodies, keep the visitor's data out of the URL, and send the
-    // same verification email as the JSON flow.
+    // urlencoded bodies, keep the visitor's data out of the URL, send the
+    // same verification email as the JSON flow, and redirect the browser back
+    // to the contact page instead of showing raw JSON.
     const form = new URLSearchParams({
       name: 'Ada Lovelace',
       email: 'ada@example.com',
       consent: 'on',
       locale: 'en-US',
     })
-    const response = await POST({
-      request: new Request('http://localhost/api/contact/submit', {
-        method: 'POST',
-        headers: { 'content-type': 'application/x-www-form-urlencoded' },
-        body: form.toString(),
-      }),
-      getClientAddress: () => '127.0.0.1',
-    } as Parameters<typeof POST>[0])
-    expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ ok: true, expiresInHours: 72 })
+    // The redirect() helper throws; the SvelteKit runtime turns it into the
+    // 303 response, so the handler-level test asserts the thrown Redirect.
+    await expect(
+      POST({
+        request: new Request('http://localhost/api/contact/submit', {
+          method: 'POST',
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+          body: form.toString(),
+        }),
+        getClientAddress: () => '127.0.0.1',
+      } as Parameters<typeof POST>[0]),
+    ).rejects.toMatchObject({ status: 303, location: '/contact/?sent=1' })
     expect(mockSend).toHaveBeenCalledTimes(1)
   })
 
-  it('treats an unchecked consent checkbox in a native POST as no consent', async () => {
+  it('redirects a native POST with the error code instead of raw JSON', async () => {
     const form = new URLSearchParams({
       name: 'Ada Lovelace',
       email: 'ada@example.com',
-      locale: 'en-US',
+      locale: 'pt-BR',
     })
-    const response = await POST({
-      request: new Request('http://localhost/api/contact/submit', {
-        method: 'POST',
-        headers: { 'content-type': 'application/x-www-form-urlencoded' },
-        body: form.toString(),
-      }),
-      getClientAddress: () => '127.0.0.1',
-    } as Parameters<typeof POST>[0])
-    expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: 'consent_required' })
+    await expect(
+      POST({
+        request: new Request('http://localhost/api/contact/submit', {
+          method: 'POST',
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+          body: form.toString(),
+        }),
+        getClientAddress: () => '127.0.0.1',
+      } as Parameters<typeof POST>[0]),
+    ).rejects.toMatchObject({ status: 303, location: '/pt-br/contato/?error=consent_required' })
     expect(mockSend).not.toHaveBeenCalled()
   })
 

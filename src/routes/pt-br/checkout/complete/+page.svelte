@@ -31,13 +31,15 @@
       // Corrupt storage value: ignore and overwrite with a fresh record.
     }
     if (fired[id]) return
-    firePurchase({
+    // Persist the dedupe flag only when analytics accepted the event — if the
+    // dataLayer was unavailable, a later revisit must still be able to fire it.
+    const accepted = firePurchase({
       orderId: data.externalReference ?? id,
       value: data.amountBRL ?? 0,
       currency: 'BRL',
       items: [],
     })
-    setSessionItem(key, JSON.stringify({ ...fired, [id]: true }))
+    if (accepted) setSessionItem(key, JSON.stringify({ ...fired, [id]: true }))
   })
 
   // Which flow a state belongs to, so error/rate-limit pages keep the right

@@ -8,7 +8,7 @@ the way it is, and how to operate it.
 
 ## Pipeline
 
-```
+```text
 push to main
    ├─ Coolify auto-deploys the app (GitHub webhook, production branch: main)
    └─ GitHub Actions: .github/workflows/purge-bunny-cache.yml
@@ -82,7 +82,10 @@ serving), and only then purges the whole pull zone.
 
 The workflow runs on every push to `main` and is available manually via
 `workflow_dispatch` (it waits for the latest main deploy to finish, then
-purges).
+purges). **Manual runs must be started from `main`**: Coolify only deploys
+`main`, so a dispatch on any other branch would make the expected commit
+undeployable and the wait step would time out — the workflow refuses with a
+loud failure.
 
 ## Local testing
 

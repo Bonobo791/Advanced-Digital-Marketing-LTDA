@@ -65,10 +65,10 @@ function trimTrailingSlashes(value) {
 }
 
 /** POSTs a deploy trigger for the application (documented webhook fallback). */
-async function defaultDeploy(apiUrl, apiToken, applicationUuid) {
+async function defaultDeploy(apiUrl, apiToken, applicationUuid, signal) {
   const response = await fetch(
     `${trimTrailingSlashes(apiUrl)}/api/v1/deploy?uuid=${encodeURIComponent(applicationUuid)}`,
-    { method: 'POST', headers: { Authorization: `Bearer ${apiToken}` } },
+    { method: 'POST', headers: { Authorization: `Bearer ${apiToken}` }, signal },
   )
   if (!response.ok) {
     throw new Error(
@@ -170,6 +170,7 @@ async function maybeTriggerDeploy({
   startedAt,
   now,
   triggerAfterMs,
+  deadline,
   base,
   apiToken,
   applicationUuid,
@@ -178,7 +179,23 @@ async function maybeTriggerDeploy({
   if (triggerSent) return true
   if (result.status !== 'not-found') return false
   if (now() - startedAt < triggerAfterMs) return false
-  await deployImpl(base, apiToken, applicationUuid)
+  // The fallback POST is covered by the same deployment deadline as the polls:
+  // a hung request must abort and fail loudly, never outlive the budget.
+  const remainingMs = deadline - now()
+  const controller = new AbortController()
+  const abortTimer = setTimeout(() => controller.abort(), Math.max(remainingMs, 0))
+  try {
+    await deployImpl(base, apiToken, applicationUuid, controller.signal)
+  } catch (cause) {
+    clearTimeout(abortTimer)
+    if (controller.signal.aborted) {
+      throw new Error(
+        `[wait-for-coolify-deploy] FATAL: deploy trigger did not complete within the deployment deadline`,
+      )
+    }
+    throw cause
+  }
+  clearTimeout(abortTimer)
   console.log('[wait-for-coolify-deploy] auto-deploy webhook missed the push; triggered a deploy from CI')
   return true
 }
@@ -236,12 +253,15 @@ export async function waitForCoolifyDeploy({
       startedAt,
       now,
       triggerAfterMs,
+      deadline,
       base,
       apiToken,
       applicationUuid,
       deployImpl,
     })
-    await sleep(pollIntervalMs)
+    // Never sleep past the deployment deadline: cap the interval at the
+    // remaining budget so the timeout error fires on schedule.
+    await sleep(Math.min(pollIntervalMs, Math.max(0, deadline - now())))
   }
 }
 

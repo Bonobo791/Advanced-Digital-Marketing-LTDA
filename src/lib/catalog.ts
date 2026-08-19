@@ -41,6 +41,13 @@ export const ADS_SPEND_RULE = {
  */
 export const BRL_USD_REFERENCE_RATE = 5
 
+/**
+ * Upper bound for a monthly ad-spend figure (BRL or USD input), shared by the
+ * client parsers and the server validators so a bound change cannot drift
+ * between the form and the checkout.
+ */
+export const MAX_MONTHLY_AD_SPEND = 1_000_000
+
 export type ServicePricing =
   | { kind: 'fixed'; monthlyBRL: number; monthlyUSD?: number }
   | { kind: 'ads-spend' }

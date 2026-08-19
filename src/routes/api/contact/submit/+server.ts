@@ -1,4 +1,4 @@
-import { json } from '@sveltejs/kit'
+import { json, redirect } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import type { Locale } from '$lib/locale'
 import { isValidEmail } from '$lib/server/checkout'
@@ -96,11 +96,27 @@ async function parseContactBody(request: Request): Promise<ParseOutcome> {
   return parseJsonBody(request)
 }
 
-async function submitOrError(payload: ValidPayload): Promise<Response> {
+/** Contact page for each locale — the target of native (no-JS) form redirects. */
+const CONTACT_ROUTES: Record<Locale, string> = {
+  'en-US': '/contact/',
+  'pt-BR': '/pt-br/contato/',
+}
+
+async function submitOrError(payload: ValidPayload, native: boolean): Promise<Response> {
   try {
     const result = await submitContactRequest(payload)
+    if (native) {
+      // A no-JavaScript submission is a full-page flow: send the browser back
+      // to the contact page with a success marker (never raw JSON).
+      throw redirect(303, `${CONTACT_ROUTES[payload.locale]}?sent=1`)
+    }
     return json({ ok: true, expiresInHours: result.expiresInHours })
   } catch (error) {
+    if (native && (error instanceof MailjetError || error instanceof ContactTokenError)) {
+      const code = error instanceof MailjetError ? error.code : 'server_misconfigured'
+      console.error(`[contact] MailJet send failed: ${code}`)
+      throw redirect(303, `${CONTACT_ROUTES[payload.locale]}?error=${code}`)
+    }
     if (error instanceof MailjetError) {
       return upstreamErrorResponse(error, 'contact', 'MailJet send')
     }
@@ -124,17 +140,36 @@ async function submitOrError(payload: ValidPayload): Promise<Response> {
  * throttled per client IP before any email is sent.
  */
 export const POST: RequestHandler = async ({ request, getClientAddress }) => {
+  // Native (no-JS) form posts are urlencoded and expect a browser flow (303
+  // redirect to the contact page); JavaScript requests get JSON as before.
+  const native = (request.headers.get('content-type') ?? '').includes('application/x-www-form-urlencoded')
+
   const parsed = await parseContactBody(request)
-  if ('response' in parsed) return parsed.response
+  if ('response' in parsed) {
+    if (native) throw redirect(303, `${CONTACT_ROUTES['en-US']}?error=invalid_json`)
+    return parsed.response
+  }
 
   const validated = validatePayload(parsed.payload)
-  if ('error' in validated) return json({ error: validated.error }, { status: 400 })
+  if ('error' in validated) {
+    if (native) {
+      const locale = parsed.payload.locale === 'pt-BR' ? 'pt-BR' : 'en-US'
+      throw redirect(303, `${CONTACT_ROUTES[locale]}?error=${validated.error}`)
+    }
+    return json({ error: validated.error }, { status: 400 })
+  }
 
   const resolved = resolveClientAddress(getClientAddress, 'contact')
-  if ('response' in resolved) return resolved.response
+  if ('response' in resolved) {
+    if (native) throw redirect(303, `${CONTACT_ROUTES[validated.payload.locale]}?error=client_address_unavailable`)
+    return resolved.response
+  }
 
   const rateLimited = rateLimitOrError('contactSubmit', resolved.address, 'contact', 'contact submission')
-  if ('response' in rateLimited) return rateLimited.response
+  if ('response' in rateLimited) {
+    if (native) throw redirect(303, `${CONTACT_ROUTES[validated.payload.locale]}?error=rate_limited`)
+    return rateLimited.response
+  }
 
-  return submitOrError(validated.payload)
+  return submitOrError(validated.payload, native)
 }

@@ -4,6 +4,8 @@
  * the comma is the decimal separator; en-US users type dots). Values with
  * more than two decimal places are rejected rather than silently rounded.
  */
+import { MAX_MONTHLY_AD_SPEND } from './catalog'
+
 export function parseUSDInput(value: string): number | undefined {
   const raw = value.trim()
   if (!raw) return undefined
@@ -11,5 +13,7 @@ export function parseUSDInput(value: string): number | undefined {
   const decimalPart = raw.split('.')[1]
   if (decimalPart !== undefined && decimalPart.length > 2) return undefined
   const number = Number(raw)
-  return Number.isFinite(number) && number >= 0 && number <= 1_000_000 ? number : undefined
+  // Same bound as the server validators (shared MAX_MONTHLY_AD_SPEND), so the
+  // form and the checkout cannot drift.
+  return Number.isFinite(number) && number >= 0 && number <= MAX_MONTHLY_AD_SPEND ? number : undefined
 }

@@ -195,7 +195,38 @@ describe('waitForCoolifyDeploy', () => {
       'https://coolify.example.com',
       't',
       'app-1',
+      expect.any(AbortSignal),
     )
+  })
+
+  it('enforces the deployment deadline when the fallback deploy trigger hangs', async () => {
+    // The self-healing POST runs under the same deadline-bound abort signal as
+    // the polls: a deployImpl that never settles must abort and fail loudly
+    // instead of outliving the documented budget.
+    const fetchImpl = vi.fn(() => new Response(JSON.stringify([]), { status: 200 }))
+    const deployImpl = vi.fn(
+      (_base: string, _token: string, _uuid: string, signal?: AbortSignal) =>
+        new Promise<Response>((_resolve, reject) => {
+          signal?.addEventListener('abort', () =>
+            reject(new DOMException('Aborted', 'AbortError')),
+          )
+        }),
+    )
+    let now = 0
+    await expect(
+      waitForCoolifyDeploy({
+        ...BASE_ARGS,
+        timing: { pollIntervalMs: 1, timeoutMs: 50, triggerAfterMs: 2 },
+        test: {
+          fetchImpl,
+          deployImpl,
+          now: () => now,
+          sleep: async () => {
+            now += 1
+          },
+        },
+      }),
+    ).rejects.toThrow(/deploy trigger did not complete within the deployment deadline/)
   })
 
   it('never double-triggers a deploy once one has been sent', async () => {

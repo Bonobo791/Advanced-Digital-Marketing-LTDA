@@ -270,7 +270,15 @@ async function readSendMessage(response: Response): Promise<Record<string, unkno
  */
 function classifiedErrorOf(entry: Record<string, unknown>): string | undefined {
   const code = typeof entry.ErrorCode === 'string' ? entry.ErrorCode : undefined
-  const status = typeof entry.StatusCode === 'string' ? entry.StatusCode : undefined
+  // MailJet's Errors[].StatusCode is an integer; accept the numeric form and
+  // normalize it to the string classification fields use.
+  const rawStatus = entry.StatusCode
+  let status: string | undefined
+  if (typeof rawStatus === 'string') {
+    status = rawStatus
+  } else if (typeof rawStatus === 'number' && Number.isFinite(rawStatus)) {
+    status = String(rawStatus)
+  }
   const identifier = typeof entry.ErrorIdentifier === 'string' ? entry.ErrorIdentifier : undefined
   const parts = [code, status, identifier].filter((part): part is string => part !== undefined)
   return parts.length > 0 ? parts.join(' ') : undefined

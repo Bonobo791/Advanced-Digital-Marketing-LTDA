@@ -22,15 +22,19 @@ function signedBody(payload: Record<string, unknown>, opts: { secret?: string; t
   body: string
   xSignature: string
   xRequestId: string
+  urlDataId: string
   ts: number
 } {
   const body = JSON.stringify(payload)
   const data = payload.data as Record<string, unknown>
   const ts = opts.ts ?? Math.floor(Date.now() / 1000)
   const requestId = opts.requestId ?? 'req-123'
-  const manifest = `id:${data.id};request-id:${requestId};ts:${ts};`
+  const rawData = payload.data as { id?: unknown } | undefined
+  const urlDataId = typeof rawData?.id === 'string' ? rawData.id.toLowerCase() : ''
+  // Mercado Pago signs the URL query data.id (lowercased), never the body id.
+  const manifest = `id:${urlDataId};request-id:${requestId};ts:${ts};`
   const v1 = createHmac('sha256', opts.secret ?? SECRET).update(manifest).digest('hex')
-  return { body, xSignature: `ts=${ts},v1=${v1}`, xRequestId: requestId, ts }
+  return { body, xSignature: `ts=${ts},v1=${v1}`, xRequestId: requestId, urlDataId, ts }
 }
 
 const paymentEvent = (id = '123456') => ({
@@ -54,28 +58,35 @@ describe('parseSignatureHeader', () => {
 
 describe('verifyWebhookSignature', () => {
   it('accepts a correctly signed event', () => {
-    const { body, xSignature, xRequestId } = signedBody(paymentEvent())
-    const result = verifyWebhookSignature({ body, xSignature, xRequestId, dataId: '123456', secret: SECRET })
+    const { body, xSignature, xRequestId, urlDataId } = signedBody(paymentEvent())
+    const result = verifyWebhookSignature({ body, xSignature, xRequestId, urlDataId: '123456', secret: SECRET })
     expect(result.ok).toBe(true)
     if (result.ok) expect(result.ts).toBeGreaterThan(0)
   })
 
   it('rejects a wrong secret', () => {
-    const { body, xSignature, xRequestId } = signedBody(paymentEvent())
-    const result = verifyWebhookSignature({ body, xSignature, xRequestId, dataId: '123456', secret: 'wrong' })
+    const { body, xSignature, xRequestId, urlDataId } = signedBody(paymentEvent())
+    const result = verifyWebhookSignature({ body, xSignature, xRequestId, urlDataId: '123456', secret: 'wrong' })
     expect(result).toEqual({ ok: false, code: 'bad_signature' })
   })
 
   it('rejects a tampered body', () => {
     const { xSignature, xRequestId } = signedBody(paymentEvent('123456'))
     const tampered = JSON.stringify(paymentEvent('999999'))
-    const result = verifyWebhookSignature({ body: tampered, xSignature, xRequestId, dataId: '999999', secret: SECRET })
+    const result = verifyWebhookSignature({ body: tampered, xSignature, xRequestId, urlDataId: '999999', secret: SECRET })
     expect(result).toEqual({ ok: false, code: 'bad_signature' })
   })
 
+  it('lowercases the URL data.id in the signature manifest', () => {
+    // Uppercase ids in the URL query must be lowercased before hashing.
+    const { body, xSignature, xRequestId } = signedBody(paymentEvent('ORD123ABC'))
+    const result = verifyWebhookSignature({ body, xSignature, xRequestId, urlDataId: 'ORD123ABC', secret: SECRET })
+    expect(result.ok).toBe(true)
+  })
+
   it('reports missing_secret when the secret is not configured', () => {
-    const { body, xSignature, xRequestId } = signedBody(paymentEvent())
-    expect(verifyWebhookSignature({ body, xSignature, xRequestId, dataId: '123456', secret: '' })).toEqual({
+    const { body, xSignature, xRequestId, urlDataId } = signedBody(paymentEvent())
+    expect(verifyWebhookSignature({ body, xSignature, xRequestId, urlDataId: '123456', secret: '' })).toEqual({
       ok: false,
       code: 'missing_secret',
     })
@@ -88,6 +99,7 @@ describe('verifyWebhookSignature', () => {
       body: old.body,
       xSignature: old.xSignature,
       xRequestId: old.xRequestId,
+      urlDataId: old.urlDataId,
       getPaymentImpl: vi.fn(),
     })
     expect(outcome).toEqual({ handled: false, code: 'stale_timestamp' })
@@ -113,8 +125,8 @@ describe('processWebhookEvent', () => {
       currencyId: 'BRL',
       payerEmail: 'customer@example.com',
     }))
-    const { body, xSignature, xRequestId } = signedBody(paymentEvent())
-    const outcome = await processWebhookEvent({ body, xSignature, xRequestId, getPaymentImpl, sendEmail })
+    const { body, xSignature, xRequestId, urlDataId } = signedBody(paymentEvent())
+    const outcome = await processWebhookEvent({ body, xSignature, xRequestId, urlDataId, getPaymentImpl, sendEmail })
     expect(outcome).toEqual({ handled: true, action: 'payment' })
     expect(sendEmail).toHaveBeenCalledTimes(1)
     expect(sendEmail.mock.calls[0][0].subject).toContain('Payment approved')
@@ -132,8 +144,8 @@ describe('processWebhookEvent', () => {
       currencyId: 'BRL',
       payerEmail: null,
     }))
-    const { body, xSignature, xRequestId } = signedBody(paymentEvent())
-    const outcome = await processWebhookEvent({ body, xSignature, xRequestId, getPaymentImpl, sendEmail })
+    const { body, xSignature, xRequestId, urlDataId } = signedBody(paymentEvent())
+    const outcome = await processWebhookEvent({ body, xSignature, xRequestId, urlDataId, getPaymentImpl, sendEmail })
     expect(outcome).toEqual({ handled: true, action: 'payment' })
     expect(sendEmail).not.toHaveBeenCalled()
   })
@@ -149,8 +161,8 @@ describe('processWebhookEvent', () => {
       transactionAmount: 2300,
       currencyId: 'BRL',
     }))
-    const { body, xSignature, xRequestId } = signedBody({ action: 'preapproval.updated', type: 'preapproval', data: { id: 's1' } })
-    const outcome = await processWebhookEvent({ body, xSignature, xRequestId, getSubscriptionImpl, sendEmail })
+    const { body, xSignature, xRequestId, urlDataId } = signedBody({ action: 'preapproval.updated', type: 'preapproval', data: { id: 's1' } })
+    const outcome = await processWebhookEvent({ body, xSignature, xRequestId, urlDataId, getSubscriptionImpl, sendEmail })
     expect(outcome).toEqual({ handled: true, action: 'preapproval' })
     expect(sendEmail).toHaveBeenCalledTimes(1)
     expect(sendEmail.mock.calls[0][0].subject).toContain('Subscription authorized')
@@ -169,8 +181,8 @@ describe('processWebhookEvent', () => {
     }))
     const first = signedBody(paymentEvent())
     const second = signedBody(paymentEvent(), { requestId: 'req-456' })
-    const firstOutcome = await processWebhookEvent({ body: first.body, xSignature: first.xSignature, xRequestId: first.xRequestId, getPaymentImpl, sendEmail })
-    const secondOutcome = await processWebhookEvent({ body: second.body, xSignature: second.xSignature, xRequestId: second.xRequestId, getPaymentImpl, sendEmail })
+    const firstOutcome = await processWebhookEvent({ body: first.body, xSignature: first.xSignature, xRequestId: first.xRequestId, urlDataId: first.urlDataId, getPaymentImpl, sendEmail })
+    const secondOutcome = await processWebhookEvent({ body: second.body, xSignature: second.xSignature, xRequestId: second.xRequestId, urlDataId: second.urlDataId, getPaymentImpl, sendEmail })
     expect(firstOutcome.handled).toBe(true)
     expect(secondOutcome).toEqual({ handled: true, action: 'deduplicated' })
     expect(sendEmail).toHaveBeenCalledTimes(1)
@@ -178,25 +190,55 @@ describe('processWebhookEvent', () => {
 
   it('ignores other webhook topics (chargebacks, plans, ...) but acknowledges them', async () => {
     const sendEmail = vi.fn()
-    const { body, xSignature, xRequestId } = signedBody({ action: 'chargebacks.created', type: 'chargebacks', data: { id: 'c1' } })
-    const outcome = await processWebhookEvent({ body, xSignature, xRequestId, sendEmail })
+    const { body, xSignature, xRequestId, urlDataId } = signedBody({ action: 'chargebacks.created', type: 'chargebacks', data: { id: 'c1' } })
+    const outcome = await processWebhookEvent({ body, xSignature, xRequestId, urlDataId, sendEmail })
     expect(outcome).toEqual({ handled: true, action: 'ignored' })
     expect(sendEmail).not.toHaveBeenCalled()
   })
 
-  it('acknowledges but logs loudly when the lookup fails', async () => {
-    const sendEmail = vi.fn()
-    const getPaymentImpl = vi.fn(async () => {
-      throw new Error('boom')
+  it('unmarks a failed event so a redelivery retries the owner notification', async () => {
+    // A transient lookup/email failure must not lose the notification: the
+    // event is unmarked and returned as processing_failed (the route answers
+    // 5xx, MP redelivers), and the retry with a healthy notifier processes it.
+    const failing = vi.fn(async () => {
+      throw new Error('mailjet down')
     })
-    const { body, xSignature, xRequestId } = signedBody(paymentEvent())
-    const outcome = await processWebhookEvent({ body, xSignature, xRequestId, getPaymentImpl, sendEmail })
-    expect(outcome).toEqual({ handled: true, action: 'failed-loud' })
+    const getPaymentImpl = vi.fn(async () => ({
+      id: '1234567890',
+      status: 'approved',
+      statusDetail: 'accredited',
+      externalReference: 'website-build:website:new',
+      transactionAmount: 3000,
+      currencyId: 'BRL',
+    }))
+    const first = signedBody(paymentEvent())
+    const failed = await processWebhookEvent({
+      body: first.body,
+      xSignature: first.xSignature,
+      xRequestId: first.xRequestId,
+      urlDataId: first.urlDataId,
+      getPaymentImpl,
+      sendEmail: failing,
+    })
+    expect(failed).toEqual({ handled: false, code: 'processing_failed' })
+
+    const healthy = vi.fn(async () => ({ messageId: 'm1' }))
+    const second = signedBody(paymentEvent())
+    const retried = await processWebhookEvent({
+      body: second.body,
+      xSignature: second.xSignature,
+      xRequestId: second.xRequestId,
+      urlDataId: second.urlDataId,
+      getPaymentImpl,
+      sendEmail: healthy,
+    })
+    expect(retried).toEqual({ handled: true, action: 'payment' })
+    expect(healthy).toHaveBeenCalledTimes(1)
   })
 
   it('rejects unsigned or malformed bodies before any work', async () => {
     vi.stubEnv('MERCADO_PAGO_WEBHOOK_SECRET', SECRET)
-    const outcome = await processWebhookEvent({ body: 'not json', xSignature: null, xRequestId: null })
+    const outcome = await processWebhookEvent({ body: 'not json', xSignature: null, xRequestId: null, urlDataId: null })
     expect(outcome).toEqual({ handled: false, code: 'bad_signature' })
   })
 })

@@ -6,7 +6,7 @@ Mercado Pago bills BRL from the Brazilian account, so English pages get a
 
 ## How it works
 
-```
+```text
 en-US configurator / build button
     ↓  POST /api/checkout/stripe  { flow: 'subscription' | 'build', ... }
 Server validates selections and derives USD amounts (never trusts the browser)

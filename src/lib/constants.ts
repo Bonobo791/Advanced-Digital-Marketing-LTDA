@@ -137,6 +137,7 @@ export type ContactCopy = {
   noscript: string
   successTitle: string
   successLead: string
+  sentLead: string
   invalidName: string
   invalidEmail: string
   consentRequired: string
@@ -231,6 +232,7 @@ export const PAGE_COPY: Record<Locale, PageCopy> = {
       noscript: 'JavaScript is off: the form still works — submitting sends your request directly and you will see the server response on this page.',
       successTitle: 'Check your inbox.',
       successLead: 'We sent a confirmation link to {email}. Click it to verify your address and complete your request. The link expires in {hours} hours.',
+      sentLead: 'We sent a confirmation link to the address you submitted. Click it to verify your address and complete your request — the link expires in 72 hours.',
       invalidName: 'Enter your name (max 100 characters).',
       invalidEmail: 'Enter a valid email address.',
       consentRequired: 'Please tick the box to confirm you agree to be contacted.',
@@ -318,6 +320,7 @@ export const PAGE_COPY: Record<Locale, PageCopy> = {
       noscript: 'JavaScript está desativado: o formulário continua funcionando — o envio é feito diretamente e a resposta do servidor aparece nesta página.',
       successTitle: 'Verifique sua caixa de entrada.',
       successLead: 'Enviamos um link de confirmação para {email}. Clique nele para verificar seu endereço e concluir sua solicitação. O link expira em {hours} horas.',
+      sentLead: 'Enviamos um link de confirmação para o endereço informado. Clique nele para verificar seu endereço e concluir sua solicitação — o link expira em 72 horas.',
       invalidName: 'Informe seu nome (máximo de 100 caracteres).',
       invalidEmail: 'Informe um e-mail válido.',
       consentRequired: 'Marque a caixa para confirmar que você concorda em ser contatado(a).',

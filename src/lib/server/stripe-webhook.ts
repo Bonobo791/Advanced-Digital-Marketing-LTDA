@@ -8,7 +8,18 @@
  */
 import { EMAIL } from '$lib/constants'
 import { MailjetError, sendMailjetMessage } from './mailjet.ts'
-import { StripeError, getCheckoutSession, verifyStripeWebhookSignature, type CheckoutSessionStatus } from './stripe.ts'
+import {
+  STRIPE_SIGNATURE_MAX_AGE_SECONDS,
+  StripeError,
+  getCheckoutSession,
+  verifyStripeWebhookSignature,
+  type CheckoutSessionStatus,
+} from './stripe.ts'
+
+/** Removes the dedupe marker so a Stripe redelivery can be processed again. */
+function unmarkProcessed(key: string): void {
+  processedEvents.delete(key)
+}
 
 /** Clears the in-memory redelivery dedupe (test isolation). */
 export function resetWebhookDedupe(): void {
@@ -22,7 +33,7 @@ const DEDUPE_TTL_MS = 24 * 60 * 60_000
 
 export type StripeWebhookOutcome =
   | { handled: true; action: string }
-  | { handled: false; code: 'missing_secret' | 'bad_signature' | 'stale_timestamp' | 'malformed' }
+  | { handled: false; code: 'missing_secret' | 'bad_signature' | 'stale_timestamp' | 'malformed' | 'processing_failed' }
 
 function isProcessed(key: string): boolean {
   const expiry = processedEvents.get(key)
@@ -89,50 +100,41 @@ export async function processStripeWebhookEvent(input: {
   const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim() ?? ''
   const verified = verifyStripeWebhookSignature({ payload: input.payload, signatureHeader: input.signatureHeader, secret })
   if (!verified.ok) return { handled: false, code: verified.code }
-  if (now - verified.ts * 1000 > 5 * 60 * 1000) return { handled: false, code: 'stale_timestamp' }
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(input.payload)
-  } catch {
-    return { handled: false, code: 'malformed' }
+  if (now - verified.ts * 1000 > STRIPE_SIGNATURE_MAX_AGE_SECONDS * 1000) {
+    return { handled: false, code: 'stale_timestamp' }
   }
-  if (typeof parsed !== 'object' || parsed === null) return { handled: false, code: 'malformed' }
-  const record = parsed as Record<string, unknown>
-  const eventId = typeof record.id === 'string' ? record.id : undefined
-  const type = typeof record.type === 'string' ? record.type : ''
+
+  const event = parseStripeEvent(input.payload)
+  if (!event) return { handled: false, code: 'malformed' }
+  const { eventId, type, sessionId } = event
   if (!eventId) return { handled: false, code: 'malformed' }
 
   if (isProcessed(eventId)) {
     console.info(`[stripe-webhook] duplicate event ${eventId}; acknowledging without re-notifying`)
     return { handled: true, action: 'deduplicated' }
   }
-  markProcessed(eventId)
 
   // Only checkout.session.completed drives an action today; other event types
   // are valid but have no handler — acknowledge them so Stripe stops retrying.
   if (type !== 'checkout.session.completed') {
+    markProcessed(eventId)
     console.info(`[stripe-webhook] ignoring event type ${type || '(unknown)'} (no action configured)`)
     return { handled: true, action: 'ignored' }
   }
+  if (!sessionId) return { handled: false, code: 'malformed' }
 
-  const object = typeof record.data === 'object' && record.data !== null ? (record.data as Record<string, unknown>).object : undefined
-  const sessionId = typeof object === 'object' && object !== null ? (object as Record<string, unknown>).id : undefined
-  if (typeof sessionId !== 'string') return { handled: false, code: 'malformed' }
+  // Marked only after event + session validation: a lookup or notification
+  // failure unmarks (below) so Stripe's redelivery (route returns 5xx for
+  // processing_failed) retries instead of acknowledging a lost notification.
+  markProcessed(eventId)
 
   try {
-    const session = await getSession(sessionId)
-    if (session && session.paymentStatus === 'paid') {
-      await sendEmail({
-        toEmail: ownerEmail(),
-        toName: 'Advanced Digital Marketing',
-        subject: `Stripe payment completed: ${session.clientReferenceId ?? session.id}`,
-        textPart: sessionNotificationText(session),
-      })
-      console.log(`[stripe-webhook] session ${sessionId} paid; owner notified`)
-    }
+    await notifyPaidSession(sessionId, getSession, sendEmail)
     return { handled: true, action: 'checkout.session.completed' }
   } catch (error) {
+    // Loud on the server log AND retryable: unmark so Stripe's redelivery can
+    // process the event again instead of permanently losing the notification.
+    unmarkProcessed(eventId)
     if (error instanceof StripeError) {
       console.error(`[stripe-webhook] session lookup failed for ${sessionId}: ${error.code}`)
     } else if (error instanceof MailjetError) {
@@ -140,6 +142,42 @@ export async function processStripeWebhookEvent(input: {
     } else {
       console.error(`[stripe-webhook] processing failed for ${sessionId}`, error)
     }
-    return { handled: true, action: 'failed-loud' }
+    return { handled: false, code: 'processing_failed' }
+  }
+}
+
+/** Parses the Stripe event payload into its id, type and (for completed
+ *  sessions) the session id — kept separate so the processor stays flat. */
+function parseStripeEvent(payload: string): { eventId: string | undefined; type: string; sessionId: string | undefined } | undefined {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(payload)
+  } catch {
+    return undefined
+  }
+  if (typeof parsed !== 'object' || parsed === null) return undefined
+  const record = parsed as Record<string, unknown>
+  const eventId = typeof record.id === 'string' ? record.id : undefined
+  const type = typeof record.type === 'string' ? record.type : ''
+  const object = typeof record.data === 'object' && record.data !== null ? (record.data as Record<string, unknown>).object : undefined
+  const sessionId = typeof object === 'object' && object !== null ? (object as Record<string, unknown>).id : undefined
+  return { eventId, type, sessionId: typeof sessionId === 'string' ? sessionId : undefined }
+}
+
+/** Emails the owner when the completed session is paid. Throws on failure. */
+async function notifyPaidSession(
+  sessionId: string,
+  getSession: typeof getCheckoutSession,
+  sendEmail: typeof sendMailjetMessage,
+): Promise<void> {
+  const session = await getSession(sessionId)
+  if (session?.paymentStatus === 'paid') {
+    await sendEmail({
+      toEmail: ownerEmail(),
+      toName: 'Advanced Digital Marketing',
+      subject: `Stripe payment completed: ${session.clientReferenceId ?? session.id}`,
+      textPart: sessionNotificationText(session),
+    })
+    console.log(`[stripe-webhook] session ${sessionId} paid; owner notified`)
   }
 }

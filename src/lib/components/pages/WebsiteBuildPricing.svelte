@@ -75,6 +75,12 @@
   let price = $derived(websiteBuildPrice(locale, type, kind))
   let submitting = $state(false)
   let errorMessage = $state<string | undefined>(undefined)
+  // One idempotency key per selected build (type:kind), reused across retries:
+  // if the server created the checkout but the response was lost, retrying the
+  // SAME build must reuse the key so Stripe/MP dedupes instead of creating a
+  // second payable checkout. A new selection generates a new key.
+  let idempotencyKey = $state<string | undefined>(undefined)
+  let keySelection = $state('')
 
   function errorMessageFor(code: string | undefined): string {
     switch (code) {
@@ -109,14 +115,18 @@
 
       // pt-BR bills BRL through Mercado Pago; en-US bills USD through Stripe.
       const endpoint = locale === 'en-US' ? '/api/checkout/stripe' : '/api/checkout/build'
+      const selection = `${type}:${kind}`
+      if (selection !== keySelection) {
+        idempotencyKey = crypto.randomUUID()
+        keySelection = selection
+      }
       const result = await fetchCheckoutUrl(endpoint, {
         flow: 'build',
         type,
         kind,
-        // Fresh per click: the checkout reference is charged once when the
-        // customer pays, so retrying a lost response must never reuse a stale
-        // reference.
-        idempotencyKey: crypto.randomUUID(),
+        // Reused for the same selection (see above) so a retry after a lost
+        // response never creates a second payable checkout.
+        idempotencyKey: idempotencyKey ?? crypto.randomUUID(),
         locale,
       })
       if (!result.ok) {

@@ -55,14 +55,14 @@ No local DB:   the token is self-contained (signed payload), so nothing is
   `MAILJET_SANDBOX_MODE=true`.
 - **Flow:** `src/lib/server/contact.ts` — `submitContactRequest` issues the
   token and sends the localized verification email; `verifyContactRequest`
-  validates the token, dedupes replays (in-memory, best-effort per serverless
+  validates the token, dedupes replays (in-memory, best-effort per server
   instance, like the rate limiter) and emails the owner the verified contact.
 - **Endpoints:** `src/routes/api/contact/submit/+server.ts` (POST) and the
   two verify pages `src/routes/contact/verify/` +
   `src/routes/pt-br/contato/verificar/`.
 - **UI:** `src/lib/components/pages/ContactForm.svelte` (mounted on
-  `ContactPage.svelte`) and `ContactVerifyPage.svelte` (verified / invalid /
-  expired states).
+  `ContactPage.svelte`) and `ContactVerifyPage.svelte` (verified /
+  notification_failed / invalid / expired / unconfigured states).
 
 ### Why MailJet's Send API v3.1 and not templates
 

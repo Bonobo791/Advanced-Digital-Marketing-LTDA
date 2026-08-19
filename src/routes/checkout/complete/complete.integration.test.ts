@@ -19,6 +19,7 @@ const loadArgs = (query: string, ip = '203.0.113.9') => ({
   url: new URL(`https://example.com/checkout/complete/${query}`),
   request: new Request(`https://example.com/checkout/complete/${query}`),
   getClientAddress: (): string => ip,
+  setHeaders: () => {},
 })
 
 const paidSession = {
@@ -52,6 +53,55 @@ describe('checkout/complete (Stripe) load', () => {
       amountTotal: 460,
       clientReferenceId: 'seo-content+hosting',
     })
+  })
+
+  it('confirms every server-created catalog package and website-build combo', async () => {
+    const combos = [
+      { clientReferenceId: 'seo-content', amountTotal: 400 },
+      { clientReferenceId: 'backlinks', amountTotal: 600 },
+      { clientReferenceId: 'hosting', amountTotal: 60 },
+      { clientReferenceId: 'website-build:website:new', amountTotal: 750 },
+      { clientReferenceId: 'website-build:website:migration', amountTotal: 1500 },
+      { clientReferenceId: 'website-build:ecommerce:new', amountTotal: 1500 },
+      { clientReferenceId: 'website-build:ecommerce:migration', amountTotal: 3000 },
+      { clientReferenceId: 'paid-search', amountTotal: 100 },
+      { clientReferenceId: 'seo-content+meta-ads', amountTotal: 500 },
+    ]
+    for (const patch of combos) {
+      mockGetSession.mockResolvedValue({ ...paidSession, ...patch })
+      expect(await load(loadArgs('?session_id=cs_test_1') as never)).toEqual({
+        state: 'confirmed',
+        sessionId: 'cs_test_1',
+        amountTotal: patch.amountTotal,
+        clientReferenceId: patch.clientReferenceId,
+      })
+    }
+  })
+
+  it('never claims success for a paid session not bound to a server-created checkout', async () => {
+    // Same binding rule as the Mercado Pago flows: wrong client_reference_id,
+    // amount or currency must render the loud error state, never the success.
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const mismatches = [
+        { clientReferenceId: 'unrelated:product:1', amountTotal: 460, currency: 'usd' },
+        { clientReferenceId: 'seo-content+hosting', amountTotal: 459, currency: 'usd' },
+        { clientReferenceId: 'seo-content+hosting', amountTotal: 460, currency: 'brl' },
+        { clientReferenceId: null, amountTotal: 460, currency: 'usd' },
+        { clientReferenceId: 'website-build:website:new', amountTotal: 749, currency: 'usd' },
+        { clientReferenceId: 'seo-content+seo-content', amountTotal: 800, currency: 'usd' },
+        { clientReferenceId: 'backlinks+seo-content', amountTotal: 1000, currency: 'usd' },
+        { clientReferenceId: 'paid-search', amountTotal: 99, currency: 'usd' },
+        { clientReferenceId: 'unknown-service', amountTotal: 460, currency: 'usd' },
+      ]
+      for (const patch of mismatches) {
+        mockGetSession.mockResolvedValue({ ...paidSession, ...patch })
+        expect(await load(loadArgs('?session_id=cs_test_1') as never)).toEqual({ state: 'error' })
+      }
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('does not match a server-created checkout'))
+    } finally {
+      warnSpy.mockRestore()
+    }
   })
 
   it('reports pending while the session is open', async () => {

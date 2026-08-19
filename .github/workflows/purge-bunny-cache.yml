@@ -28,6 +28,14 @@ jobs:
       BUNNY_API_KEY: ${{ secrets.BUNNY_API_KEY }}
       PURGE_REQUIRE_CREDS: '1'
     steps:
+      - name: Refuse manual runs from non-main branches
+        # Coolify only deploys main; a manual dispatch on another branch would
+        # make EXPECTED_COMMIT undeployable and the wait step would time out.
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
+        run: |
+          echo "Manual cache purges must be started from main (Coolify deploys main; EXPECTED_COMMIT must be deployable)."
+          exit 1
+
       - name: Checkout
         # Pinned to an immutable commit (zizmor: unpinned action reference in a
         # job with deployment credentials) and Git credentials are not persisted

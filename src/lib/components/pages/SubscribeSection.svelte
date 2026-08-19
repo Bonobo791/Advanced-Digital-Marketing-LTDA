@@ -24,6 +24,7 @@
     type CatalogServiceId,
   } from '$lib/catalog'
   import { parseBRLInput } from '$lib/brl'
+  import { BRL_USD_REFERENCE_RATE } from '$lib/catalog'
   import { parseUSDInput } from '$lib/usd'
   import { fireBeginCheckout } from '$lib/client/analytics'
   import { fetchCheckoutUrl } from '$lib/client/checkout'
@@ -112,10 +113,18 @@
     })
   })
 
+  /** Parses an ad-spend input with the locale's separator conventions — the
+   *  SAME parser must validate and price, or a valid USD entry like
+   *  "1,000.50" would fail validation while a BRL-shaped "1.000,50" would
+   *  silently price as 0. */
+  function parseSpend(value: string): number | undefined {
+    return locale === 'en-US' ? parseUSDInput(value) : parseBRLInput(value)
+  }
+
   function spendOf(id: CatalogServiceId): number {
     const value = spends[id]
     if (value === undefined) return 0
-    return locale === 'en-US' ? parseUSDInput(value) ?? 0 : parseBRLInput(value) ?? 0
+    return parseSpend(value) ?? 0
   }
 
   function priceOf(id: CatalogServiceId): { amount: string } {
@@ -139,7 +148,7 @@
       const pricing = SERVICES[id].pricing
       if (pricing.kind === 'fixed') {
         return locale === 'en-US'
-          ? sum + (pricing.monthlyUSD ?? pricing.monthlyBRL / 5)
+          ? sum + (pricing.monthlyUSD ?? pricing.monthlyBRL / BRL_USD_REFERENCE_RATE)
           : sum + pricing.monthlyBRL
       }
       return locale === 'en-US' ? sum + adSpendFeeUSD(spendOf(id)) : sum + adSpendFeeBRL(spendOf(id))
@@ -206,7 +215,7 @@
       return
     }
     for (const id of adsIds) {
-      if (selected.has(id) && parseBRLInput(spends[id] ?? '') === undefined) {
+      if (selected.has(id) && parseSpend(spends[id] ?? '') === undefined) {
         errorMessage = text.invalidSpend
         return
       }

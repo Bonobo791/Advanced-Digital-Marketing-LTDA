@@ -114,4 +114,42 @@ describe('processStripeWebhookEvent', () => {
     const outcome = await processStripeWebhookEvent({ payload, signatureHeader, sendEmail: vi.fn() })
     expect(outcome).toEqual({ handled: false, code: 'missing_secret' })
   })
+
+  it('does not consume the dedupe slot when the notification fails — a redelivery retries', async () => {
+    // A transient MailJet/Stripe-API failure must not lose the owner
+    // notification forever: the event is unmarked and returned as
+    // processing_failed (the route answers 5xx, Stripe redelivers), and the
+    // retry with a healthy notifier processes it exactly once.
+    const getSessionImpl = vi.fn(async () => ({
+      id: 'cs_test_1',
+      status: 'complete',
+      paymentStatus: 'paid',
+      customerEmail: null,
+      amountTotal: 100,
+      currency: 'usd',
+      clientReferenceId: 'seo-content',
+    }))
+    const failing = vi.fn(async () => {
+      throw new Error('mailjet down')
+    })
+    const first = signedEvent(completedEvent())
+    const failed = await processStripeWebhookEvent({
+      payload: first.payload,
+      signatureHeader: first.signatureHeader,
+      getSessionImpl,
+      sendEmail: failing,
+    })
+    expect(failed).toEqual({ handled: false, code: 'processing_failed' })
+
+    const healthy = vi.fn(async (_input: MailjetMessageInput) => ({ messageId: 'm2' }))
+    const second = signedEvent(completedEvent())
+    const retried = await processStripeWebhookEvent({
+      payload: second.payload,
+      signatureHeader: second.signatureHeader,
+      getSessionImpl,
+      sendEmail: healthy,
+    })
+    expect(retried).toEqual({ handled: true, action: 'checkout.session.completed' })
+    expect(healthy).toHaveBeenCalledTimes(1)
+  })
 })

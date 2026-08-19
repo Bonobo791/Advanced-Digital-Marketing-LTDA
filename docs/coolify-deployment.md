@@ -33,8 +33,9 @@ container.
 4. **Environment variables** (Application → Environment Variables) — never
    baked into the image; `.env` is excluded via `.dockerignore`:
    - `MERCADO_PAGO_ACCESS_TOKEN` (and `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN` for
-     test mode), `MERCADO_PAGO_WEBHOOK_SECRET` (webhook signatures),
-     `PUBLIC_MERCADO_PAGO_PUBLIC_KEY`
+     test mode), `MERCADO_PAGO_WEBHOOK_SECRET` (webhook signatures; the
+     hosted-checkout redirect flow needs no public key — see
+     docs/mercado-pago-subscriptions.md)
    - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` (en-US USD checkout — see
      docs/stripe-checkout.md)
    - `MAILJET_API_KEY`, `MAILJET_API_SECRET`, `MAILJET_SENDER_EMAIL`,

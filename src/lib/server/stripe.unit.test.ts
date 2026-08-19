@@ -88,7 +88,10 @@ describe('createCheckoutSession', () => {
   }
 
   beforeEach(() => vi.stubEnv('STRIPE_SECRET_KEY', 'sk_test_123'))
-  afterEach(() => vi.unstubAllEnvs())
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
 
   it('POSTs a form-encoded session with recurring price_data and returns the URL', async () => {
     const fetchImpl = vi.fn(async () => new Response(sessionResponse(), { status: 200 }))
@@ -168,7 +171,10 @@ describe('isAllowedCheckoutUrl', () => {
 
 describe('getCheckoutSession', () => {
   beforeEach(() => vi.stubEnv('STRIPE_SECRET_KEY', 'sk_test_123'))
-  afterEach(() => vi.unstubAllEnvs())
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
 
   it('returns a sanitized subset', async () => {
     vi.stubGlobal(
