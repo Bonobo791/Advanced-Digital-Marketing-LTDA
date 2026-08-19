@@ -30,6 +30,13 @@ npm run build
 
 The public pages remain prerendered.
 
+## Cache purge
+
+The site is served through Bunny CDN in front of Netlify. A GitHub Actions
+workflow (`.github/workflows/purge-bunny-cache.yml`) waits until the deployed
+commit is live on Netlify, then purges the Bunny pull zone — see
+`docs/bunny-cdn-purge.md` for the design, setup, and CI-less fallback.
+
 ## Test and quality checks
 
 ```bash

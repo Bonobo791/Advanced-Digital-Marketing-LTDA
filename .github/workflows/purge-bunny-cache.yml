@@ -1,0 +1,44 @@
+name: Purge Bunny CDN after production deploy
+
+# Single purge trigger per deploy event. This workflow is the ONLY place the
+# cache is ever purged: Netlify deploys from main, the workflow waits for the
+# exact commit to be live (wait-for-commit-marker), then purges the Bunny
+# pull zone. There is deliberately no in-container entrypoint — see
+# docs/bunny-cdn-purge.md for why, and for the CI-less fallback design.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  purge:
+    name: Wait for deploy, then purge
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NETLIFY_SITE_ID: ${{ vars.NETLIFY_SITE_ID }}
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      EXPECTED_COMMIT: ${{ github.sha }}
+      EXPECTED_BRANCH: main
+      BUNNY_PULL_ZONE_ID: ${{ vars.BUNNY_PULL_ZONE_ID }}
+      BUNNY_API_KEY: ${{ secrets.BUNNY_API_KEY }}
+      PURGE_REQUIRE_CREDS: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Never purge at deploy-start and never blindly: block until the exact
+      # commit is serving (deploy state 'ready'), then purge. On timeout,
+      # deploy failure, or API error the job fails loudly instead of purging
+      # against stale content.
+      - name: Wait until the new commit is serving (wait-for-commit-marker)
+        run: node scripts/wait-for-netlify-deploy.mjs
+
+      # With creds set (they always are here), a failed purge must log loudly
+      # and fail the job. PURGE_REQUIRE_CREDS=1 turns the script's dev no-op
+      # into a hard failure so a missing key can never silently skip the purge.
+      - name: Purge the Bunny CDN pull zone
+        run: node scripts/purge-bunny-cache.mjs
