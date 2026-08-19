@@ -72,7 +72,7 @@ function buildLineItems(flow: Extract<ValidPayload, { flow: 'build' }>) {
     throw new PricingError('invalid_build', 'Invalid build selection')
   }
   return {
-    externalReference: `website-build:${type}:${kind}`,
+    externalReference: `website-build:${String(type)}:${String(kind)}`,
     items: [
       {
         name: websiteBuildTitle(flow.locale, type, kind),

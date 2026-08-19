@@ -112,14 +112,22 @@ async function pollOnce({
     }
     return resolveCoolifyDeployment(await response.json(), expectedCommit, { applicationUuid, applicationName })
   } catch (cause) {
+    // Every failure becomes a typed Error here — never a rethrown unknown
+    // (the caller handles rejections; a raw rethrow would risk an unhandled
+    // promise rejection and trips the SAST heuristic).
     if (controller.signal.aborted) {
       throw new Error(
         `[wait-for-coolify-deploy] FATAL: timed out after ${Math.round(remainingMs / 1000)}s of pending ` +
           'Coolify API I/O — refusing to purge',
       )
     }
-    if (cause instanceof Error && cause.message.startsWith('[wait-for-coolify-deploy]')) throw cause
-    throw new Error(`[wait-for-coolify-deploy] FATAL: Coolify API request failed: ${cause.message}`, { cause })
+    if (cause instanceof Error && cause.message.startsWith('[wait-for-coolify-deploy]')) {
+      throw new Error(cause.message)
+    }
+    const detail = cause instanceof Error ? cause.message : String(cause)
+    throw new Error(`[wait-for-coolify-deploy] FATAL: Coolify API request failed: ${detail}`, {
+      cause: cause instanceof Error ? cause : undefined,
+    })
   } finally {
     clearTimeout(abortTimer)
   }
@@ -164,36 +172,28 @@ function reportReady(result, expectedCommit, attempts) {
  * appeared within the grace window, POST /api/v1/deploy exactly once.
  * Returns the updated triggerSent flag.
  */
-async function maybeTriggerDeploy({
-  triggerSent,
-  result,
-  startedAt,
-  now,
-  triggerAfterMs,
-  deadline,
-  base,
-  apiToken,
-  applicationUuid,
-  deployImpl,
-}) {
+async function maybeTriggerDeploy({ triggerSent, result, startedAt, now, config }) {
   if (triggerSent) return true
   if (result.status !== 'not-found') return false
-  if (now() - startedAt < triggerAfterMs) return false
+  if (now() - startedAt < config.triggerAfterMs) return false
   // The fallback POST is covered by the same deployment deadline as the polls:
   // a hung request must abort and fail loudly, never outlive the budget.
-  const remainingMs = deadline - now()
+  const remainingMs = config.deadline - now()
   const controller = new AbortController()
   const abortTimer = setTimeout(() => controller.abort(), Math.max(remainingMs, 0))
   try {
-    await deployImpl(base, apiToken, applicationUuid, controller.signal)
+    await config.deployImpl(config.base, config.apiToken, config.applicationUuid, controller.signal)
   } catch (cause) {
     clearTimeout(abortTimer)
     if (controller.signal.aborted) {
       throw new Error(
-        `[wait-for-coolify-deploy] FATAL: deploy trigger did not complete within the deployment deadline`,
+        '[wait-for-coolify-deploy] FATAL: deploy trigger did not complete within the deployment deadline',
       )
     }
-    throw cause
+    const detail = cause instanceof Error ? cause.message : String(cause)
+    throw new Error(`[wait-for-coolify-deploy] FATAL: deploy trigger failed: ${detail}`, {
+      cause: cause instanceof Error ? cause : undefined,
+    })
   }
   clearTimeout(abortTimer)
   console.log('[wait-for-coolify-deploy] auto-deploy webhook missed the push; triggered a deploy from CI')
@@ -252,12 +252,7 @@ export async function waitForCoolifyDeploy({
       result,
       startedAt,
       now,
-      triggerAfterMs,
-      deadline,
-      base,
-      apiToken,
-      applicationUuid,
-      deployImpl,
+      config: { triggerAfterMs, deadline, base, apiToken, applicationUuid, deployImpl },
     })
     // Never sleep past the deployment deadline: cap the interval at the
     // remaining budget so the timeout error fires on schedule.

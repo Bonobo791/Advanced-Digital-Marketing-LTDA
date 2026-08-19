@@ -19,7 +19,7 @@ const loadArgs = (query: string, ip = '203.0.113.9') => ({
   url: new URL(`https://example.com/checkout/complete/${query}`),
   request: new Request(`https://example.com/checkout/complete/${query}`),
   getClientAddress: (): string => ip,
-  setHeaders: () => {},
+  setHeaders: () => undefined,
 })
 
 const paidSession = {
@@ -81,7 +81,7 @@ describe('checkout/complete (Stripe) load', () => {
   it('never claims success for a paid session not bound to a server-created checkout', async () => {
     // Same binding rule as the Mercado Pago flows: wrong client_reference_id,
     // amount or currency must render the loud error state, never the success.
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     try {
       const mismatches = [
         { clientReferenceId: 'unrelated:product:1', amountTotal: 460, currency: 'usd' },

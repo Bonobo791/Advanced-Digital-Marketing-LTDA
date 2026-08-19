@@ -153,8 +153,10 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
   const validated = validatePayload(parsed.payload)
   if ('error' in validated) {
     if (native) {
-      const locale = parsed.payload.locale === 'pt-BR' ? 'pt-BR' : 'en-US'
-      throw redirect(303, `${CONTACT_ROUTES[locale]}?error=${validated.error}`)
+      // Literal per-locale route (no dynamic record index — the locale value
+      // is request-controlled and must never drive an object lookup).
+      const route = parsed.payload.locale === 'pt-BR' ? '/pt-br/contato/' : '/contact/'
+      throw redirect(303, `${route}?error=${validated.error}`)
     }
     return json({ error: validated.error }, { status: 400 })
   }

@@ -19,19 +19,21 @@
 
 This is a SvelteKit 2 / Svelte 5 site using TypeScript, Vite, and Tailwind CSS.
 
-**Tech stack:** Node 24 / npm 11 · SvelteKit 2 + Svelte 5 (runes) · TypeScript (strict) · Vite 6 · Tailwind CSS 3 + PostCSS/autoprefixer · Fontsource (Archivo, JetBrains Mono, Overpass) · Vitest + fast-check (tests) · Stryker (mutation testing) · Docker + Coolify (adapter-node; Bunny CDN in front).
+**Tech stack:** Node 24 / npm 11, SvelteKit 2 + Svelte 5 (runes), TypeScript (strict), Vite 6, Tailwind CSS 3 + PostCSS/autoprefixer. Fonts: Fontsource (Archivo, JetBrains Mono, Overpass). Tests: Vitest + fast-check, Stryker for mutation testing. Deployment: Docker + Coolify (adapter-node) behind Bunny CDN.
 
-- `src/routes/` — public pages (en + `pt-br/`): home, `about/`, `contact/`, the `services/` index + `services/[slug]/` details (and `pt-br/servicos/` variants), plus the `checkout/complete/` return pages (en Stripe + pt-BR Mercado Pago). API routes run on the Node server: `api/checkout/subscription/`, `api/checkout/build/`, `api/checkout/stripe/`, `api/contact/submit/`, `api/webhooks/*`, `api/health/`.
+- `src/routes/` — public pages in English (`en`) and Brazilian Portuguese (`pt-BR`): home, `about/`, `contact/`, the `services/` index + `services/[slug]/` details (and `pt-br/servicos/` variants), plus the `checkout/complete/` return pages (en Stripe + pt-BR Mercado Pago).
+- API routes run on the Node server: `api/checkout/subscription/`, `api/checkout/build/`, `api/checkout/stripe/`, `api/contact/submit/`, `api/webhooks/*`, `api/health/`.
 - `src/lib/components/` contains reusable `chrome` (navigation and footer), `cyber` (visual effects), and `pages` components.
 - `src/lib/` contains locale logic, constants, client helpers, and tests.
 - `static/` contains public fonts and static assets; `src/lib/assets/` contains imported visual assets.
 - `new-assets/` — gitignored design **handoff** folder. New design mockups, drafts, and assets are delivered here for implementation only. Nothing that ships on the live site lives here: implement mockups as routes/components, and move any asset that should go live into its proper app location (`src/lib/assets/` for imported assets, `static/` for public ones) before shipping. Do not treat `new-assets/` as a source of truth for production content or assets.
 - Deployment runtime code lives in `src/hooks.server.ts` (locale/geo routing, formerly the Netlify edge function), `Dockerfile` (adapter-node image for Coolify), and `.github/workflows/purge-bunny-cache.yml` (post-deploy CDN purge). The legacy `netlify/` directory is gone.
-- `scripts/` contains build-time asset synchronization and the deployment wait/purge helpers (`scripts/wait-for-coolify-deploy.mjs`, `scripts/purge-bunny-cache.mjs`). Do not edit generated `.svelte-kit/`, `build/`, or `reports/` output.
+- `scripts/` contains build-time asset synchronization and the deployment wait/purge helpers (`scripts/wait-for-coolify-deploy.mjs`, `scripts/purge-bunny-cache.mjs`).
+- Do not edit generated `.svelte-kit/`, `build/`, or `reports/` output.
 
 ## Build, Test, and Development Commands
 
-Use Node 24 and npm 11, as pinned by `package.json` and the `Dockerfile` (`node:24-alpine`). On this dev box the default `node`/`npm` are distrobox wrappers that fail (podman is broken) — prepend a real Node 24 to `PATH` (e.g. `/tmp/node24/bin`).
+Use Node 24 and npm 11, as pinned by `package.json` and the `Dockerfile` (`node:24-alpine`). On this dev box the default `node`/`npm` are distrobox wrappers that fail (podman is broken) — prepend a real Node 24 to the `PATH` environment variable (e.g. `/tmp/node24/bin`).
 
 ```bash
 npm install              # install the locked dependency set

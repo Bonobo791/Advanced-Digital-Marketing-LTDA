@@ -124,7 +124,7 @@ describe('waitForCoolifyDeploy', () => {
         test: {
           fetchImpl,
           now: () => now,
-          sleep: async () => {
+          sleep: () => {
             now += 1000
           },
         },
@@ -207,9 +207,9 @@ describe('waitForCoolifyDeploy', () => {
     const deployImpl = vi.fn(
       (_base: string, _token: string, _uuid: string, signal?: AbortSignal) =>
         new Promise<Response>((_resolve, reject) => {
-          signal?.addEventListener('abort', () =>
-            reject(new DOMException('Aborted', 'AbortError')),
-          )
+          signal?.addEventListener('abort', () => {
+            reject(new DOMException('Aborted', 'AbortError'))
+          })
         }),
     )
     let now = 0
