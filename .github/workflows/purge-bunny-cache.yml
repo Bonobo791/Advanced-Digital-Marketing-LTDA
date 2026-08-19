@@ -17,7 +17,8 @@ permissions:
 jobs:
   purge:
     name: Wait for deploy, then purge
-    runs-on: ubuntu-latest
+    # Pinned runner (a mutable ubuntu-latest tag can change under a run).
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       COOLIFY_API_URL: ${{ vars.COOLIFY_API_URL }}

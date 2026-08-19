@@ -27,5 +27,8 @@ COPY --from=build /app/package.json ./package.json
 # maps only) and never writes files, so the runtime needs no root.
 USER node
 EXPOSE 3000
+# Container-level healthcheck (Coolify can also probe /api/health over HTTP).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(function(r){process.exit(r.ok?0:1)}).catch(function(){process.exit(1)})"
 # adapter-node listens on PORT (default 3000) / HOST (default 0.0.0.0).
 CMD ["node", "build"]
