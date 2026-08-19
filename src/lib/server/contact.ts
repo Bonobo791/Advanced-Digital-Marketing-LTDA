@@ -255,6 +255,56 @@ export function processedVerificationCount(): number {
 }
 
 /**
+ * In-flight owner notifications keyed by token hash.
+ *
+ * Two requests for the same token can overlap: the first marks the token and
+ * waits for MailJet while the second would otherwise see the marker and return
+ * `verified` immediately — even if the first send then fails. Concurrent
+ * requests therefore await the SAME in-flight send result instead of treating
+ * an in-progress marker as a successful delivery. Entries are removed as soon
+ * as the send settles (success or failure), so a later replay still hits the
+ * processed-set dedupe on success or retries on failure.
+ */
+const inFlightNotifications = new Map<string, Promise<void>>()
+
+/**
+ * Sends the owner notification, unmarking the token and rethrowing on failure
+ * so every awaiter reports `notification_failed` and a later click retries.
+ */
+async function deliverOwnerNotification(input: {
+  token: string
+  name: string
+  email: string
+  locale: Locale
+  issuedAt: number
+  subject: string | undefined
+}): Promise<void> {
+  try {
+    await sendMailjetMessage({
+      toEmail: contactOwnerEmail(),
+      toName: 'Advanced Digital Marketing',
+      subject: ownerNotificationSubject(input.name, input.email, input.locale),
+      textPart: ownerNotificationText(input.name, input.email, input.issuedAt, input.locale, input.subject),
+      // The owner's normal Reply action must reach the verified lead, not
+      // bounce back to the site's own inbox (sender) address.
+      replyToEmail: input.email,
+    })
+  } catch (error) {
+    // The address is verified; only the notification failed. Fail loud on
+    // the server log AND tell the visitor (a silent 'verified' would claim
+    // the request reached the owner when it did not) — and unmark the token
+    // so a later click retries the notification instead of losing the lead.
+    unmarkProcessed(input.token)
+    if (error instanceof MailjetError) {
+      console.error(`[contact] owner notification failed after verification; will retry on next click: ${error.code}`)
+    } else {
+      console.error('[contact] owner notification failed after verification; will retry on next click', error)
+    }
+    throw error
+  }
+}
+
+/**
  * Verifies a submission token and, on first use, emails the owner the
  * verified contact details. Returns the page state for the verify page.
  * `now` is injectable for tests.
@@ -268,28 +318,27 @@ export async function verifyContactRequest(token: string, now: number = Date.now
   }
   const { name, email, locale, issuedAt, expiresAt, subject } = result.payload
 
-  if (markProcessed(token, expiresAt * 1000, now)) {
+  const hash = createHash('sha256').update(token).digest('hex')
+  let notification = inFlightNotifications.get(hash)
+  if (!notification) {
+    if (markProcessed(token, expiresAt * 1000, now)) {
+      notification = deliverOwnerNotification({ token, name, email, locale, issuedAt, subject })
+      inFlightNotifications.set(hash, notification)
+      // Clear the in-flight entry on BOTH outcomes (success and failure) so a
+      // later replay hits the processed-set dedupe on success or retries on
+      // failure; the settlement handlers consume the rejection so no promise
+      // goes unhandled (the awaiter below handles it for the caller).
+      notification.then(
+        () => inFlightNotifications.delete(hash),
+        () => inFlightNotifications.delete(hash),
+      )
+    }
+  }
+
+  if (notification) {
     try {
-      await sendMailjetMessage({
-        toEmail: contactOwnerEmail(),
-        toName: 'Advanced Digital Marketing',
-        subject: ownerNotificationSubject(name, email, locale),
-        textPart: ownerNotificationText(name, email, issuedAt, locale, subject),
-        // The owner's normal Reply action must reach the verified lead, not
-        // bounce back to the site's own inbox (sender) address.
-        replyToEmail: email,
-      })
-    } catch (error) {
-      // The address is verified; only the notification failed. Fail loud on
-      // the server log AND tell the visitor (a silent 'verified' would claim
-      // the request reached the owner when it did not) — and unmark the token
-      // so a later click retries the notification instead of losing the lead.
-      unmarkProcessed(token)
-      if (error instanceof MailjetError) {
-        console.error(`[contact] owner notification failed after verification; will retry on next click: ${error.code}`)
-      } else {
-        console.error('[contact] owner notification failed after verification; will retry on next click', error)
-      }
+      await notification
+    } catch {
       return { status: 'notification_failed', name, email }
     }
   }

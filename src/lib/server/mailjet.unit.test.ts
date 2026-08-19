@@ -207,7 +207,10 @@ describe('sendMailjetMessage', () => {
     }
   })
 
-  it('sets Reply-To when a replyToEmail is provided (owner notification path)', async () => {
+  it('sets Reply-To as a single contact object when a replyToEmail is provided (owner notification path)', async () => {
+    // MailJet Send API v3.1 expects ReplyTo to be a single contact OBJECT
+    // (unlike the array-valued To/Cc/Bcc); an array makes the API reject the
+    // message, so the exact serialized shape is pinned here.
     let captured: { init: RequestInit } | undefined
     vi.stubGlobal(
       'fetch',
@@ -218,7 +221,8 @@ describe('sendMailjetMessage', () => {
     )
     await sendMailjetMessage({ ...validInput, replyToEmail: 'lead@example.com' })
     const body = JSON.parse(String(captured!.init.body)) as { Messages: Array<Record<string, unknown>> }
-    expect(body.Messages[0].ReplyTo).toEqual([{ Email: 'lead@example.com' }])
+    expect(body.Messages[0].ReplyTo).toEqual({ Email: 'lead@example.com' })
+    expect(Array.isArray(body.Messages[0].ReplyTo)).toBe(false)
   })
 
   it('omits Reply-To when none is provided (verification email path)', async () => {

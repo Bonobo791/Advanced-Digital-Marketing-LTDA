@@ -56,6 +56,33 @@ export type ServiceContent = {
   pricingAnchor?: string
 }
 
+/**
+ * Contact-route href that carries the option's subject so the owner
+ * notification can name the requested service (validated server-side).
+ */
+export function contactHref(contactRoute: string, subject: string | undefined): string {
+  return subject ? `${contactRoute}?subject=${encodeURIComponent(subject)}` : contactRoute
+}
+
+/**
+ * Single source of truth for an option CTA's destination — used by
+ * `ServicePage.svelte` and pinned by `services.unit.test.ts` so the resolved
+ * behavior (not the raw data field) is what the tests guard:
+ *  - explicit `pricingAnchor: null` → the contact form (with `?subject=` when
+ *    the option carries one);
+ *  - an explicit anchor → that anchor;
+ *  - otherwise the service-level default anchor, or the contact form when the
+ *    service has none.
+ */
+export function resolveOptionCtaHref(
+  option: Pick<ServiceOption, 'pricingAnchor'> & { subject?: string },
+  service: Pick<ServiceContent, 'pricingAnchor'>,
+  contactRoute: string,
+): string {
+  const anchor = option.pricingAnchor === null ? null : option.pricingAnchor ?? service.pricingAnchor ?? null
+  return anchor !== null ? anchor : contactHref(contactRoute, option.subject)
+}
+
 export const SERVICE_ROUTES: Record<ServiceId, Record<Locale, string>> = {
   'technical-seo': { 'en-US': '/services/technical-seo/', 'pt-BR': '/pt-br/servicos/technical-seo/' },
   geo: { 'en-US': '/services/geo/', 'pt-BR': '/pt-br/servicos/geo/' },

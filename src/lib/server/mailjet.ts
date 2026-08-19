@@ -118,7 +118,12 @@ function sanitizeForLog(value: string): string {
  * redacted preview.
  */
 function redactEmails(value: string): string {
-  return value.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, '[email redacted]')
+  // Local part: labels joined by . _ % + -; domain: dot-joined labels; TLD:
+  // 2+ letters. No character class on both sides of the separators, so the
+  // pattern cannot backtrack quadratically over long separator runs
+  // (SonarCloud: super-linear regex).
+  const EMAIL_LIKE_RE = /[A-Za-z0-9]+(?:[._%+-][A-Za-z0-9]+)*@(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}/g
+  return value.replace(EMAIL_LIKE_RE, '[email redacted]')
 }
 
 /**
@@ -126,18 +131,24 @@ function redactEmails(value: string): string {
  * "mj-0001", "send-0008") when parseable — used to tell an unvalidated sender
  * apart from a generic credential problem.
  */
-async function readMailjetErrorCode(response: Response): Promise<string | undefined> {
-  const body = await response.text().catch(() => '')
-  let code: string | undefined
+/** Extracts MailJet's classification ErrorCode from a response body (string only). */
+function parseErrorCode(body: string): string | undefined {
   try {
     const parsed = JSON.parse(body) as { ErrorCode?: unknown }
-    code = typeof parsed.ErrorCode === 'string' ? parsed.ErrorCode : undefined
+    return typeof parsed.ErrorCode === 'string' ? parsed.ErrorCode : undefined
   } catch {
     // Body is not JSON — the status code still tells us what failed.
+    return undefined
   }
+}
+
+async function readMailjetErrorCode(response: Response): Promise<string | undefined> {
+  const body = await response.text().catch(() => '')
+  const code = parseErrorCode(body)
   // Log the classification code plus a sanitized, recipient-redacted preview;
   // never the raw body (MailJet echoes the recipient address in send errors).
-  console.error(`[mailjet] error (HTTP ${response.status})${code ? ` code=${code}` : ''}: ${redactEmails(sanitizeForLog(body))}`)
+  const codeLabel = code ? ` code=${code}` : ''
+  console.error(`[mailjet] error (HTTP ${response.status})${codeLabel}: ${redactEmails(sanitizeForLog(body))}`)
   return code
 }
 
@@ -170,7 +181,10 @@ async function sendRequest(input: MailjetMessageInput, apiKey: string, apiSecret
         ...(input.htmlPart ? { HTMLPart: input.htmlPart } : {}),
         // Reply-To routes the recipient's Reply action to this address
         // (e.g. the verified lead's inbox) instead of the sender inbox.
-        ...(input.replyToEmail ? { ReplyTo: [{ Email: input.replyToEmail }] } : {}),
+        // MailJet v3.1 expects a single contact OBJECT here (unlike the
+        // array-valued To/Cc/Bcc) — an array would make the API reject the
+        // message.
+        ...(input.replyToEmail ? { ReplyTo: { Email: input.replyToEmail } } : {}),
       },
     ],
     // Root-level property (sibling of Messages): MailJet validates the payload
@@ -239,7 +253,8 @@ async function readSendMessage(response: Response): Promise<Record<string, unkno
       })
       .filter((part): part is string => part !== undefined)
       .join('; ')
-    console.error(`[mailjet] message_rejected${classified ? `: ${classified}` : ''}`)
+    const classifiedLabel = classified ? `: ${classified}` : ''
+    console.error(`[mailjet] message_rejected${classifiedLabel}`)
     throw new MailjetError('message_rejected', 'MailJet rejected the message payload')
   }
   return message
