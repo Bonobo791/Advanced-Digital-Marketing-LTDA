@@ -1,12 +1,12 @@
-node_modules
-reports
-dist
+/node_modules
+/reports
+/dist
 .svelte-kit
 .netlify
-build
+/build
 .DS_Store
 vite.config.ts.timestamp-*
-new-assets
+/new-assets
 reasonix.toml
 .env
 .env.local
@@ -16,6 +16,7 @@ reasonix.toml
 .playwright-cli
 .impeccable
 .codex
+.codacy
 # Local environment files with real credentials
 .env.local
 .reasonix

@@ -25,11 +25,11 @@ Prospects evaluate the agency from a desktop or mobile browser, often comparing 
 ## Capabilities and Constraints
 
 Public pages are Home, About, Contact, the Services index and Service detail
-pages (en + pt-BR), and the subscription checkout return page, built with
-SvelteKit and deployed as prerendered web pages (the checkout endpoint and the
-return page run as Netlify Functions). Preserve the existing routes, direct
-email behavior, registered-office details, services, and accessibility
-behavior. Do not fabricate results, client logos, testimonials,
+pages (en + pt-BR), and the payment checkout return pages, built with
+SvelteKit and server-rendered by the Node server (adapter-node on Coolify,
+with Bunny CDN caching the rendered HTML). Preserve the existing routes,
+direct-access behavior, registered-office details, services, and
+accessibility behavior. Do not fabricate results, client logos, testimonials,
 certifications, partnerships, or performance claims.
 
 ## Brand Commitments

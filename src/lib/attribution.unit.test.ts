@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { captureAttribution, parseAttribution, sanitizeAttribution } from './attribution'
+import {
+  captureAttribution,
+  isVerificationUrl,
+  parseAttribution,
+  sanitizeAttribution,
+} from './attribution'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -55,6 +60,38 @@ describe('sanitizeAttribution', () => {
     expect(sanitizeAttribution('nope')).toBeUndefined()
     expect(sanitizeAttribution({})).toBeUndefined()
     expect(sanitizeAttribution({ utm_source: '   ' })).toBeUndefined()
+  })
+})
+
+describe('isVerificationUrl', () => {
+  it('flags the en and pt-BR verification routes carrying a token', () => {
+    expect(isVerificationUrl(new URL('https://example.com/contact/verify/?token=abc'))).toBe(true)
+    expect(isVerificationUrl(new URL('https://example.com/pt-br/contato/verificar/?token=abc'))).toBe(true)
+    expect(isVerificationUrl(new URL('https://example.com/contact/verify/'))).toBe(true)
+  })
+
+  it('does not flag ordinary marketing or contact pages', () => {
+    expect(isVerificationUrl(new URL('https://example.com/'))).toBe(false)
+    expect(isVerificationUrl(new URL('https://example.com/contact/?utm_source=google'))).toBe(false)
+    expect(isVerificationUrl(new URL('https://example.com/contact/verify-notes/'))).toBe(false)
+  })
+})
+
+describe('captureAttribution — token-bearing routes are never a first touch', () => {
+  it('skips persistence on verification routes (token + PII must not reach localStorage)', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const setItem = vi.fn()
+    vi.stubGlobal('window', {
+      location: { href: 'https://example.com/pt-br/contato/verificar/?token=abc.def' },
+    })
+    vi.stubGlobal('document', { referrer: 'https://mail.example/' })
+    vi.stubGlobal('localStorage', { getItem: () => null, setItem, removeItem: () => {} })
+
+    const result = captureAttribution()
+
+    expect(result).toBeUndefined()
+    expect(setItem).not.toHaveBeenCalled()
+    expect(warn).not.toHaveBeenCalled()
   })
 })
 

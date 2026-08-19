@@ -1,14 +1,18 @@
 /**
- * Mercado Pago subscriptions client (spec §9, §14).
+ * Mercado Pago client (spec §9, §14).
  *
  * All Mercado Pago API access lives here — pages and routes call this
  * abstraction instead of talking to `api.mercadopago.com` directly.
  *
- * Flow: create a subscription WITHOUT an associated plan via
- * `POST /preapproval` with `status: "pending"` (hosted-checkout, pending
- * payment model). Mercado Pago stores the subscription and returns an
- * `init_point` URL that the browser is redirected to; billing, pausing,
- * cancelling and payment history all stay in Mercado Pago.
+ * Two hosted-checkout flows:
+ *  - Subscriptions: `POST /preapproval` with `status: "pending"` (no plan).
+ *    Mercado Pago stores the subscription and returns an `init_point` the
+ *    browser is redirected to; billing, pausing, cancelling and payment
+ *    history all stay in Mercado Pago.
+ *  - One-time payments: `POST /checkout/preferences` (Checkout Pro). The
+ *    preference is charged once when the customer pays on the hosted
+ *    checkout; `getPayment` verifies the resulting `payment_id` on the
+ *    return page.
  *
  * Server-only: reads `MERCADO_PAGO_ACCESS_TOKEN` / `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN`
  * from the environment. The access token never leaves this module.
@@ -16,6 +20,8 @@
 import { isSandboxAccessToken } from './sandbox.ts'
 
 export const PREAPPROVAL_ENDPOINT = 'https://api.mercadopago.com/preapproval'
+export const CHECKOUT_PRO_PREFERENCES_ENDPOINT = 'https://api.mercadopago.com/checkout/preferences'
+export const PAYMENTS_ENDPOINT = 'https://api.mercadopago.com/v1/payments'
 /**
  * Time budget for a single Mercado Pago API call.
  *
@@ -35,6 +41,31 @@ export type CreateSubscriptionInput = {
   amountBRL: number
   backUrl: string
   idempotencyKey: string
+}
+
+export type CheckoutPaymentMethods = {
+  /** Mercado Pago payment-type ids to exclude, e.g. `prepaid_card`. */
+  excludedPaymentTypes: readonly string[]
+  /** Maximum number of installments offered to the buyer (credit card). */
+  maxInstallments: number
+  /** Installments preselected in the checkout — 1 means full payment (à vista). */
+  defaultInstallments: number
+}
+
+export type CreateCheckoutPreferenceInput = {
+  title: string
+  /** One-time amount in BRL — always the server-computed build price. */
+  amountBRL: number
+  externalReference: string
+  backUrls: { success: string; failure: string; pending: string }
+  idempotencyKey: string
+  /**
+   * Which payment methods the hosted checkout offers (exclusions + credit
+   * installments). Required on purpose: omitting it would silently fall back
+   * to Checkout Pro's default "all methods" behavior (AGENTS.md: no silent
+   * fallbacks).
+   */
+  paymentMethods: CheckoutPaymentMethods
 }
 
 export type SubscriptionCreated = {
@@ -143,38 +174,31 @@ async function logMercadoPagoError(response: Response, code: MercadoPagoError['c
 }
 
 /**
- * Creates a Mercado Pago subscription (no associated plan) and returns the
- * hosted checkout URL. Throws `MercadoPagoError` with a machine-readable code;
- * the raw HTTP body is never surfaced to callers.
+ * POSTs a JSON body to a Mercado Pago endpoint with the access token and
+ * idempotency key, and returns the parsed JSON record. Every HTTP/network
+ * failure mode maps to a stable `MercadoPagoError` code; the raw body is only
+ * logged server-side, never returned to callers.
  */
-export async function createSubscription(input: CreateSubscriptionInput): Promise<SubscriptionCreated> {
-  const { accessToken, sandboxToken } = readCredentials()
+async function postMercadoPagoJson(
+  endpoint: string,
+  body: unknown,
+  idempotencyKey: string,
+): Promise<Record<string, unknown>> {
+  const { accessToken } = readCredentials()
   if (!accessToken) {
     throw new MercadoPagoError('missing_credentials', 'Mercado Pago access token is not configured')
   }
 
   let response: Response
   try {
-    response = await fetch(PREAPPROVAL_ENDPOINT, {
+    response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
-        'X-Idempotency-Key': input.idempotencyKey,
+        'X-Idempotency-Key': idempotencyKey,
       },
-      body: JSON.stringify({
-        reason: input.reason,
-        external_reference: input.externalReference,
-        payer_email: input.email,
-        auto_recurring: {
-          frequency: 1,
-          frequency_type: 'months',
-          transaction_amount: input.amountBRL,
-          currency_id: 'BRL',
-        },
-        back_url: input.backUrl,
-        status: 'pending',
-      }),
+      body: JSON.stringify(body),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     })
   } catch (error) {
@@ -193,14 +217,26 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
     throw new MercadoPagoError('api_error', `Mercado Pago returned HTTP ${response.status}`)
   }
 
-  let body: unknown
+  let parsed: unknown
   try {
-    body = await response.json()
+    parsed = await response.json()
   } catch {
     throw new MercadoPagoError('invalid_response', 'Mercado Pago returned malformed JSON')
   }
+  if (typeof parsed !== 'object' || parsed === null) {
+    throw new MercadoPagoError('invalid_response', 'Mercado Pago returned malformed JSON')
+  }
+  return parsed as Record<string, unknown>
+}
 
-  const record = typeof body === 'object' && body !== null ? (body as Record<string, unknown>) : {}
+/**
+ * Extracts and validates the hosted-checkout URL from a create response
+ * (`init_point` / `sandbox_init_point`, shared by preapprovals and Checkout
+ * Pro preferences). A missing or hostile URL throws a typed error, so a
+ * customer is never redirected to a foreign host.
+ */
+function parseCheckoutResponse(record: Record<string, unknown>): SubscriptionCreated {
+  const { accessToken, sandboxToken } = readCredentials()
   const id = typeof record.id === 'string' && record.id ? record.id : undefined
   const initPoint = selectInitPoint(record, accessToken, sandboxToken)
 
@@ -217,6 +253,70 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
   return { id, checkoutUrl: initPoint }
 }
 
+/**
+ * Creates a Mercado Pago subscription (no associated plan) and returns the
+ * hosted checkout URL. Throws `MercadoPagoError` with a machine-readable code;
+ * the raw HTTP body is never surfaced to callers.
+ */
+export async function createSubscription(input: CreateSubscriptionInput): Promise<SubscriptionCreated> {
+  const record = await postMercadoPagoJson(
+    PREAPPROVAL_ENDPOINT,
+    {
+      reason: input.reason,
+      external_reference: input.externalReference,
+      payer_email: input.email,
+      auto_recurring: {
+        frequency: 1,
+        frequency_type: 'months',
+        transaction_amount: input.amountBRL,
+        currency_id: 'BRL',
+      },
+      back_url: input.backUrl,
+      status: 'pending',
+    },
+    input.idempotencyKey,
+  )
+  return parseCheckoutResponse(record)
+}
+
+/**
+ * Creates a one-time Checkout Pro preference for a website build and returns
+ * the hosted checkout URL. The amount is always the server-computed build
+ * price (BRL); Mercado Pago handles the payment and redirects back through
+ * `back_urls` with `auto_return: "approved"`.
+ *
+ * `paymentMethods` narrows the hosted checkout to the configured methods and
+ * credit-card installments: `excluded_payment_types` removes every offered
+ * type outside the policy, `installments` caps the maximum number of
+ * installments (parcelado), and `default_installments: 1` preselects à vista.
+ * Mercado Pago's wallet (`account_money`) cannot be excluded by preference.
+ */
+export async function createCheckoutPreference(input: CreateCheckoutPreferenceInput): Promise<SubscriptionCreated> {
+  const record = await postMercadoPagoJson(
+    CHECKOUT_PRO_PREFERENCES_ENDPOINT,
+    {
+      items: [
+        {
+          title: input.title,
+          quantity: 1,
+          unit_price: input.amountBRL,
+          currency_id: 'BRL',
+        },
+      ],
+      payment_methods: {
+        excluded_payment_types: input.paymentMethods.excludedPaymentTypes.map((id) => ({ id })),
+        installments: input.paymentMethods.maxInstallments,
+        default_installments: input.paymentMethods.defaultInstallments,
+      },
+      back_urls: input.backUrls,
+      auto_return: 'approved',
+      external_reference: input.externalReference,
+    },
+    input.idempotencyKey,
+  )
+  return parseCheckoutResponse(record)
+}
+
 export type SubscriptionStatus = {
   id: string
   status: string | null
@@ -227,24 +327,25 @@ export type SubscriptionStatus = {
   currencyId: string | null
 }
 
+type GetResult = { found: true; record: Record<string, unknown> } | { found: false }
+
 /**
- * Fetches a subscription directly from Mercado Pago and returns a sanitized
- * subset of its state. Returns `undefined` when credentials are missing or the
- * subscription does not exist (404). Nothing is cached or persisted locally.
+ * GETs a Mercado Pago resource with the access token. A 404 maps to
+ * `{ found: false }`; every other failure mode throws a typed
+ * `MercadoPagoError`.
  */
-export async function getSubscription(subscriptionId: string): Promise<SubscriptionStatus | undefined> {
+async function getMercadoPagoJson(path: string): Promise<GetResult> {
   const { accessToken } = readCredentials()
-  if (!accessToken) return undefined
+  if (!accessToken) {
+    throw new MercadoPagoError('missing_credentials', 'Mercado Pago access token is not configured')
+  }
 
   let response: Response
   try {
-    response = await fetch(
-      `https://api.mercadopago.com/preapproval/${encodeURIComponent(subscriptionId)}`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      },
-    )
+    response = await fetch(path, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    })
   } catch (error) {
     if (isTimeoutError(error)) {
       throw new MercadoPagoError('timeout', 'Mercado Pago request timed out')
@@ -256,24 +357,121 @@ export async function getSubscription(subscriptionId: string): Promise<Subscript
     await logMercadoPagoError(response, 'unauthorized')
     throw new MercadoPagoError('unauthorized', 'Mercado Pago rejected the access token')
   }
-  if (response.status === 404) return undefined
+  if (response.status === 404) return { found: false }
   if (!response.ok) {
     await logMercadoPagoError(response, 'api_error')
     throw new MercadoPagoError('api_error', `Mercado Pago returned HTTP ${response.status}`)
   }
 
-  let body: unknown
+  let parsed: unknown
   try {
-    body = await response.json()
+    parsed = await response.json()
   } catch {
     throw new MercadoPagoError('invalid_response', 'Mercado Pago returned malformed JSON')
   }
+  if (typeof parsed !== 'object' || parsed === null) {
+    throw new MercadoPagoError('invalid_response', 'Mercado Pago returned malformed JSON')
+  }
+  return { found: true, record: parsed as Record<string, unknown> }
+}
 
-  const record = typeof body === 'object' && body !== null ? (body as Record<string, unknown>) : {}
-  if (typeof record.id !== 'string' || !record.id) {
+/**
+ * Fetches a subscription directly from Mercado Pago and returns a sanitized
+ * subset of its state. Returns `undefined` when credentials are missing or the
+ * subscription does not exist (404). Nothing is cached or persisted locally.
+ */
+/**
+ * Mercado Pago returns some resource ids as JSON numbers (payments) and others
+ * as strings (preapprovals); normalize both to the stable string form used by
+ * the site (URLs and response bodies). Missing/empty ids return undefined.
+ */
+function recordIdOf(record: Record<string, unknown>): string | undefined {
+  const raw = record.id
+  if (typeof raw === 'string' && raw.length > 0) return raw
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) return String(raw)
+  return undefined
+}
+
+/**
+ * Fetches a subscription directly from Mercado Pago and returns a sanitized
+ * subset of its state. Returns `undefined` only when the preapproval does not
+ * exist (404). A missing access token throws `missing_credentials` loudly
+ * (AGENTS.md) instead of silently failing the customer's return page.
+ */
+export async function getSubscription(subscriptionId: string): Promise<SubscriptionStatus | undefined> {
+  if (!readCredentials().accessToken) {
+    throw new MercadoPagoError('missing_credentials', 'Mercado Pago access token is not configured')
+  }
+
+  const result = await getMercadoPagoJson(
+    `${PREAPPROVAL_ENDPOINT}/${encodeURIComponent(subscriptionId)}`,
+  )
+  if (!result.found) return undefined
+  const id = recordIdOf(result.record)
+  if (!id) {
     throw new MercadoPagoError('invalid_response', 'Mercado Pago response is missing id')
   }
-  return mapSubscriptionStatus(record)
+  const status = mapSubscriptionStatus(result.record, id)
+  if (!status.status) {
+    // A 200 with an absent/non-string status is a malformed upstream response,
+    // not a subscription that is merely unconfirmed — the completion page
+    // must show the loud error state, never a guessed pending/confirmed claim.
+    throw new MercadoPagoError('invalid_response', 'Mercado Pago response is missing subscription status')
+  }
+  return status
+}
+
+export type PaymentStatus = {
+  id: string
+  status: string | null
+  statusDetail: string | null
+  externalReference: string | null
+  transactionAmount: number | null
+  currencyId: string | null
+}
+
+/**
+ * Fetches a one-time payment directly from Mercado Pago and returns a
+ * sanitized subset of its state. Returns `undefined` only when the payment
+ * does not exist (404). A missing access token throws `missing_credentials`
+ * loudly (AGENTS.md) instead of silently failing the customer's return page.
+ * Nothing is cached or persisted locally.
+ */
+export async function getPayment(paymentId: string): Promise<PaymentStatus | undefined> {
+  if (!readCredentials().accessToken) {
+    throw new MercadoPagoError('missing_credentials', 'Mercado Pago access token is not configured')
+  }
+
+  const result = await getMercadoPagoJson(`${PAYMENTS_ENDPOINT}/${encodeURIComponent(paymentId)}`)
+  if (!result.found) return undefined
+  const id = recordIdOf(result.record)
+  if (!id) {
+    throw new MercadoPagoError('invalid_response', 'Mercado Pago response is missing id')
+  }
+  const status = mapPaymentStatus(result.record, id)
+  if (!status.status) {
+    // A 200 with an absent/non-string status is a malformed upstream response,
+    // not a payment that is merely unconfirmed — the completion page must show
+    // the loud error state, never a guessed unconfirmed/pending claim.
+    throw new MercadoPagoError('invalid_response', 'Mercado Pago response is missing payment status')
+  }
+  return status
+}
+
+/**
+ * Maps a sanitized one-time payment status from a validated Mercado Pago
+ * payment record. Only safe, typed fields are copied — everything else in the
+ * response (card data, tokens, …) is dropped.
+ */
+function mapPaymentStatus(record: Record<string, unknown>, id: string): PaymentStatus {
+  return {
+    id,
+    status: typeof record.status === 'string' ? record.status : null,
+    statusDetail: typeof record.status_detail === 'string' ? record.status_detail : null,
+    externalReference: typeof record.external_reference === 'string' ? record.external_reference : null,
+    transactionAmount: typeof record.transaction_amount === 'number' ? record.transaction_amount : null,
+    currencyId: typeof record.currency_id === 'string' ? record.currency_id : null,
+  }
 }
 
 /**
@@ -281,14 +479,14 @@ export async function getSubscription(subscriptionId: string): Promise<Subscript
  * preapproval record. Only safe, typed fields are copied — everything else in
  * the response (card ids, tokens, …) is dropped.
  */
-function mapSubscriptionStatus(record: Record<string, unknown>): SubscriptionStatus {
+function mapSubscriptionStatus(record: Record<string, unknown>, id: string): SubscriptionStatus {
   const recurring =
     typeof record.auto_recurring === 'object' && record.auto_recurring !== null
       ? (record.auto_recurring as Record<string, unknown>)
       : {}
 
   return {
-    id: record.id as string,
+    id,
     status: typeof record.status === 'string' ? record.status : null,
     reason: typeof record.reason === 'string' ? record.reason : null,
     externalReference: typeof record.external_reference === 'string' ? record.external_reference : null,

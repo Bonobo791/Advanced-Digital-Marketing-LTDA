@@ -2,7 +2,7 @@
 
 # Advanced Digital Marketing LTDA
 
-Cyberpunk-themed marketing agency website. SvelteKit 2 + Svelte 5 (runes) + Tailwind CSS 3.4, deployed to Netlify with prerendered public pages.
+Cyberpunk-themed marketing agency website. SvelteKit 2 + Svelte 5 (runes) + Tailwind CSS 3.4, deployed as a Docker container on Coolify (adapter-node) behind Bunny CDN; pages are server-rendered (the CDN caches at the edge).
 
 **Owner / operator:** Andrew Philip Weilbacher
 **Services:** SEO & GEO, Paid Search, Paid Social, Web Design
@@ -28,7 +28,15 @@ optionally `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN` and `PUBLIC_SITE_URL`) — see
 npm run build
 ```
 
-The public pages remain prerendered.
+Pages are server-rendered; Bunny CDN caches the HTML at the edge (purged on every deploy).
+
+## Cache purge
+
+The site is served through Bunny CDN in front of the Coolify-hosted Node
+server. A GitHub Actions workflow (`.github/workflows/purge-bunny-cache.yml`)
+waits until the deployed commit finishes deploying on Coolify, then purges the
+Bunny pull zone — see `docs/bunny-cdn-purge.md` for the design, setup, and
+CI-less fallback, and `docs/coolify-deployment.md` for the Coolify setup.
 
 ## Test and quality checks
 

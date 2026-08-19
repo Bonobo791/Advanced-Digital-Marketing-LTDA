@@ -1,0 +1,17 @@
+# Build context hygiene: never ship dev tooling, local state, or secrets
+# (especially .env — it contains real credentials) into the image build.
+node_modules
+.git
+.svelte-kit
+build
+reports
+new-assets
+.netlify
+.idea
+.playwright-cli
+.impeccable
+.reasonix
+.codex
+.env
+.env.*
+!.env.example

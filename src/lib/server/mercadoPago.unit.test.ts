@@ -1,9 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { isSandboxAccessToken } from './sandbox'
+import { WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS } from '$lib/website-builds'
 import {
+  CHECKOUT_PRO_PREFERENCES_ENDPOINT,
+  PAYMENTS_ENDPOINT,
   PREAPPROVAL_ENDPOINT,
   MercadoPagoError,
+  createCheckoutPreference,
   createSubscription,
+  getPayment,
   getSubscription,
   isAllowedCheckoutUrl,
   selectInitPoint,
@@ -245,11 +250,11 @@ describe('getSubscription', () => {
     })
   })
 
-  it('returns undefined for a missing token (no request is made)', async () => {
+  it('throws missing_credentials for a missing token (no request is made)', async () => {
     vi.stubEnv('MERCADO_PAGO_ACCESS_TOKEN', '')
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
-    await expect(getSubscription('s1')).resolves.toBeUndefined()
+    await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'missing_credentials' })
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
@@ -272,9 +277,10 @@ describe('getSubscription', () => {
     await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'timeout' })
   })
 
-  it('rejects a response without a string id instead of coercing it', async () => {
-    stubFetch(() => jsonResponse({ id: 123, status: 'authorized' }))
-    await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'invalid_response' })
+  it('normalizes numeric ids and rejects missing ids loudly', async () => {
+    stubFetch(() => jsonResponse({ id: 123456, status: 'authorized' }))
+    const normalized = await getSubscription('s1')
+    expect(normalized?.id).toBe('123456')
     stubFetch(() => jsonResponse({ status: 'authorized' }))
     await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'invalid_response' })
   })
@@ -282,5 +288,241 @@ describe('getSubscription', () => {
   it('maps non-ok responses to api_error', async () => {
     stubFetch(() => jsonResponse({}, 503))
     await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'api_error' })
+  })
+
+  it('rejects a 200 response with a missing or non-string status loudly', async () => {
+    // A malformed upstream response must surface as invalid_response (and the
+    // completion page's loud error state), never as a guessed pending state.
+    stubFetch(() => jsonResponse({ id: 's1' }))
+    await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'invalid_response' })
+    stubFetch(() => jsonResponse({ id: 's1', status: 200 }))
+    await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'invalid_response' })
+  })
+})
+
+describe('createCheckoutPreference', () => {
+  beforeEach(() => {
+    vi.stubEnv('MERCADO_PAGO_ACCESS_TOKEN', TEST_TOKEN)
+    vi.stubEnv('MERCADO_PAGO_SANDBOX_ACCESS_TOKEN', TEST_TOKEN)
+  })
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+
+  const input = {
+    title: 'Desenvolvimento de Site E-commerce (Migração)',
+    amountBRL: 12000,
+    externalReference: 'website-build:ecommerce:migration',
+    backUrls: {
+      success: 'https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/',
+      failure: 'https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/',
+      pending: 'https://advanceddigitalmarketingltda.com/pt-br/checkout/complete/',
+    },
+    idempotencyKey: 'attempt-123',
+    paymentMethods: WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS,
+  }
+
+  it('creates the Checkout Pro preference with the server-computed amount and returns the checkout URL', async () => {
+    let captured: { url: string; init?: RequestInit } | undefined
+    stubFetch((url, init) => {
+      captured = { url: String(url), init }
+      return jsonResponse({ id: 'pref-1', init_point: 'https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=pref-1', sandbox_init_point: 'https://sandbox.mercadopago.com.br/checkout/v1/redirect?pref_id=pref-1' })
+    })
+
+    const created = await createCheckoutPreference(input)
+
+    expect(captured?.url).toBe(CHECKOUT_PRO_PREFERENCES_ENDPOINT)
+    expect(captured?.init?.method).toBe('POST')
+    const headers = captured?.init?.headers as Record<string, string>
+    expect(headers.Authorization).toBe(`Bearer ${TEST_TOKEN}`)
+    expect(headers['X-Idempotency-Key']).toBe('attempt-123')
+    expect(JSON.parse(String(captured?.init?.body))).toEqual({
+      items: [{ title: input.title, quantity: 1, unit_price: 12000, currency_id: 'BRL' }],
+      payment_methods: {
+        excluded_payment_types: WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS.excludedPaymentTypes.map((id) => ({ id })),
+        installments: WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS.maxInstallments,
+        default_installments: WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS.defaultInstallments,
+      },
+      back_urls: input.backUrls,
+      auto_return: 'approved',
+      external_reference: 'website-build:ecommerce:migration',
+    })
+    expect(created).toEqual({
+      id: 'pref-1',
+      checkoutUrl: 'https://sandbox.mercadopago.com.br/checkout/v1/redirect?pref_id=pref-1',
+    })
+  })
+
+  it('prefers init_point (not sandbox) with production credentials', async () => {
+    vi.stubEnv('MERCADO_PAGO_SANDBOX_ACCESS_TOKEN', '')
+    stubFetch(() =>
+      jsonResponse({
+        id: 'pref-2',
+        init_point: 'https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=pref-2',
+        sandbox_init_point: 'https://sandbox.mercadopago.com.br/checkout/v1/redirect?pref_id=pref-2',
+      }),
+    )
+    const created = await createCheckoutPreference(input)
+    expect(created.checkoutUrl).toContain('www.mercadopago.com.br')
+  })
+
+  it('maps the payment-methods policy to the Checkout Pro payment_methods block', async () => {
+    let captured: { url: string; init?: RequestInit } | undefined
+    stubFetch((url, init) => {
+      captured = { url: String(url), init }
+      return jsonResponse({ id: 'pref-5', init_point: 'https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=pref-5' })
+    })
+
+    await createCheckoutPreference({
+      ...input,
+      paymentMethods: { excludedPaymentTypes: ['prepaid_card', 'atm'], maxInstallments: 6, defaultInstallments: 1 },
+    })
+
+    const body = JSON.parse(String(captured?.init?.body)) as Record<string, unknown>
+    expect(body.payment_methods).toEqual({
+      excluded_payment_types: [{ id: 'prepaid_card' }, { id: 'atm' }],
+      installments: 6,
+      default_installments: 1,
+    })
+  })
+
+  it('fails loudly when the access token is missing (no request is made)', async () => {
+    vi.stubEnv('MERCADO_PAGO_ACCESS_TOKEN', '')
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(createCheckoutPreference(input)).rejects.toMatchObject({ code: 'missing_credentials' })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('maps 401/403, non-2xx, network failures and timeouts to typed codes', async () => {
+    stubFetch(() => jsonResponse({}, 401))
+    await expect(createCheckoutPreference(input)).rejects.toMatchObject({ code: 'unauthorized' })
+    stubFetch(() => jsonResponse({}, 500))
+    await expect(createCheckoutPreference(input)).rejects.toMatchObject({ code: 'api_error' })
+    stubFetch(() => {
+      throw new TypeError('fetch failed')
+    })
+    await expect(createCheckoutPreference(input)).rejects.toMatchObject({ code: 'api_error' })
+    stubFetch(() => {
+      throw new DOMException('The operation was aborted due to timeout', 'TimeoutError')
+    })
+    await expect(createCheckoutPreference(input)).rejects.toMatchObject({ code: 'timeout' })
+  })
+
+  it('rejects malformed responses, missing ids and hostile init_points', async () => {
+    stubFetch(() => new Response('<html>oops</html>', { status: 200 }))
+    await expect(createCheckoutPreference(input)).rejects.toMatchObject({ code: 'invalid_response' })
+    stubFetch(() => jsonResponse({ init_point: 'https://www.mercadopago.com.br/x' }))
+    await expect(createCheckoutPreference(input)).rejects.toMatchObject({ code: 'invalid_response' })
+    stubFetch(() => jsonResponse({ id: 'pref-3' }))
+    await expect(createCheckoutPreference(input)).rejects.toMatchObject({ code: 'missing_init_point' })
+    // Sandbox mode is active in this suite, so the hostile URL must be the
+    // sandbox field for it to be selected (and then rejected by host check).
+    stubFetch(() => jsonResponse({ id: 'pref-4', sandbox_init_point: 'https://evil.example.com/x' }))
+    await expect(createCheckoutPreference(input)).rejects.toMatchObject({ code: 'invalid_init_point' })
+  })
+})
+
+describe('getPayment', () => {
+  beforeEach(() => {
+    vi.stubEnv('MERCADO_PAGO_ACCESS_TOKEN', PROD_TOKEN)
+  })
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+
+  it('returns a sanitized payment status', async () => {
+    stubFetch(() =>
+      jsonResponse({
+        id: '1234567890',
+        status: 'approved',
+        status_detail: 'accredited',
+        external_reference: 'website-build:website:new',
+        transaction_amount: 3000,
+        currency_id: 'BRL',
+        payer: { email: 'customer@example.com' },
+        card: { last_four_digits: '4242' },
+        init_point: 'https://www.mercadopago.com.br/secret',
+      }),
+    )
+    const status = await getPayment('1234567890')
+    expect(status).toEqual({
+      id: '1234567890',
+      status: 'approved',
+      statusDetail: 'accredited',
+      externalReference: 'website-build:website:new',
+      transactionAmount: 3000,
+      currencyId: 'BRL',
+    })
+  })
+
+  it('throws missing_credentials for a missing token (no request is made)', async () => {
+    vi.stubEnv('MERCADO_PAGO_ACCESS_TOKEN', '')
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(getPayment('123')).rejects.toMatchObject({ code: 'missing_credentials' })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('returns undefined on 404', async () => {
+    stubFetch(() => jsonResponse({}, 404))
+    await expect(getPayment('123')).resolves.toBeUndefined()
+  })
+
+  it('maps 401 and 403 to unauthorized', async () => {
+    stubFetch(() => jsonResponse({}, 401))
+    await expect(getPayment('123')).rejects.toMatchObject({ code: 'unauthorized' })
+    stubFetch(() => jsonResponse({}, 403))
+    await expect(getPayment('123')).rejects.toMatchObject({ code: 'unauthorized' })
+  })
+
+  it('accepts the numeric id Mercado Pago returns for payments and normalizes it', async () => {
+    // The Payments API represents payment ids as JSON numbers; rejecting them
+    // would make every real approved payment fail verification.
+    stubFetch(() =>
+      jsonResponse({
+        id: 1234567890,
+        status: 'approved',
+        status_detail: 'accredited',
+        external_reference: 'website-build:website:new',
+        transaction_amount: 3000,
+        currency_id: 'BRL',
+      }),
+    )
+    const status = await getPayment('1234567890')
+    expect(status).toEqual({
+      id: '1234567890',
+      status: 'approved',
+      statusDetail: 'accredited',
+      externalReference: 'website-build:website:new',
+      transactionAmount: 3000,
+      currencyId: 'BRL',
+    })
+  })
+
+  it('rejects a response without any id loudly', async () => {
+    stubFetch(() => jsonResponse({ status: 'approved' }))
+    await expect(getPayment('123')).rejects.toMatchObject({ code: 'invalid_response' })
+  })
+
+  it('rejects a 200 response with a missing or non-string status loudly', async () => {
+    // A malformed upstream response must surface as invalid_response (and the
+    // completion page's loud error state), never as a guessed unconfirmed state.
+    stubFetch(() => jsonResponse({ id: '1234567890' }))
+    await expect(getPayment('123')).rejects.toMatchObject({ code: 'invalid_response' })
+    stubFetch(() => jsonResponse({ id: '1234567890', status: 42 }))
+    await expect(getPayment('123')).rejects.toMatchObject({ code: 'invalid_response' })
+  })
+
+  it('requests the payments endpoint with the encoded id', async () => {
+    let capturedUrl = ''
+    stubFetch((url) => {
+      capturedUrl = String(url)
+      return jsonResponse({ id: '1234567890', status: 'approved' })
+    })
+    await getPayment('1234567890')
+    expect(capturedUrl).toBe(`${PAYMENTS_ENDPOINT}/1234567890`)
   })
 })

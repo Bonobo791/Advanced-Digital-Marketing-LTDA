@@ -1,0 +1,59 @@
+name: Purge Bunny CDN after production deploy
+
+# Single purge trigger per deploy event. This workflow is the ONLY place the
+# cache is ever purged: Coolify deploys from main (via its GitHub webhook), the
+# workflow waits for the deployment of the exact commit to finish
+# (wait-for-commit-marker), then purges the Bunny pull zone. There is
+# deliberately no in-container purge entrypoint — see docs/bunny-cdn-purge.md
+# for why, and for the CI-less fallback design.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  purge:
+    name: Wait for deploy, then purge
+    # Pinned runner (a mutable ubuntu-latest tag can change under a run).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      COOLIFY_API_URL: ${{ vars.COOLIFY_API_URL }}
+      COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+      COOLIFY_APPLICATION_UUID: ${{ vars.COOLIFY_APPLICATION_UUID }}
+      EXPECTED_COMMIT: ${{ github.sha }}
+      BUNNY_PULL_ZONE_ID: ${{ vars.BUNNY_PULL_ZONE_ID }}
+      BUNNY_API_KEY: ${{ secrets.BUNNY_API_KEY }}
+      PURGE_REQUIRE_CREDS: '1'
+    steps:
+      - name: Refuse manual runs from non-main branches
+        # Coolify only deploys main; a manual dispatch on another branch would
+        # make EXPECTED_COMMIT undeployable and the wait step would time out.
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
+        run: |
+          echo "Manual cache purges must be started from main (Coolify deploys main; EXPECTED_COMMIT must be deployable)."
+          exit 1
+
+      - name: Checkout
+        # Pinned to an immutable commit (zizmor: unpinned action reference in a
+        # job with deployment credentials) and Git credentials are not persisted
+        # — later steps only use API tokens, never git auth.
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      # Never purge at deploy-start and never blindly: block until the exact
+      # commit's Coolify deployment reaches 'finished' (the new code is
+      # serving). On timeout, deploy failure, or API error the job fails
+      # loudly instead of purging against stale content.
+      - name: Wait until the new commit is deployed (wait-for-commit-marker)
+        run: node scripts/wait-for-coolify-deploy.mjs
+
+      # With creds set (they always are here), a failed purge must log loudly
+      # and fail the job. PURGE_REQUIRE_CREDS=1 turns the script's dev no-op
+      # into a hard failure so a missing key can never silently skip the purge.
+      - name: Purge the Bunny CDN pull zone
+        run: node scripts/purge-bunny-cache.mjs

@@ -2,10 +2,11 @@
   /**
    * Mix-and-match monthly subscription configurator (spec §3).
    *
-   * pt-BR: full checkout flow — select services, enter ad spend, email, and
-   * redirect to the Mercado Pago hosted subscription checkout.
-   * en-US: informational state (Stripe checkout is future work) — prices shown
-   * with the USD reference, no email/CTA.
+   * pt-BR: full checkout flow — select services, enter ad spend (R$), email,
+   * and redirect to the Mercado Pago hosted subscription checkout (BRL).
+   * en-US: full checkout flow too — ad spend in US$, billed by Stripe
+   * Checkout in USD (activated by STRIPE_SECRET_KEY; see
+   * docs/stripe-checkout.md).
    *
    * The total shown here is a client-side mirror for display only. The server
    * independently recalculates every price; a manipulated browser total can
@@ -16,12 +17,17 @@
     CATALOG_SERVICE_IDS,
     SERVICES,
     adSpendFeeBRL,
+    adSpendFeeUSD,
     formatPrice,
+    formatUSD,
     isSubscribable,
     type CatalogServiceId,
   } from '$lib/catalog'
   import { parseBRLInput } from '$lib/brl'
-  import { CHECKOUT_REQUEST_TIMEOUT_MS, EMAIL } from '$lib/constants'
+  import { BRL_USD_REFERENCE_RATE } from '$lib/catalog'
+  import { parseUSDInput } from '$lib/usd'
+  import { fireBeginCheckout } from '$lib/client/analytics'
+  import { fetchCheckoutUrl } from '$lib/client/checkout'
   import type { Locale } from '$lib/locale'
 
   let {
@@ -48,18 +54,16 @@
     'en-US': {
       kicker: 'Subscribe',
       heading: 'Build your monthly package.',
-      lead: 'Pick the services you want, see the monthly total, and pay through Mercado Pago. Prices are shown in USD for reference; the checkout is billed in BRL.',
-      adSpendLabel: 'Monthly ad spend (R$)',
+      lead: 'Pick the services you want and watch the monthly total update as you go. You will complete the payment on Stripe in USD.',
+      adSpendLabel: 'Monthly ad spend (US$)',
       adSpendHint: '10% of spend, $100 minimum',
       perMonth: '/mo',
       total: 'Monthly total',
       emailLabel: 'Email',
       emailPlaceholder: 'you@company.com',
-      cta: 'Subscribe with Mercado Pago',
-      submitting: 'Redirecting to Mercado Pago...',
-      secureNote: 'You will continue in Mercado Pago\u2019s secure environment to complete the payment.',
-      comingSoon: 'Subscription checkout is coming soon (Stripe). Until then, email us to start.',
-      emailUs: 'Email us',
+      cta: 'Subscribe with Stripe',
+      submitting: 'Redirecting to Stripe...',
+      secureNote: 'You will continue in Stripe\u2019s secure environment to complete the payment.',
       selectOne: 'Select at least one service.',
       invalidEmail: 'Enter a valid email address.',
       invalidSpend: 'Enter a valid monthly ad spend for the ads services.',
@@ -77,8 +81,6 @@
       cta: 'Assinar com Mercado Pago',
       submitting: 'Redirecionando para o Mercado Pago...',
       secureNote: 'Você continuará no ambiente seguro do Mercado Pago para concluir o pagamento.',
-      comingSoon: 'O checkout de assinaturas está chegando em breve (Stripe). Até lá, fale com a gente por e-mail.',
-      emailUs: 'Fale conosco',
       selectOne: 'Selecione ao menos um serviço.',
       invalidEmail: 'Informe um e-mail válido.',
       invalidSpend: 'Informe um valor de investimento mensal válido para os anúncios.',
@@ -111,10 +113,18 @@
     })
   })
 
+  /** Parses an ad-spend input with the locale's separator conventions — the
+   *  SAME parser must validate and price, or a valid USD entry like
+   *  "1,000.50" would fail validation while a BRL-shaped "1.000,50" would
+   *  silently price as 0. */
+  function parseSpend(value: string): number | undefined {
+    return locale === 'en-US' ? parseUSDInput(value) : parseBRLInput(value)
+  }
+
   function spendOf(id: CatalogServiceId): number {
     const value = spends[id]
     if (value === undefined) return 0
-    return parseBRLInput(value) ?? 0
+    return parseSpend(value) ?? 0
   }
 
   function priceOf(id: CatalogServiceId): { amount: string } {
@@ -123,16 +133,25 @@
       // One currency per locale: BRL on pt-BR pages, USD on en-US pages.
       return { amount: formatPrice(locale, pricing.monthlyBRL, pricing.monthlyUSD) }
     }
-    // ads-spend services show their live fee (or the minimum); the fee is
-    // computed in BRL and converted for the en-US display.
-    return { amount: formatPrice(locale, adSpendFeeBRL(spendOf(id))) }
+    // ads-spend services show their live fee (or the minimum) in the
+    // checkout currency: BRL fee on pt-BR, USD fee on en-US.
+    return locale === 'en-US'
+      ? { amount: formatUSD(adSpendFeeUSD(spendOf(id))) }
+      : { amount: formatPrice(locale, adSpendFeeBRL(spendOf(id))) }
   }
 
-  let totalBRL = $derived(
+  // Client-side display total in the checkout currency (BRL pt-BR / USD
+  // en-US). The server independently reprices everything; this is display only.
+  let totalAmount = $derived(
     subscribable.reduce((sum, id) => {
       if (!selected.has(id)) return sum
       const pricing = SERVICES[id].pricing
-      return pricing.kind === 'fixed' ? sum + pricing.monthlyBRL : sum + adSpendFeeBRL(spendOf(id))
+      if (pricing.kind === 'fixed') {
+        return locale === 'en-US'
+          ? sum + (pricing.monthlyUSD ?? pricing.monthlyBRL / BRL_USD_REFERENCE_RATE)
+          : sum + pricing.monthlyBRL
+      }
+      return locale === 'en-US' ? sum + adSpendFeeUSD(spendOf(id)) : sum + adSpendFeeBRL(spendOf(id))
     }, 0),
   )
 
@@ -150,20 +169,10 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim())
   }
 
-  function fireBeginCheckout(items: { item_id: string; item_name: string }[], value: number) {
-    if (typeof window === 'undefined') return
-    const dataLayer = (window as unknown as { dataLayer?: unknown[] }).dataLayer
-    if (!Array.isArray(dataLayer)) {
-      console.info('[checkout] analytics: no dataLayer found; begin_checkout was not fired')
-      return
-    }
-    dataLayer.push({ event: 'begin_checkout', currency: 'BRL', value, items })
-  }
-
   let genericError = $derived(
     locale === 'pt-BR'
       ? 'Não foi possível iniciar o pagamento pelo Mercado Pago. Tente novamente.'
-      : 'Could not start the Mercado Pago payment. Please try again.',
+      : 'Could not start the Stripe payment. Please try again.',
   )
 
   function errorMessageFor(code: string | undefined): string {
@@ -206,7 +215,7 @@
       return
     }
     for (const id of adsIds) {
-      if (selected.has(id) && parseBRLInput(spends[id] ?? '') === undefined) {
+      if (selected.has(id) && parseSpend(spends[id] ?? '') === undefined) {
         errorMessage = text.invalidSpend
         return
       }
@@ -236,51 +245,27 @@
 
       fireBeginCheckout(
         serviceIds.map((id) => ({ item_id: id, item_name: SERVICES[id].name[locale] })),
-        totalBRL,
+        totalAmount,
+        locale === 'en-US' ? 'USD' : 'BRL',
       )
 
-      const controller = new AbortController()
-      // Bound the request: a stalled Mercado Pago round-trip must reach the
-      // error handling instead of leaving `submitting` active indefinitely.
-      // Leave headroom beyond the server's own timeout (mercadoPago.ts
-      // REQUEST_TIMEOUT_MS = 15 s): this timer covers the full browser →
-      // function → Mercado Pago round-trip, so it must not expire while the
-      // function is still within its upstream budget and about to return.
-      const timeout = window.setTimeout(() => controller.abort(), CHECKOUT_REQUEST_TIMEOUT_MS)
-      try {
-        const response = await fetch('/api/checkout/subscription', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: email.trim(),
-            serviceIds,
-            config,
-            idempotencyKey,
-            locale,
-          }),
-          signal: controller.signal,
-        })
-
-        const body = (await response.json().catch(() => ({}))) as { checkoutUrl?: unknown; error?: unknown }
-        if (!response.ok) {
-          errorMessage = errorMessageFor(typeof body.error === 'string' ? body.error : undefined)
-          return
-        }
-        if (typeof body.checkoutUrl !== 'string') {
-          errorMessage = genericError
-          return
-        }
-
-        // Full-page redirect: the browser address bar visibly leaves our domain.
-        window.location.assign(body.checkoutUrl)
-      } catch (error) {
-        // Fail loudly on the server log; keep the generic message user-facing.
-        console.error('[checkout] subscription request failed', error)
-        errorMessage = genericError
-      } finally {
-        window.clearTimeout(timeout)
-        submitting = false
+      // pt-BR bills BRL through Mercado Pago; en-US bills USD through Stripe.
+      const endpoint = locale === 'en-US' ? '/api/checkout/stripe' : '/api/checkout/subscription'
+      const result = await fetchCheckoutUrl(endpoint, {
+        flow: 'subscription',
+        email: email.trim(),
+        serviceIds,
+        config,
+        idempotencyKey,
+        locale,
+      })
+      if (!result.ok) {
+        errorMessage = errorMessageFor(result.errorCode)
+        return
       }
+
+      // Full-page redirect: the browser address bar visibly leaves our domain.
+      window.location.assign(result.checkoutUrl)
     } catch (error) {
       // Fail loudly on the server log; keep the generic message user-facing.
       console.error('[checkout] subscription preparation failed', error)
@@ -304,11 +289,14 @@
         {@const price = priceOf(id)}
         <div class="sub-row" class:on={selected.has(id)}>
           <label class="sub-check">
+            <!-- Selection is a display-only calculator on every locale (the
+                 checkout form itself only renders on pt-BR); disabling it on
+                 en-US made the ad-spend total impossible to explore there. -->
             <input
               type="checkbox"
               checked={selected.has(id)}
               onchange={() => toggle(id)}
-              disabled={submitting || locale !== 'pt-BR'}
+              disabled={submitting}
             />
             <span class="sub-name">
               <b>{service.name[locale]}</b>
@@ -327,7 +315,7 @@
                 placeholder="0"
                 value={spends[id] ?? ''}
                 oninput={(e) => (spends[id] = (e.currentTarget as HTMLInputElement).value)}
-                disabled={submitting || locale !== 'pt-BR'}
+                disabled={submitting}
               />
               <small>{text.adSpendHint}</small>
             </label>
@@ -338,11 +326,10 @@
 
     <div class="sub-total" aria-live="polite" aria-atomic="true">
       <span>{text.total}</span>
-      <b>{formatPrice(locale, totalBRL)}<small>{text.perMonth}</small></b>
+      <b>{locale === 'en-US' ? formatUSD(totalAmount) : formatPrice(locale, totalAmount)}<small>{text.perMonth}</small></b>
     </div>
 
-    {#if locale === 'pt-BR'}
-      <form class="sub-checkout" onsubmit={(e) => { e.preventDefault(); submit() }}>
+    <form class="sub-checkout" onsubmit={(e) => { e.preventDefault(); submit() }}>
         <label class="sub-email">
           <span>{text.emailLabel}</span>
           <input
@@ -364,9 +351,5 @@
         </button>
         <p class="sub-note">{text.secureNote}</p>
       </form>
-    {:else}
-      <p class="sub-note sub-coming-soon">{text.comingSoon}</p>
-      <a class="btn btn-ghost-ink" href={`mailto:${EMAIL}`}>{text.emailUs}</a>
-    {/if}
   </div>
 </section>

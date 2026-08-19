@@ -20,6 +20,15 @@ export type ServiceOption = {
   items: string[]
   cta: string
   subject: string
+  /** Same-page pricing/checkout section this CTA scrolls to (e.g. '#subscribe').
+   *  Unset falls back to the service default and then to the contact form.
+   *  Explicit `null` forces the contact form — for one-time/free options that
+   *  have no pricing section and must never land on the recurring checkout. */
+  pricingAnchor?: string | null
+  /** Catalog subscription this option's CTA preselects in the configurator
+   *  (e.g. Technical SEO's per-option CTAs), so clicking one option never
+   *  seeds a package that includes the others. */
+  preselect?: CatalogServiceId
 }
 
 export type ServiceStep = { jp: string; title: string; text: string }
@@ -46,6 +55,44 @@ export type ServiceContent = {
   contactSub: string
   bookCall: string
   seeOptions: string
+  /** Default pricing section anchor for this service's option CTAs (e.g.
+   *  '#subscribe'). Services without a pricing section keep mailto CTAs. */
+  pricingAnchor?: string
+}
+
+/**
+ * Contact-route href that carries the option's subject so the owner
+ * notification can name the requested service (validated server-side).
+ */
+export function contactHref(contactRoute: string, subject: string | undefined): string {
+  return subject ? `${contactRoute}?subject=${encodeURIComponent(subject)}` : contactRoute
+}
+
+/**
+ * Single source of truth for an option CTA's destination — used by
+ * `ServicePage.svelte` and pinned by `services.unit.test.ts` so the resolved
+ * behavior (not the raw data field) is what the tests guard:
+ *  - explicit `pricingAnchor: null` → the contact form (with `?subject=` when
+ *    the option carries one);
+ *  - an explicit anchor → that anchor;
+ *  - otherwise the service-level default anchor, or the contact form when the
+ *    service has none.
+ */
+export function resolveOptionCtaHref(
+  option: Pick<ServiceOption, 'pricingAnchor'> & { subject?: string; preselect?: CatalogServiceId },
+  service: Pick<ServiceContent, 'pricingAnchor'>,
+  contactRoute: string,
+): string {
+  // Explicit `null` must NOT inherit the service default (one-time options
+  // force the contact form), so the ternary cannot be replaced with `??` —
+  // nullish coalescing would collapse explicit null into the service default.
+  const anchor = option.pricingAnchor === null ? null : option.pricingAnchor ?? service.pricingAnchor ?? null
+  if (anchor === null) return contactHref(contactRoute, option.subject)
+  // An option that must seed the configurator with ONLY the clicked service
+  // carries it in the URL (?preselect=…), which ServicePage reads to override
+  // the service-level default preselect set.
+  if (option.preselect) return `?preselect=${encodeURIComponent(option.preselect)}#${anchor.slice(1)}`
+  return anchor
 }
 
 export const SERVICE_ROUTES: Record<ServiceId, Record<Locale, string>> = {
@@ -170,6 +217,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Start with the audit',
           subject: 'Audit request',
+          pricingAnchor: null,
         },
 
         {
@@ -188,6 +236,9 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Start content development',
           subject: 'Content development request',
+          // Clicking one option must seed the configurator with ONLY that
+          // service — the service default preselects both SEO options.
+          preselect: 'seo-content',
         },
         {
           jp: '検索',
@@ -204,6 +255,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Start link building',
           subject: 'Backlinks request',
+          preselect: 'backlinks',
         },
       ],
       optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
@@ -222,6 +274,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       contactSub: 'One email starts it. We reply within one business day with next steps and a straight answer on whether we can help.',
       bookCall: 'Book a strategy call',
       seeOptions: 'See the options',
+      pricingAnchor: '#subscribe',
     },
     geo: {
       navLabel: 'GEO',
@@ -283,6 +336,10 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Talk retainers',
           subject: 'Visibility retainer inquiry',
+          // GEO has no subscription configurator (SERVICE_SUBSCRIPTIONS is
+          // empty), so the service default '#subscribe' anchor would scroll to
+          // nothing — keep the retainer CTA in the contact flow.
+          pricingAnchor: null,
         },
       ],
       optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
@@ -329,6 +386,9 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Start with the build audit',
           subject: 'Build audit request',
+          // One-time diagnostic — there is no pricing section for it in the
+          // website-build checkout below, so it must not inherit '#builds'.
+          pricingAnchor: null,
         },
         {
           flag: 'Most chosen',
@@ -346,6 +406,9 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Book the sprint',
           subject: 'Build sprint request',
+          // One-time engagement — the #builds panel prices the website/
+          // ecommerce build itself, not this sprint, so it goes to the form.
+          pricingAnchor: null,
         },
         {
           jp: '計測',
@@ -362,6 +425,11 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Talk retainers',
           subject: 'Build retainer inquiry',
+          // The R$2,900 build retainer has no catalog entry — the #subscribe
+          // configurator only knows the R$300/mo hosting product, so sending
+          // this CTA there would let the visitor buy hosting instead. Route
+          // the fixed-price retainer to the contact form with its subject.
+          pricingAnchor: null,
         },
       ],
       optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
@@ -380,6 +448,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       contactSub: 'One email starts it. We reply within one business day with next steps and a straight answer on whether we can help.',
       bookCall: 'Book a strategy call',
       seeOptions: 'See the options',
+      pricingAnchor: '#builds',
     },
     'paid-search': {
       navLabel: 'Paid Search',
@@ -408,6 +477,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Start with the account audit',
           subject: 'Account audit request',
+          pricingAnchor: null,
         },
         {
           flag: 'Most chosen',
@@ -425,6 +495,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Book the sprint',
           subject: 'Launch sprint request',
+          pricingAnchor: null,
         },
         {
           jp: '計測',
@@ -441,6 +512,12 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Talk retainers',
           subject: 'Paid retainer inquiry',
+          // The R$2,900 fixed-price retainer is not the spend-based
+          // 'paid-search' catalog product the #subscribe configurator prices
+          // (max(10% × spend, R$ 500)); routing it there would quote a
+          // different product. Keep the fixed-price retainer CTA in the
+          // contact flow with its subject.
+          pricingAnchor: null,
         },
       ],
       optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
@@ -459,6 +536,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       contactSub: 'One email starts it. We reply within one business day with next steps and a straight answer on whether we can help.',
       bookCall: 'Book a strategy call',
       seeOptions: 'See the options',
+      pricingAnchor: '#subscribe',
     },
     'meta-ads': {
       navLabel: 'Meta Ads',
@@ -487,6 +565,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Start with the Meta audit',
           subject: 'Meta audit request',
+          pricingAnchor: null,
         },
         {
           flag: 'Most chosen',
@@ -504,6 +583,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Book the sprint',
           subject: 'Meta launch request',
+          pricingAnchor: null,
         },
         {
           jp: '計測',
@@ -520,6 +600,9 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Talk retainers',
           subject: 'Meta retainer inquiry',
+          // Fixed-price retainer: same rule as the Paid Retainer — the
+          // configurator only prices the spend-based meta-ads product.
+          pricingAnchor: null,
         },
       ],
       optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
@@ -538,6 +621,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       contactSub: 'One email starts it. We reply within one business day with next steps and a straight answer on whether we can help.',
       bookCall: 'Book a strategy call',
       seeOptions: 'See the options',
+      pricingAnchor: '#subscribe',
     },
     'ai-automation': {
       navLabel: 'AI Automation',
@@ -615,6 +699,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Começar com a auditoria',
           subject: 'Audit request',
+          pricingAnchor: null,
         },
 
         {
@@ -633,6 +718,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Começar com conteúdo',
           subject: 'Content development request',
+          preselect: 'seo-content',
         },
         {
           jp: '検索',
@@ -649,6 +735,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Começar com link building',
           subject: 'Backlinks request',
+          preselect: 'backlinks',
         },
       ],
       optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
@@ -667,6 +754,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       contactSub: 'Um e-mail começa tudo. Respondemos em até um dia útil com os próximos passos e uma resposta direta sobre se podemos ajudar.',
       bookCall: 'Agendar uma conversa',
       seeOptions: 'Ver as opções',
+      pricingAnchor: '#subscribe',
     },
     geo: {
       navLabel: 'GEO',
@@ -728,6 +816,8 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Falar sobre mensalidade',
           subject: 'Visibility retainer inquiry',
+          // GEO não tem configurador de assinaturas — CTA vai para o contato.
+          pricingAnchor: null,
         },
       ],
       optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
@@ -774,6 +864,9 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Começar com a auditoria de build',
           subject: 'Build audit request',
+          // Diagnóstico de pagamento único — o painel #builds precifica o
+          // site/e-commerce, não esta auditoria; vai para o formulário.
+          pricingAnchor: null,
         },
         {
           flag: 'Mais escolhido',
@@ -791,6 +884,9 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Agendar o sprint',
           subject: 'Build sprint request',
+          // Engajamento de pagamento único — não herda '#builds' (o painel
+          // precifica o site/e-commerce, não este sprint).
+          pricingAnchor: null,
         },
         {
           jp: '計測',
@@ -807,6 +903,10 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Falar sobre mensalidade',
           subject: 'Build retainer inquiry',
+          // Mensalidade fixa de R$ 2.900 sem entrada no catálogo (o
+          // configurador #subscribe só conhece a hospedagem de R$ 300/mês) —
+          // o CTA vai para o formulário de contato com o assunto.
+          pricingAnchor: null,
         },
       ],
       optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
@@ -825,6 +925,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       contactSub: 'Um e-mail começa tudo. Respondemos em até um dia útil com os próximos passos e uma resposta direta sobre se podemos ajudar.',
       bookCall: 'Agendar uma conversa',
       seeOptions: 'Ver as opções',
+      pricingAnchor: '#builds',
     },
     'paid-search': {
       navLabel: 'Google Ads',
@@ -853,6 +954,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Começar com a auditoria de conta',
           subject: 'Account audit request',
+          pricingAnchor: null,
         },
         {
           flag: 'Mais escolhido',
@@ -870,6 +972,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Agendar o sprint',
           subject: 'Launch sprint request',
+          pricingAnchor: null,
         },
         {
           jp: '計測',
@@ -886,6 +989,9 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Falar sobre mensalidade',
           subject: 'Paid retainer inquiry',
+          // Mensalidade fixa (R$ 2.900) ≠ produto por investimento do
+          // configurador #subscribe — o CTA vai para o formulário de contato.
+          pricingAnchor: null,
         },
       ],
       optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
@@ -904,6 +1010,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       contactSub: 'Um e-mail começa tudo. Respondemos em até um dia útil com os próximos passos e uma resposta direta sobre se podemos ajudar.',
       bookCall: 'Agendar uma conversa',
       seeOptions: 'Ver as opções',
+      pricingAnchor: '#subscribe',
     },
     'meta-ads': {
       navLabel: 'Meta Ads',
@@ -932,6 +1039,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Começar com a auditoria Meta',
           subject: 'Meta audit request',
+          pricingAnchor: null,
         },
         {
           flag: 'Mais escolhido',
@@ -949,6 +1057,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Agendar o sprint',
           subject: 'Meta launch request',
+          pricingAnchor: null,
         },
         {
           jp: '計測',
@@ -965,6 +1074,8 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Falar sobre mensalidade',
           subject: 'Meta retainer inquiry',
+          // Mensalidade fixa: mesma regra do retainer de mídia paga.
+          pricingAnchor: null,
         },
       ],
       optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
@@ -983,6 +1094,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
       contactSub: 'Um e-mail começa tudo. Respondemos em até um dia útil com os próximos passos e uma resposta direta sobre se podemos ajudar.',
       bookCall: 'Agendar uma conversa',
       seeOptions: 'Ver as opções',
+      pricingAnchor: '#subscribe',
     },
     'ai-automation': {
       navLabel: 'Automação com IA',

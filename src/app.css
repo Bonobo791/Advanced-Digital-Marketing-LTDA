@@ -702,6 +702,41 @@ img { display: block; max-width: 100%; }
 .contact-notes li span i { margin-left: 0.6rem; color: var(--verm); font-size: 0.92rem; font-style: normal; }
 .contact-notes li p { max-width: 55ch; margin: 0; color: var(--ink-muted); }
 
+/* Opt-in contact form (ContactPage + ContactForm) */
+.contact-form-section__lead { max-width: 56ch; color: var(--ink-muted); }
+.contact-form-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1.5rem; align-items: start; margin-top: 3.5rem; }
+.contact-form-grid__form { grid-column: 1 / 8; }
+.contact-form-grid__notes { grid-column: 9 / 13; }
+.contact-form-grid__notes-title { margin: 0 0 1rem; font-family: 'ADM Display', 'Archivo Variable', sans-serif; font-size: 1.55rem; font-weight: 400; letter-spacing: -0.01em; line-height: 1.05; text-transform: uppercase; }
+.contact-form-grid__notes.contact-notes ol { margin-top: 0; }
+.contact-form-grid__notes.contact-notes li { padding: 1.1rem 0; }
+
+.contact-form { display: grid; gap: 18px; max-width: 480px; }
+.contact-form__field { display: grid; gap: 7px; }
+.contact-form__field span { color: var(--ink-muted); font-family: 'ADM Semi', sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; }
+.contact-form__field input {
+  width: 100%;
+  min-width: 0;
+  padding: 13px 15px;
+  border: 1px solid var(--ink-faint);
+  border-radius: 0;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+}
+.contact-form__field input:focus-visible { border-color: var(--verm); outline: 2px solid var(--verm); outline-offset: 2px; }
+.contact-form__field input:disabled { cursor: not-allowed; opacity: 0.55; }
+.contact-form__consent { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
+.contact-form__consent input { flex: none; width: 18px; height: 18px; margin-top: 2px; accent-color: var(--verm); }
+.contact-form__consent span { color: var(--ink-muted); font-size: 13px; line-height: 1.55; }
+.contact-form__error { margin: 0; color: var(--verm); font-size: 14px; }
+.contact-form .button { width: 100%; }
+.contact-form__success { max-width: 480px; padding: 28px 30px; border: 1px solid var(--ink-faint); background: #fff; }
+.contact-form__success-title { margin: 0 0 10px; font-family: 'ADM Display', 'Archivo Variable', sans-serif; font-size: 1.6rem; font-weight: 400; letter-spacing: -0.01em; text-transform: uppercase; }
+.contact-form__success-lead { margin: 0; color: var(--ink-muted); font-size: 15px; line-height: 1.6; }
+
+
 /* Footer is a calm ledger, not another hero */
 .editorial-footer { position: relative; padding: 80px var(--pad-r) 48px var(--pad-l); border-top: 1px solid var(--paper-faint); background: var(--ink); }
 .editorial-footer__grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1.5rem; }
@@ -778,7 +813,8 @@ img { display: block; max-width: 100%; }
   .process-step { border-left: 0; padding: 1.1rem 0 1.1rem 1.75rem; }
   .process-step::after { top: 1.5rem; }
   .process-cta { justify-content: flex-start; margin-top: 3rem; }
-  .why-grid, .people-grid, .about-story__grid { display: block; }
+  .why-grid, .people-grid, .about-story__grid, .contact-form-grid { display: block; }
+  .contact-form-grid__notes { margin-top: 3rem; }
   .why-image { margin: 2rem calc(-1 * var(--pad-r)) 0 calc(-1 * var(--pad-l)); }
   .why-image img { min-height: 0; }
   .why-copy { margin: -1px 0 0; padding: 2rem 1.5rem 0 0; background: var(--paper); }
@@ -1151,7 +1187,7 @@ img { display: block; max-width: 100%; }
   font-size: 15px;
 }
 .sub-email input:focus,
-.sub-spend input:focus { outline: none; border-color: var(--index-verm); }
+.sub-spend input:focus-visible { border-color: var(--index-verm); outline: 2px solid var(--index-verm); outline-offset: 2px; }
 .sub-email input:disabled,
 .sub-spend input:disabled { cursor: not-allowed; opacity: 0.55; }
 .sub-total {
@@ -1185,10 +1221,29 @@ img { display: block; max-width: 100%; }
 
 /* ─── One-time website builds (WebsiteBuildPricing) ───────────────────── */
 .build-panel .sec-lead { max-width: 46em; }
+
+/* The one-time website build panel and the monthly subscription panel are one
+   pricing block (web-development page + services index): tighten the default
+   128px section rhythm so both sets of options read together. */
+.build-panel + .subscribe-panel { padding-top: 0; }
+.service-page .build-panel { padding-bottom: 64px; }
 .build-row { margin-top: 32px; }
 .build-info { min-width: 0; }
 .build-name { display: block; font-family: 'ADM Display', sans-serif; font-size: 1.15rem; letter-spacing: -0.01em; text-transform: uppercase; }
 .build-flips { display: flex; flex-wrap: wrap; gap: 16px 32px; margin-top: 18px; }
+
+/* One-time website build purchase (WebsiteBuildPricing) */
+.build-cta { display: grid; gap: 14px; margin-top: 28px; max-width: 460px; }
+.build-cta .btn { width: 100%; }
+.build-note { max-width: 46em; color: var(--index-ink60); font-size: 13px; }
+.build-row .build-cta { grid-column: 1 / -1; }
+.flip button:disabled { cursor: not-allowed; opacity: 0.55; }
+.flip button:disabled:hover { color: var(--index-ink60); }
+.flip button:disabled[aria-pressed='true'] { background: var(--index-ink); color: var(--index-paper); }
+
+/* Anchored sections land below the fixed top nav when CTA buttons scroll to
+   them (e.g. option cards -> #subscribe / #builds). */
+.index-home section[id] { scroll-margin-top: 96px; }
 .flip-group { display: grid; gap: 8px; }
 .flip-label { color: var(--index-ink60); font-family: 'ADM Semi', sans-serif; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
 .flip { display: inline-flex; border: 1px solid var(--index-hair-i); background: var(--index-paper); }

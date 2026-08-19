@@ -41,6 +41,13 @@ export const ADS_SPEND_RULE = {
  */
 export const BRL_USD_REFERENCE_RATE = 5
 
+/**
+ * Upper bound for a monthly ad-spend figure (BRL or USD input), shared by the
+ * client parsers and the server validators so a bound change cannot drift
+ * between the form and the checkout.
+ */
+export const MAX_MONTHLY_AD_SPEND = 1_000_000
+
 export type ServicePricing =
   | { kind: 'fixed'; monthlyBRL: number; monthlyUSD?: number }
   | { kind: 'ads-spend' }
@@ -149,6 +156,16 @@ export function isSubscribable(service: CatalogService): boolean {
  */
 export function adSpendFeeBRL(monthlyAdSpend: number): number {
   const fee = Math.max(monthlyAdSpend * ADS_SPEND_RULE.rate, ADS_SPEND_RULE.minimumBRL)
+  return Math.round(fee * 100) / 100
+}
+
+/**
+ * Monthly management fee for an ads service, in USD (Stripe en-US checkout):
+ * `max(monthlyAdSpendUSD × 10%, US$ 100)` — the USD twin of the BRL rule at
+ * the catalog's 5:1 reference rate.
+ */
+export function adSpendFeeUSD(monthlyAdSpendUSD: number): number {
+  const fee = Math.max(monthlyAdSpendUSD * ADS_SPEND_RULE.rate, ADS_SPEND_RULE.minimumUSD)
   return Math.round(fee * 100) / 100
 }
 

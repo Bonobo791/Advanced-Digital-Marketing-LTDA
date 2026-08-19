@@ -1,10 +1,15 @@
-# Mercado Pago Subscriptions
+# Mercado Pago Checkout
 
-Monthly mix-and-match subscriptions via Mercado Pago's **hosted subscription
-checkout**. Customers select recurring services, see the monthly total, enter
-their email, and are redirected completely off this site to Mercado Pago, where
-the subscription is created, paid, and managed. **Mercado Pago is the system of
-record for subscriptions and billing** — there is no local billing database.
+Two hosted-checkout flows, both with **Mercado Pago as the system of record**
+(there is no local billing database):
+
+1. **Subscriptions** — monthly mix-and-match services via Mercado Pago's hosted
+   *subscription* checkout. Customers select recurring services, see the
+   monthly total, enter their email, and are redirected to Mercado Pago, where
+   the subscription is created, paid, and managed.
+2. **One-time website builds** — the web-development page's flipper configurator
+   charges a fixed one-time price through Checkout Pro, and the hosting
+   subscription below it recurs monthly.
 
 ```text
 Service selector (Monte seu pacote)
@@ -22,6 +27,19 @@ Customer authorizes the payment method on Mercado Pago
 Customer returns to /pt-br/checkout/complete
 ```
 
+```text
+Website build flippers (tipo + migração)
+    ↓  POST /api/checkout/build
+Server validates type + kind (never trusts a client amount)
+    ↓  POST https://api.mercadopago.com/checkout/preferences
+Mercado Pago creates a one-time Checkout Pro preference
+    ↓  returns id + init_point (sandbox-aware)
+Browser is redirected to Mercado Pago's hosted payment checkout
+    ↓
+Customer pays once; Mercado Pago redirects to /pt-br/checkout/complete?payment_id=…
+    ↓  GET /v1/payments/{payment_id} verifies status === "approved"
+```
+
 The design principle:
 
 ```text
@@ -34,8 +52,8 @@ Mercado Pago:  customer + subscription + checkout + payments + recurring billing
 
 ## Architecture
 
-- **Stack:** SvelteKit 2 / Svelte 5 (runes), adapter-netlify. Pages are
-  prerendered; the checkout endpoint runs as a Netlify Function.
+- **Stack:** SvelteKit 2 / Svelte 5 (runes), adapter-node (Docker on Coolify). Pages are
+  server-rendered; the checkout endpoint runs on the Node server.
 - **Catalog:** `src/lib/catalog.ts` — the single source of truth for what can be
   subscribed to and what it costs. Isomorphic (no secrets); the client uses it
   only to *display* prices.
@@ -46,12 +64,20 @@ Mercado Pago:  customer + subscription + checkout + payments + recurring billing
 - **Mercado Pago client:** `src/lib/server/mercadoPago.ts` — all MP API access
   is isolated here. Creates subscriptions without an associated plan via
   `POST /preapproval` (`status: "pending"` = hosted checkout, pending-payment
-  model), validates the returned `init_point` (HTTPS + Mercado Pago hostname),
-  and exposes a sanitized `getSubscription()` proxy.
-- **Endpoint:** `src/routes/api/checkout/subscription/+server.ts` (POST).
-- **UI:** `src/lib/components/pages/SubscribeSection.svelte` mounted on the
-  services gateway (`/services/`, `/pt-br/servicos/`) and on each subscribable
-  service page (EN + PT).
+  model), creates one-time Checkout Pro preferences via
+  `POST /checkout/preferences`, validates every returned `init_point` (HTTPS +
+  Mercado Pago hostname), and exposes sanitized `getSubscription()` /
+  `getPayment()` proxies for the return page.
+- **Endpoints:** `src/routes/api/checkout/subscription/+server.ts` (POST,
+  monthly) and `src/routes/api/checkout/build/+server.ts` (POST, one-time
+  website build).
+- **UI:** `src/lib/components/pages/SubscribeSection.svelte` (monthly
+  configurator) mounted on the services gateway (`/services/`,
+  `/pt-br/servicos/`) and on each subscribable service page (EN + PT), and
+  `src/lib/components/pages/WebsiteBuildPricing.svelte` (one-time build
+  purchase with the type/migration flippers). Option-card CTAs on service
+  pages scroll to the relevant pricing section (`#builds` / `#subscribe`)
+  instead of opening mailto links.
 - **No local billing database.** No ORM. No payment tables. No webhooks (see
   below).
 
@@ -76,26 +102,71 @@ AR/BR/CL/CO/MX/PE/UY — there is no USD subscription checkout from this
 reference); an English checkout via **Stripe is planned future work** and is
 not implemented here.
 
+### One-time website build pricing
+
+| Choice | BRL (checkout) | USD reference |
+|---|---|---|
+| Website — new | R$ 3.000 | $750 |
+| Website — migration | R$ 6.000 | $1,500 |
+| Ecommerce — new | R$ 6.000 | $1,500 |
+| Ecommerce — migration | R$ 12.000 | $3,000 |
+
+The authoritative BRL table lives in `WEBSITE_BUILD_BASE_PRICE_BRL`
+(`src/lib/website-builds.ts`); the pt-BR display prices must equal it
+(guarded by `website-builds.unit.test.ts`). The en-US prices are a separate
+USD reference and are never billed (no USD checkout yet).
+
+### Payment methods (hosted Checkout Pro)
+
+The one-time build preference carries an explicit `payment_methods` block
+(`WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS` in `src/lib/website-builds.ts`,
+server-side only — the browser never sends it):
+
+- **Offered methods:** credit card (`credit_card`), debit card
+  (`debit_card`), Pix / bank transfer (`bank_transfer`) and boleto
+  (`ticket`).
+- **Credit installments:** à vista is preselected
+  (`default_installments: 1`); buyers may split the payment into up to
+  12 installments (`installments: 12`).
+- **Exclusions:** `excluded_payment_types: [{ "id": "prepaid_card" }]`
+  removes every other Checkout Pro payment type. Mercado Pago's wallet
+  (`account_money`, "Dinheiro em conta") **cannot be excluded by
+  preference** and stays available.
+
 ---
 
 ## Environment variables
 
-| Variable | Required | Purpose |
+Both checkout flows (subscriptions and one-time website builds) read the same
+three server-only variables from `process.env` inside
+`src/lib/server/mercadoPago.ts`; they are never exposed to the browser.
+
+| Variable | Dev (sandbox) | Prod (live) |
 |---|---|---|
-| `MERCADO_PAGO_ACCESS_TOKEN` | Yes | Server-only Mercado Pago access token. Both production and test credentials are `APP_USR-...` (the environment is whichever section of the panel they came from). Never expose client-side. |
-| `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN` | For sandbox | When it equals the access token, sandbox mode is detected. Note: the Subscriptions API returns only `init_point` (there is no `sandbox_init_point` for preapprovals) — the checkout environment is resolved server-side from the preapproval. |
-| `PUBLIC_SITE_URL` | Yes (prod) | Base URL used for the `back_url` redirect back to `/pt-br/checkout/complete/`. Must be a public HTTPS domain Mercado Pago accepts — non-HTTPS schemes and loopback hosts (`localhost`, `127.0.0.1`, `0.0.0.0`, `::1`) are rejected in code, and `*.netlify.app` is rejected by MP with `400 invalid_field_content`. Falls back to the `SITE_ORIGIN` constant with a loud server-side warning if unset, malformed, or not a public HTTPS URL (the configured value is never echoed in logs). |
+| `MERCADO_PAGO_ACCESS_TOKEN` | **Test** Access Token from the panel's *Credenciais de teste* section (also `APP_USR-...` — the environment is the panel section, not the prefix). | **Production** Access Token from *Credenciais de produção*. |
+| `MERCADO_PAGO_WEBHOOK_SECRET` | Any value (webhooks are off in test). | Secret from the panel's webhook configuration — verifies `POST /api/webhooks/mercadopago` signatures. Without it the webhook endpoint refuses with 503. |
+| `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN` | Set to the **same test token** — exact equality with the access token is how sandbox mode is detected (`selectInitPoint` then uses `sandbox_init_point`, which Checkout Pro returns). | **Do not set** (or set to a different value). If it equals the production token, every real customer is redirected to the sandbox checkout and payments fail. |
+| `PUBLIC_SITE_URL` | Any public HTTPS domain MP accepts — the production domain works for local testing (`localhost`/non-public hosts are rejected by MP). | `https://advanceddigitalmarketingltda.com` — base for the `back_url` redirect to `/pt-br/checkout/complete/`. Falls back to the `SITE_ORIGIN` constant with a loud server-side warning if unset/malformed/not public HTTPS. |
 
 The token is read only inside `src/lib/server/mercadoPago.ts` and never appears
 in API responses, HTML, or logs. Do **not** add a Mercado Pago public key —
 this redirect flow needs none. Do not prefix any of these with `PUBLIC_` for
 `import.meta.env` access.
 
-> Note: local `.env` files are gitignored. For local development, set
-> `MERCADO_PAGO_ACCESS_TOKEN` to the **test** Access Token from the panel's
-> "Credenciais de teste" section (also `APP_USR-...`) — do **not** copy
-> production credentials into a local `.env`. `MERCADO_PAGO_WEBHOOK_SECRET`
-> and `PUBLIC_KEY` in `.env` are unused by this flow.
+**Client ID / Client Secret are not needed** (prod or dev). Mercado Pago only
+uses them for OAuth-based integrations — the `client_credentials` grant to
+mint an Access Token programmatically (`POST /oauth/token`) or the
+authorization-code flow for marketplace/third-party access. This integration
+uses the static Access Token from the panel directly and performs no OAuth;
+the codebase never reads these values. (Test credentials do not even expose a
+Client ID/Secret pair.)
+
+> Note: local `.env` files are gitignored. The current dev `.env` follows the
+> dev row above (test token in both variables — the account resolves to a
+> seller **test user**, `TESTUSER...`, tagged `test_user` in
+> `GET /users/me`). `PUBLIC_KEY` in `.env` belongs to a different application
+> — ignore it. `MERCADO_PAGO_WEBHOOK_SECRET` is only read by the webhook
+> endpoint.
 
 ---
 
@@ -105,7 +176,7 @@ this redirect flow needs none. Do not prefix any of these with `PUBLIC_` for
 2. Create an application in the Mercado Pago Developer panel
    (`https://www.mercadopago.com.br/developers/panel/app`).
 3. Copy the **Access Token** (production) into `MERCADO_PAGO_ACCESS_TOKEN` on
-   Netlify (Site settings → Environment variables) and locally.
+   Coolify (Application → Environment Variables) and locally.
 4. Confirm **Subscriptions** is enabled for the application
    (Subscriptions → Integration → create a subscription).
 5. Add `https://<site>/pt-br/checkout/complete/` to the application's
@@ -119,16 +190,31 @@ this redirect flow needs none. Do not prefix any of these with `PUBLIC_` for
 2. Set `MERCADO_PAGO_ACCESS_TOKEN` and `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN` to
    the **same** test Access Token, and `PUBLIC_SITE_URL` to a public HTTPS
    domain accepted by Mercado Pago (see the environment-variable note above).
-3. **Sandbox requires the buyer to be a test user**: the `payer_email` entered
-   in the subscribe form must be a test account on `@testuser.com` (create
-   buyer test users in the panel under Test accounts). A real email makes
-   Mercado Pago return `500` on `/preapproval`.
-4. Run `npm run test` (all Mercado Pago calls are mocked — no real requests).
-5. For a live sandbox end-to-end check, run `npm run dev`, enter a `@testuser.com`
-   email in the pt-BR configurator, and submit; the browser is redirected via
-   `init_point` to Mercado Pago's subscription checkout, where the subscription
-   is created in **test** mode and paid with test cards
-   (e.g. `5031 4332 1540 6351`).
+3. Run `npm run test` (all Mercado Pago calls are mocked — no real requests).
+4. For a live sandbox end-to-end check, run `npm run dev` and use a **real
+   browser** (the sandbox checkout's invisible reCAPTCHA blocks automated
+   browsers):
+   - **Subscription flow** — enter a `@testuser.com` email in the pt-BR
+     configurator (sandbox requires the buyer to be a test account; a real
+     email makes Mercado Pago return `500` on `/preapproval`) and submit.
+   - **Website build flow** — click *Comprar site* and pay as a guest
+     ("Sem conta Mercado Pago") with a current test card (no test-user email
+     needed for Checkout Pro).
+
+### Current test cards (Brazil, 2026)
+
+The card list changes — always re-check
+[Cartões de teste](https://www.mercadopago.com.br/developers/pt/docs/your-integrations/test/cards).
+Verified working with this account:
+
+| Result | Card | Holder name | CPF | Expiry | CVV |
+|---|---|---|---|---|---|
+| Approved | `5480 8328 0103 3311` (Mastercard) or `4235 6477 2802 5682` (Visa) | `APRO` | `12345678909` | `11/30` | `123` |
+| Declined | any of the above | `OTHE` | `12345678909` | `11/30` | `123` |
+
+> The previously documented card `5031 4332 1540 6351` is **no longer
+> accepted** by Mercado Pago (rejected live with "Não é possível pagar com
+> este cartão"). Do not use it.
 
 Production credentials are used only when `MERCADO_PAGO_ACCESS_TOKEN` is a
 production token. **Never run a real (non-sandbox) checkout in development.**
@@ -202,7 +288,48 @@ returned:
 | 502 | `unauthorized`, `api_error`, `invalid_response`, `missing_init_point`, `invalid_init_point` |
 | 503 | `missing_credentials`, `timeout`, `client_address_unavailable` |
 
-Unexpected errors are re-thrown so the server logs them (Sentry/Netlify logs).
+Unexpected errors are re-thrown so the server logs them (Coolify container logs).
+
+### `POST /api/checkout/build` (one-time website build)
+
+Request:
+
+```json
+{
+  "type": "ecommerce",
+  "kind": "migration",
+  "idempotencyKey": "00000000-0000-4000-8000-000000000000",
+  "locale": "pt-BR"
+}
+```
+
+- `type` — `website` or `ecommerce` (unknown values are rejected).
+- `kind` — `new` or `migration` (migration bills 2×).
+- `idempotencyKey` — UUID v4, same duplicate-submission guard as subscriptions.
+- `locale` — only selects the item-title language; **no amount field exists** —
+  the server derives the one-time BRL price from `type` + `kind`.
+
+Server procedure:
+
+1. Validate `type`/`kind` and the idempotency key.
+2. Derive the authoritative amount from `WEBSITE_BUILD_BASE_PRICE_BRL` × the
+   migration multiplier (browser manipulation cannot change the billed amount).
+3. Build the item title (e.g. `Desenvolvimento de Site E-commerce (Migração)`)
+   and `external_reference` (e.g. `website-build:ecommerce:migration`,
+   deterministic, no PII).
+4. `POST https://api.mercadopago.com/checkout/preferences` with one item,
+   the `payment_methods` block (offered methods + à vista/parcelado policy,
+   see [Payment methods](#payment-methods-hosted-checkout-pro)), `back_urls`
+   (all three states → `/pt-br/checkout/complete/`),
+   `auto_return: "approved"`.
+5. Validate the returned `init_point` (HTTPS, Mercado Pago host; sandbox-aware
+   via `sandbox_init_point` when the sandbox token matches) and respond.
+
+Response: `{ "checkoutUrl": "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=…" }`
+
+Error responses reuse the subscription codes plus `invalid_build` (400). The
+UI only renders the purchase button on pt-BR pages (Mercado Pago bills BRL);
+en-US pages show the informational email CTA until the Stripe checkout lands.
 
 ---
 
@@ -212,14 +339,22 @@ Unexpected errors are re-thrown so the server logs them (Sentry/Netlify logs).
 prerendered: a server load function (`+page.server.ts`) verifies the redirect
 before claiming success.
 
-Mercado Pago's hosted checkout appends `preapproval_id` to the `back_url`; the
-load function calls `getSubscription(preapproval_id)` (live API, no local
-state) and renders one of:
+Mercado Pago's hosted checkouts append identifiers to the `back_url`; the
+load function verifies them live against the API (no local state):
 
-- **confirmed** — only when the preapproval status is `authorized`
-  (`Sua assinatura foi processada.` plus the subscription reference);
-- **pending** — any other status (`paused`, `cancelled`, ...) — the page never
-  claims success for these;
+- **subscriptions** — `preapproval_id` → `getSubscription()` (see below);
+- **one-time builds** — `payment_id` (legacy `collection_id`) → `getPayment()`
+  (`GET /v1/payments/{id}`).
+
+It renders one of:
+
+- **confirmed** — subscription: only when the preapproval status is
+  `authorized`; payment: only when the payment status is `approved`
+  (`Sua assinatura foi processada.` / `Seu pagamento foi aprovado.` plus the
+  reference);
+- **pending / cancelled / payment_unconfirmed** — any other status — the page
+  never claims success for these (a one-time payment that is not `approved`
+  renders `payment_unconfirmed`);
 - **rate_limited** — too many verification requests from the same client in a
   short window (throttled with the same per-IP limiter as subscription
   creation; the page asks the customer to wait and retry);
@@ -231,17 +366,34 @@ parameters as proof of payment on its own — the status is fetched from Mercado
 Pago. The page stays `noindex` and transient.
 
 Abuse protection runs before any outbound call: requests carrying a
-`preapproval_id` are throttled per client IP (same in-memory limiter and
-bucket as `POST /api/checkout/subscription`), and identifiers that fail a
-conservative shape check (only `[A-Za-z0-9_-]`, max 128 chars) are rejected
-without touching the Mercado Pago API.
+`preapproval_id` or `payment_id` are throttled per client IP (same in-memory
+limiter; separate buckets `subscriptionVerify` and `paymentVerify`, and
+`buildCreate` for the build endpoint, so traffic on one entry point never
+exhausts another's budget), and identifiers that fail a conservative shape
+check (only `[A-Za-z0-9_-]`, max 128 chars) are rejected without touching the
+Mercado Pago API.
 
 ## Webhooks
 
-Intentionally **not implemented**: there is no local billing database to sync,
-and no application-side action (onboarding email, CRM, access grant) depends on
-subscription events today. If one is added later, validate Mercado Pago webhook
-signatures properly and keep the handler to that single action.
+`POST /api/webhooks/mercadopago` receives Mercado Pago event notifications
+(`src/lib/server/mercadoPago-webhook.ts`).
+
+- **Signature:** `x-signature` (`ts=…,v1=…`) verified with
+  `MERCADO_PAGO_WEBHOOK_SECRET` (HMAC-SHA256 over
+  `id:<data.id>;request-id:<x-request-id>;ts:<ts>;`), with a 5-minute
+  timestamp recency check so a captured request cannot be replayed. A missing
+  secret returns 503 (operator misconfiguration, MP retries); a bad signature
+  returns 401 before any work.
+- **Action:** the single handoff that matters — email the owner when a
+  `payment` is `approved` or a `preapproval` (subscription) is `authorized`.
+  There is still no local billing database; everything else stays in Mercado
+  Pago.
+- **Redelivery:** MP retries non-2xx webhooks, so events are deduped in
+  memory by `type:data.id` (24 h window, bounded) — a replayed event is
+  acknowledged without a second owner email.
+- **Setup:** add the webhook to the Mercado Pago panel (Application →
+  Webhooks → URL `https://<site>/api/webhooks/mercadopago`) with the payment
+  and preapproval events, and set `MERCADO_PAGO_WEBHOOK_SECRET` on Coolify.
 
 ---
 
@@ -271,7 +423,8 @@ understandable inside Mercado Pago without any local database.
 ## Security checklist
 
 - Server-side pricing only — browser manipulation cannot change the billed
-  amount (covered by integration tests, including a literal `total: 1` attack).
+  amount, for subscriptions or for one-time builds (covered by integration
+  tests, including literal `total: 1` / `amount: 1` attacks).
 - Strict service-id / config validation; quote-only and inactive services are
   rejected.
 - Access token is server-only (`src/lib/server/mercadoPago.ts`), never exposed.
@@ -296,10 +449,11 @@ understandable inside Mercado Pago without any local database.
 
 Before redirecting, the client pushes a `begin_checkout` event to
 `window.dataLayer` when Google Tag Manager is present
-(`{ event, currency: "BRL", value, items: [{ item_id, item_name }] }`). It is a
-no-op when no `dataLayer` exists (logged with `console.info`). A purchase
-conversion is deliberately **not** fired on the return page — only reliable
-Mercado Pago payment/webhook data should ever drive that.
+(`{ event, currency, value, items: [{ item_id, item_name }] }`). A `purchase`
+conversion fires on the return page ONLY when the server has verified the
+payment/subscription live against the API (`confirmed`/`payment_confirmed`),
+with the verified amount and reference, deduped per id in sessionStorage so a
+refresh or revisit cannot double-count.
 
 ---
 
@@ -308,18 +462,23 @@ Mercado Pago payment/webhook data should ever drive that.
 ```bash
 npm run check      # svelte-check, strict TS
 npm run test       # all unit + integration tests (Mercado Pago is mocked)
-npm run build      # Netlify build; confirms prerender/function split
+npm run build      # adapter-node build; confirms SSR pages + API routes
 ```
 
 Coverage highlights:
 
 - Pricing: one/multiple/all services, invalid + inactive ids, quote-only
   rejection, ad-spend rule at/below/above the R$ 500 minimum, zero totals,
-  `reason`/`external_reference` shapes.
+  `reason`/`external_reference` shapes; build prices for every type × kind
+  combo against `WEBSITE_BUILD_BASE_PRICE_BRL` (including the pt-BR display
+  sync guard).
 - Checkout: valid creation, invalid email/json/spend/idempotency-key, MP
   401/5xx/timeout, missing `init_point`, hostile `init_point` host, duplicate
-  submission (same idempotency key), and the end-to-end tamper test proving the
-  server price reaches Mercado Pago (`subscription-flow.integration.test.ts`).
+  submission (same idempotency key), the end-to-end tamper test proving the
+  server price reaches Mercado Pago (`subscription-flow.integration.test.ts`),
+  and the build endpoint's invalid type/kind rejection + server-priced
+  preference (`build.integration.test.ts`). Return page: subscription and
+  payment verification, malformed-id rejection, per-bucket rate limits.
 
 ## Troubleshooting
 
@@ -331,19 +490,20 @@ Coverage highlights:
   MP response body (`[mercadoPago] api_error (HTTP ...): ...`). Verified causes
   on this account:
   - `400 invalid_field_content` — `back_url` domain rejected by MP
-    (`*.netlify.app` and `localhost` are disallowed; use a public HTTPS
+    (`localhost` and non-public hosts are disallowed; use a public HTTPS
     domain).
   - `500 Internal server error` on `/preapproval` — the `payer_email` is not a
     sandbox test user. In sandbox, the buyer email must be a test account on
     `@testuser.com`; a real email makes MP fail with 500.
 - **Redirecting to sandbox unexpectedly:** `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN`
-  equals the access token — intended in test environments, remove in prod. The
-  Subscriptions API only ever returns `init_point`, so this variable does not
-  change which checkout URL is used; the environment is determined by the
-  credential itself.
+  equals the access token — intended in test environments, remove in prod. For
+  Checkout Pro (website builds) the equality is what selects
+  `sandbox_init_point`, so in prod it must not equal the production token. For
+  Subscriptions the API only ever returns `init_point`; the environment there
+  is determined by the credential itself.
 - **Back URL wrong:** set `PUBLIC_SITE_URL` to a public HTTPS domain Mercado
   Pago accepts (e.g. `https://advanceddigitalmarketingltda.com` — not
-  `localhost` or `*.netlify.app`); otherwise the canonical `SITE_ORIGIN`
+  `localhost` or non-public hosts); otherwise the canonical `SITE_ORIGIN`
   constant is used with a server-side warning.
 - **USD prices on EN pages:** display-only reference; checkout always charges
   BRL (MP Subscriptions does not support USD from this account).

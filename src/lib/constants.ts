@@ -1,4 +1,3 @@
-import { env } from '$env/dynamic/public'
 import type { Locale } from './locale'
 
 /**
@@ -13,18 +12,23 @@ import type { Locale } from './locale'
  */
 export const CHECKOUT_REQUEST_TIMEOUT_MS = 30_000
 
+/**
+ * Browser-side bound for the `/api/contact/submit` round-trip.
+ *
+ * Deliberately LONGER than the server's MailJet request timeout
+ * (`MAILJET_REQUEST_TIMEOUT_MS`, 15s in `src/lib/server/mailjet.ts`), for the
+ * same reason as the checkout timer above: the browser clock starts when the
+ * fetch is issued, so an equal or shorter client timeout could abort right as
+ * the server returns success. Guarded by `contact-timeouts.unit.test.ts`.
+ */
+export const CONTACT_REQUEST_TIMEOUT_MS = 30_000
+
+// The site's public inboxes. Contact and quote CTAs no longer link to these
+// directly — they funnel into the opt-in contact form page — but the
+// addresses remain the visible fallback on the contact page and the MailJet
+// sender/owner-inbox defaults (see src/lib/server/mailjet.ts and contact.ts).
 export const EMAIL = 'contact@AdvancedDigitalMarketingLTDA.com'
 export const PORTUGUESE_EMAIL = 'contato@AdvancedDigitalMarketingLTDA.com'
-export const MAILTO = `mailto:${EMAIL}?subject=Strategy%20call%20request`
-export const PT_MAILTO = `mailto:${PORTUGUESE_EMAIL}?subject=Conversa%20estrat%C3%A9gica`
-export const WHATSAPP_URL = env.PUBLIC_WHATSAPP_URL?.trim() || ''
-
-/**
- * WhatsApp CTAs are gated on availability, not on locale: when
- * PUBLIC_WHATSAPP_URL is configured the CTA shows in both languages (each
- * locale carries its own label); otherwise it is hidden everywhere.
- */
-export const WHATSAPP_AVAILABLE = Boolean(WHATSAPP_URL)
 
 export const LINKS = [
   { to: '/', label: 'Home', jp: 'ホーム' },
@@ -115,17 +119,31 @@ export type ContactCopy = {
   hero: string
   heroAccent: string
   intro: string
-  bookCall: string
-  whatsapp: string
-  emailCta: string
   office: string
   status: string
   notesLabel: string
   notesHeading: string
   notes: [string, string, string][]
-  closeLabel: string
-  closeHeading: string
-  closeLead: string
+  formLabel: string
+  formHeading: string
+  formLead: string
+  nameLabel: string
+  namePlaceholder: string
+  emailLabel: string
+  emailPlaceholder: string
+  consentLabel: string
+  submit: string
+  submitting: string
+  noscript: string
+  successTitle: string
+  successLead: string
+  sentLead: string
+  invalidName: string
+  invalidEmail: string
+  consentRequired: string
+  genericError: string
+  serverMisconfigured: string
+  rateLimited: string
 }
 
 export type PageCopy = {
@@ -196,16 +214,31 @@ export const PAGE_COPY: Record<Locale, PageCopy> = {
     },
     contact: {
       label: 'Contact', hero: 'Open a', heroAccent: 'channel.',
-      intro: 'One inbox, no intake form, no account manager. Every message lands directly with the owner.',
-      bookCall: 'Book a strategy call', whatsapp: 'Book via WhatsApp', emailCta: 'Email Andrew', office: 'Registered office', status: 'Channel: open',
-      notesLabel: 'Before you write', notesHeading: 'Three things that make the first reply useful.',
+      intro: 'Send your name and email, confirm your opt-in, and verify your address — the first reply comes straight from the person doing the work.',
+      office: 'Registered office', status: 'Channel: open',
+      notesLabel: 'What happens next', notesHeading: 'Three steps, one inbox.',
       notes: [
-        ['Goal', JP.goal, 'What outcome you want: more qualified traffic, better conversion, a site that ranks, or all three.'],
-        ['URL', JP.site, 'Your current site, if you have one. The audit starts there.'],
-        ['Timeline', JP.deadline, 'When you need results by, and what a win looks like for you.'],
+        ['Submit', '送信', 'Your name and email, plus your explicit consent to be contacted.'],
+        ['Verify', '確認', 'We email you a confirmation link. Click it — this proves the address is yours and confirms the opt-in.'],
+        ['Reply', '返信', 'The verified request lands with the owner, who replies within one business day.'],
       ],
-      closeLabel: 'Contact', closeHeading: 'The channel is open.',
-      closeLead: 'Bring the visibility problem in front of you. The first reply comes straight from the person doing the work.',
+      formLabel: 'Contact form',
+      formHeading: 'Send a message.',
+      formLead: 'Leave your name and email below. We confirm your opt-in by email, then reply within one business day.',
+      nameLabel: 'Name', namePlaceholder: 'Your name',
+      emailLabel: 'Email', emailPlaceholder: 'you@company.com',
+      consentLabel: 'I agree that Advanced Digital Marketing LTDA may use the details I provide to reply to my enquiry, and I consent to being contacted by email. I understand I can withdraw my consent at any time.',
+      submit: 'Send request', submitting: 'Sending…',
+      noscript: 'JavaScript is off: the form still works — submitting sends your request directly and you will see the server response on this page.',
+      successTitle: 'Check your inbox.',
+      successLead: 'We sent a confirmation link to {email}. Click it to verify your address and complete your request. The link expires in {hours} hours.',
+      sentLead: 'We sent a confirmation link to the address you submitted. Click it to verify your address and complete your request — the link expires in 72 hours.',
+      invalidName: 'Enter your name (max 100 characters).',
+      invalidEmail: 'Enter a valid email address.',
+      consentRequired: 'Please tick the box to confirm you agree to be contacted.',
+      genericError: 'Could not send your request. Please try again.',
+      serverMisconfigured: 'The contact form is not configured yet. Please try again later.',
+      rateLimited: 'Too many attempts. Please try again in a few minutes.',
     },
   },
   'pt-BR': {
@@ -269,19 +302,31 @@ export const PAGE_COPY: Record<Locale, PageCopy> = {
     },
     contact: {
       label: 'Contato', hero: 'Abra um', heroAccent: 'canal.',
-      intro: 'Uma caixa de entrada, sem formulário e sem gerente de contas. Toda mensagem chega diretamente ao proprietário.',
-      bookCall: 'Agendar uma conversa por e-mail', office: 'Sede registrada', status: 'Canal: aberto',
-      whatsapp: 'Falar pelo WhatsApp', emailCta: 'Enviar um e-mail',
-      notesLabel: 'Antes de escrever', notesHeading: 'Cinco informações que tornam a primeira resposta útil.',
+      intro: 'Envie seu nome e e-mail, confirme seu consentimento e verifique seu endereço — a primeira resposta vem diretamente de quem vai analisar o trabalho.',
+      office: 'Sede registrada', status: 'Canal: aberto',
+      notesLabel: 'O que acontece agora', notesHeading: 'Três passos, uma caixa de entrada.',
       notes: [
-        ['O que você vende?', JP.goal, 'Conte qual é sua oferta principal e o que você quer que mais pessoas encontrem.'],
-        ['Em quais cidades atende?', JP.site, 'Liste as cidades e regiões onde você quer gerar contatos.'],
-        ['Qual serviço precisa gerar mais contatos?', JP.deadline, 'Aponte o serviço que deve receber mais procura qualificada.'],
-        ['Você já usa Google Perfil da Empresa, anúncios ou uma landing page?', JP.goal, 'Conte quais canais já estão ativos e o que está funcionando hoje.'],
-        ['Quando precisa começar a ver evolução?', JP.site, 'Indique o prazo que orienta sua prioridade de implementação.'],
+        ['Enviar', '送信', 'Seu nome e e-mail, com seu consentimento explícito para ser contatado(a).'],
+        ['Verificar', '確認', 'Enviamos um link de confirmação por e-mail. Clique nele — isso prova que o endereço é seu e confirma o opt-in.'],
+        ['Responder', '返信', 'A solicitação verificada chega ao responsável, que responde em até um dia útil.'],
       ],
-      closeLabel: 'Contato', closeHeading: 'O canal está aberto.',
-      closeLead: 'Conte o que você vende, onde atende e o que precisa melhorar. A primeira resposta vem diretamente de quem vai analisar o trabalho.',
+      formLabel: 'Formulário de contato',
+      formHeading: 'Envie uma mensagem.',
+      formLead: 'Deixe seu nome e e-mail abaixo. Confirmamos seu consentimento por e-mail e respondemos em até um dia útil.',
+      nameLabel: 'Nome', namePlaceholder: 'Seu nome',
+      emailLabel: 'E-mail', emailPlaceholder: 'voce@empresa.com.br',
+      consentLabel: 'Concordo que a Advanced Digital Marketing LTDA utilize os dados informados para responder à minha solicitação e consinto em ser contatado(a) por e-mail. Entendo que posso revogar meu consentimento a qualquer momento.',
+      submit: 'Enviar solicitação', submitting: 'Enviando…',
+      noscript: 'JavaScript está desativado: o formulário continua funcionando — o envio é feito diretamente e a resposta do servidor aparece nesta página.',
+      successTitle: 'Verifique sua caixa de entrada.',
+      successLead: 'Enviamos um link de confirmação para {email}. Clique nele para verificar seu endereço e concluir sua solicitação. O link expira em {hours} horas.',
+      sentLead: 'Enviamos um link de confirmação para o endereço informado. Clique nele para verificar seu endereço e concluir sua solicitação — o link expira em 72 horas.',
+      invalidName: 'Informe seu nome (máximo de 100 caracteres).',
+      invalidEmail: 'Informe um e-mail válido.',
+      consentRequired: 'Marque a caixa para confirmar que você concorda em ser contatado(a).',
+      genericError: 'Não foi possível enviar sua solicitação. Tente novamente.',
+      serverMisconfigured: 'O formulário de contato ainda não está configurado. Tente novamente mais tarde.',
+      rateLimited: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.',
     },
   },
 }
