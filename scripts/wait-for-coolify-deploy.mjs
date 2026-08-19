@@ -57,10 +57,17 @@ function defaultSleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+/** Strips trailing slashes without a regex (O(n); SonarCloud S8786 flags regexes here). */
+function trimTrailingSlashes(value) {
+  let end = value.length
+  while (end > 0 && value[end - 1] === '/') end -= 1
+  return value.slice(0, end)
+}
+
 /** POSTs a deploy trigger for the application (documented webhook fallback). */
 async function defaultDeploy(apiUrl, apiToken, applicationUuid) {
   const response = await fetch(
-    `${apiUrl.replace(/\/+$/, '')}/api/v1/deploy?uuid=${encodeURIComponent(applicationUuid)}`,
+    `${trimTrailingSlashes(apiUrl)}/api/v1/deploy?uuid=${encodeURIComponent(applicationUuid)}`,
     { method: 'POST', headers: { Authorization: `Bearer ${apiToken}` } },
   )
   if (!response.ok) {
@@ -128,14 +135,58 @@ function timeoutError(expectedCommit, timeoutMs, seen) {
   )
 }
 
+/** Loudly validates the required inputs (kept out of the polling loop). */
+function validateInput({ apiUrl, apiToken, expectedCommit, applicationUuid }) {
+  if (!apiUrl) throw new Error('[wait-for-coolify-deploy] FATAL: COOLIFY_API_URL is not set')
+  if (!apiToken) throw new Error('[wait-for-coolify-deploy] FATAL: COOLIFY_API_TOKEN is not set')
+  if (!expectedCommit) throw new Error('[wait-for-coolify-deploy] FATAL: EXPECTED_COMMIT is not set')
+  if (!applicationUuid) throw new Error('[wait-for-coolify-deploy] FATAL: COOLIFY_APPLICATION_UUID is not set')
+}
+
+/** Human-readable last-seen state for the timeout error. */
+function lastSeenOf(result) {
+  return result.status === 'not-found' ? 'no deployment for this commit yet' : `status ${result.state}`
+}
+
+/** Logs and returns the ready result. */
+function reportReady(result, expectedCommit, attempts) {
+  console.log(
+    `[wait-for-coolify-deploy] ok   commit ${expectedCommit} is deployed` +
+      (result.deploymentUuid ? ` (deployment ${result.deploymentUuid})` : '') +
+      ` after ${attempts} poll(s)`,
+  )
+  return result
+}
+
+/**
+ * Self-healing webhook fallback (documented in docs/coolify-deployment.md):
+ * when the GitHub webhook silently failed and no deployment for the commit
+ * appeared within the grace window, POST /api/v1/deploy exactly once.
+ * Returns the updated triggerSent flag.
+ */
+async function maybeTriggerDeploy({
+  triggerSent,
+  result,
+  startedAt,
+  now,
+  triggerAfterMs,
+  base,
+  apiToken,
+  applicationUuid,
+  deployImpl,
+}) {
+  if (triggerSent) return true
+  if (result.status !== 'not-found') return false
+  if (now() - startedAt < triggerAfterMs) return false
+  await deployImpl(base, apiToken, applicationUuid)
+  console.log('[wait-for-coolify-deploy] auto-deploy webhook missed the push; triggered a deploy from CI')
+  return true
+}
+
 /**
  * Polls Coolify until the expected commit is deployed; fails loudly otherwise.
- *
- * Self-healing (documented in docs/coolify-deployment.md): when the GitHub
- * webhook silently fails and no deployment for the commit appears within the
- * grace window, a deploy is triggered from CI (`POST /api/v1/deploy`) exactly
- * once, then polling continues for `finished` before the purge is allowed.
- * This never double-deploys when auto-deploy works.
+ * The request (and its body reads) runs under an abort signal tied to the
+ * remaining deadline, so a hung fetch can never outlive the documented budget.
  */
 export async function waitForCoolifyDeploy({
   apiUrl,
@@ -146,10 +197,7 @@ export async function waitForCoolifyDeploy({
   timing = {},
   test = {},
 }) {
-  if (!apiUrl) throw new Error('[wait-for-coolify-deploy] FATAL: COOLIFY_API_URL is not set')
-  if (!apiToken) throw new Error('[wait-for-coolify-deploy] FATAL: COOLIFY_API_TOKEN is not set')
-  if (!expectedCommit) throw new Error('[wait-for-coolify-deploy] FATAL: EXPECTED_COMMIT is not set')
-  if (!applicationUuid) throw new Error('[wait-for-coolify-deploy] FATAL: COOLIFY_APPLICATION_UUID is not set')
+  validateInput({ apiUrl, apiToken, expectedCommit, applicationUuid })
 
   const {
     pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
@@ -158,7 +206,7 @@ export async function waitForCoolifyDeploy({
   } = timing
   const { fetchImpl = fetch, now = Date.now, sleep = defaultSleep, deployImpl = defaultDeploy } = test
 
-  const base = apiUrl.replace(/\/+$/, '')
+  const base = trimTrailingSlashes(apiUrl)
   const deadline = now() + timeoutMs
   const startedAt = now()
   let attempts = 0
@@ -179,23 +227,20 @@ export async function waitForCoolifyDeploy({
       remainingMs,
       fetchImpl,
     })
-    if (result.status === 'ready') {
-      console.log(
-        `[wait-for-coolify-deploy] ok   commit ${expectedCommit} is deployed` +
-          (result.deploymentUuid ? ` (deployment ${result.deploymentUuid})` : '') +
-          ` after ${attempts} poll(s)`,
-      )
-      return result
-    }
-    if (result.status === 'error') {
-      throw new Error(`[wait-for-coolify-deploy] FATAL: ${result.message}`)
-    }
-    lastSeen = result.status === 'not-found' ? 'no deployment for this commit yet' : `status ${result.state}`
-    if (!triggerSent && result.status === 'not-found' && now() - startedAt >= triggerAfterMs) {
-      await deployImpl(base, apiToken, applicationUuid)
-      triggerSent = true
-      console.log('[wait-for-coolify-deploy] auto-deploy webhook missed the push; triggered a deploy from CI')
-    }
+    if (result.status === 'ready') return reportReady(result, expectedCommit, attempts)
+    if (result.status === 'error') throw new Error(`[wait-for-coolify-deploy] FATAL: ${result.message}`)
+    lastSeen = lastSeenOf(result)
+    triggerSent = await maybeTriggerDeploy({
+      triggerSent,
+      result,
+      startedAt,
+      now,
+      triggerAfterMs,
+      base,
+      apiToken,
+      applicationUuid,
+      deployImpl,
+    })
     await sleep(pollIntervalMs)
   }
 }
