@@ -56,6 +56,8 @@ export type MailjetMessageInput = {
   textPart: string
   /** Optional HTML body; at least one of textPart/htmlPart is required. */
   htmlPart?: string
+  /** Optional Reply-To address (e.g. the verified lead's inbox for owner notifications). */
+  replyToEmail?: string
 }
 
 export type MailjetMessageResult = {
@@ -99,18 +101,33 @@ function isTimeoutError(error: unknown): boolean {
 }
 
 /**
+ * One sanitization pipeline for every MailJet log line: strip control
+ * characters/newlines (log forging, terminal escape injection), collapse
+ * whitespace, and cap the preview. Single definition for both log sites
+ * (AGENTS.md: DO create reusable code).
+ */
+function sanitizeForLog(value: string): string {
+  const cleaned = value.replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim()
+  return cleaned.length > 2000 ? `${cleaned.slice(0, 2000)}…(truncated ${value.length} bytes)` : cleaned
+}
+
+/**
+ * Replaces email-like tokens before logging. MailJet echoes the rejected
+ * recipient address in send-error bodies; the visitor's address must never
+ * land in server logs, so logs carry the classification fields plus a
+ * redacted preview.
+ */
+function redactEmails(value: string): string {
+  return value.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, '[email redacted]')
+}
+
+/**
  * Reads the MailJet error body once and returns its `ErrorCode` (e.g.
  * "mj-0001", "send-0008") when parseable — used to tell an unvalidated sender
  * apart from a generic credential problem.
  */
 async function readMailjetErrorCode(response: Response): Promise<string | undefined> {
   const body = await response.text().catch(() => '')
-  const sanitized = body
-    .replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-  const preview =
-    sanitized.length > 2000 ? `${sanitized.slice(0, 2000)}…(truncated ${body.length} bytes)` : sanitized
   let code: string | undefined
   try {
     const parsed = JSON.parse(body) as { ErrorCode?: unknown }
@@ -118,7 +135,9 @@ async function readMailjetErrorCode(response: Response): Promise<string | undefi
   } catch {
     // Body is not JSON — the status code still tells us what failed.
   }
-  console.error(`[mailjet] error (HTTP ${response.status}): ${preview}`)
+  // Log the classification code plus a sanitized, recipient-redacted preview;
+  // never the raw body (MailJet echoes the recipient address in send errors).
+  console.error(`[mailjet] error (HTTP ${response.status})${code ? ` code=${code}` : ''}: ${redactEmails(sanitizeForLog(body))}`)
   return code
 }
 
@@ -149,6 +168,9 @@ async function sendRequest(input: MailjetMessageInput, apiKey: string, apiSecret
         // Omit the HTML part entirely when none was provided (an empty string
         // would be a payload the Send API may reject).
         ...(input.htmlPart ? { HTMLPart: input.htmlPart } : {}),
+        // Reply-To routes the recipient's Reply action to this address
+        // (e.g. the verified lead's inbox) instead of the sender inbox.
+        ...(input.replyToEmail ? { ReplyTo: [{ Email: input.replyToEmail }] } : {}),
       },
     ],
     // Root-level property (sibling of Messages): MailJet validates the payload
@@ -204,11 +226,20 @@ async function readSendMessage(response: Response): Promise<Record<string, unkno
   const messages = Array.isArray(record.Messages) ? (record.Messages as Record<string, unknown>[]) : []
   const message = messages[0]
   if (message?.Status !== 'success') {
-    // HTTP 200 with a per-message error Status: log the embedded Errors
-    // array server-side, keep the stable error code for callers.
-    const detail = JSON.stringify(message?.Errors ?? '')
-    const sanitized = detail.replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim()
-    console.error(`[mailjet] message_rejected: ${sanitized.slice(0, 2000)}`)
+    // HTTP 200 with a per-message error Status: log only the classification
+    // fields (ErrorCode / StatusCode / ErrorIdentifier) — the free-text
+    // Errors entries are dropped because they can echo the recipient address.
+    const classified = (Array.isArray(message.Errors) ? (message.Errors as Record<string, unknown>[]) : [])
+      .map((entry) => {
+        const code = typeof entry.ErrorCode === 'string' ? entry.ErrorCode : undefined
+        const status = typeof entry.StatusCode === 'string' ? entry.StatusCode : undefined
+        const identifier = typeof entry.ErrorIdentifier === 'string' ? entry.ErrorIdentifier : undefined
+        const parts = [code, status, identifier].filter((part): part is string => part !== undefined)
+        return parts.length > 0 ? parts.join(' ') : undefined
+      })
+      .filter((part): part is string => part !== undefined)
+      .join('; ')
+    console.error(`[mailjet] message_rejected${classified ? `: ${classified}` : ''}`)
     throw new MailjetError('message_rejected', 'MailJet rejected the message payload')
   }
   return message

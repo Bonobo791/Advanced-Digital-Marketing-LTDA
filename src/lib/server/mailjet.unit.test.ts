@@ -156,7 +156,10 @@ describe('sendMailjetMessage', () => {
         ),
       )
       await expect(sendMailjetMessage(validInput)).rejects.toMatchObject({ code: 'message_rejected' })
-      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('no content'))
+      // Only the classification fields are logged — the free-text ErrorMessage
+      // (which can echo the recipient address) is dropped.
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('send-0003'))
+      expect(errorSpy).not.toHaveBeenCalledWith(expect.stringContaining('no content'))
     } finally {
       errorSpy.mockRestore()
     }
@@ -199,6 +202,52 @@ describe('sendMailjetMessage', () => {
       const body = JSON.parse(String(captured.init.body)) as { Messages: Array<{ From: { Email: string } }> }
       expect(body.Messages[0].From.Email).toBe('contact@AdvancedDigitalMarketingLTDA.com')
       expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('MAILJET_SENDER_EMAIL'))
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
+  it('sets Reply-To when a replyToEmail is provided (owner notification path)', async () => {
+    let captured: { init: RequestInit } | undefined
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+        captured = { init: init ?? {} }
+        return okResponse()
+      }),
+    )
+    await sendMailjetMessage({ ...validInput, replyToEmail: 'lead@example.com' })
+    const body = JSON.parse(String(captured!.init.body)) as { Messages: Array<Record<string, unknown>> }
+    expect(body.Messages[0].ReplyTo).toEqual([{ Email: 'lead@example.com' }])
+  })
+
+  it('omits Reply-To when none is provided (verification email path)', async () => {
+    const captured = await captureRequest()
+    const body = JSON.parse(String(captured.init.body)) as { Messages: Array<Record<string, unknown>> }
+    expect('ReplyTo' in body.Messages[0]).toBe(false)
+  })
+
+  it('redacts recipient addresses from logged error bodies (privacy)', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(
+          async () =>
+            new Response(
+              JSON.stringify({
+                ErrorCode: 'send-0003',
+                ErrorMessage: 'invalid recipient ada@example.com',
+              }),
+              { status: 400 },
+            ),
+        ),
+      )
+      await expect(sendMailjetMessage(validInput)).rejects.toMatchObject({ code: 'api_error' })
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('send-0003'))
+      // The visitor's address must never land in server logs.
+      expect(errorSpy).not.toHaveBeenCalledWith(expect.stringContaining('ada@example.com'))
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('[email redacted]'))
     } finally {
       errorSpy.mockRestore()
     }

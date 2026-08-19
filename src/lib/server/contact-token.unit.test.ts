@@ -127,11 +127,14 @@ describe('verifyContactToken', () => {
     expect(verifyContactToken(forged, NOW).status).toBe('invalid')
   })
 
-  it('fails loud when verifying while the secret is missing', () => {
+  it('reports unconfigured (not invalid) when verifying while the secret is missing', () => {
+    // A missing secret is a server misconfiguration, not a bad link: the
+    // verify page must show a truthful retry-later state, never claim the
+    // link was copied incorrectly.
     vi.stubEnv('CONTACT_FORM_TOKEN_SECRET', '')
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
-      expect(verifyContactToken('x.y', NOW).status).toBe('invalid')
+      expect(verifyContactToken('x.y', NOW).status).toBe('unconfigured')
       expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('CONTACT_FORM_TOKEN_SECRET'))
     } finally {
       errorSpy.mockRestore()
@@ -143,5 +146,52 @@ describe('verifyContactToken', () => {
     expect(readContactTokenSecret()).toBe(SECRET)
     vi.stubEnv('CONTACT_FORM_TOKEN_SECRET', '   ')
     expect(readContactTokenSecret()).toBeUndefined()
+  })
+
+  it('round-trips an optional subject in v2 tokens', () => {
+    vi.stubEnv('CONTACT_FORM_TOKEN_SECRET', SECRET)
+    const { token } = createContactToken(
+      { email: 'ada@example.com', name: 'Ada', locale: 'en-US', subject: 'Account audit request' },
+      NOW,
+      SECRET,
+    )
+    const result = verifyContactToken(token, NOW)
+    expect(result.status).toBe('verified')
+    if (result.status === 'verified') {
+      expect(result.payload.subject).toBe('Account audit request')
+    }
+  })
+
+  it('still verifies legacy v1 tokens (no subject) for their full lifetime', () => {
+    // v1 was the six-field format shipped before the subject field; in-flight
+    // verification emails must keep working until they expire.
+    const encoded = Buffer.from(
+      JSON.stringify([1, 'ada@example.com', 'Ada Lovelace', 'en-US', NOW_SECONDS, NOW_SECONDS + 60]),
+    ).toString('base64url')
+    const legacyToken = `${encoded}.${createHmac('sha256', SECRET).update(encoded).digest('hex')}`
+    vi.stubEnv('CONTACT_FORM_TOKEN_SECRET', SECRET)
+    const result = verifyContactToken(legacyToken, NOW)
+    expect(result.status).toBe('verified')
+    if (result.status === 'verified') {
+      expect(result.payload.subject).toBeUndefined()
+    }
+  })
+
+  it('rejects a v2 token missing the seventh subject field', () => {
+    const encoded = Buffer.from(
+      JSON.stringify([2, 'ada@example.com', 'Ada Lovelace', 'en-US', NOW_SECONDS, NOW_SECONDS + 60]),
+    ).toString('base64url')
+    const bad = `${encoded}.${createHmac('sha256', SECRET).update(encoded).digest('hex')}`
+    vi.stubEnv('CONTACT_FORM_TOKEN_SECRET', SECRET)
+    expect(verifyContactToken(bad, NOW).status).toBe('invalid')
+  })
+
+  it('rejects a subject with control characters', () => {
+    const encoded = Buffer.from(
+      JSON.stringify([2, 'ada@example.com', 'Ada Lovelace', 'en-US', NOW_SECONDS, NOW_SECONDS + 60, 'bad\nsubject']),
+    ).toString('base64url')
+    const bad = `${encoded}.${createHmac('sha256', SECRET).update(encoded).digest('hex')}`
+    vi.stubEnv('CONTACT_FORM_TOKEN_SECRET', SECRET)
+    expect(verifyContactToken(bad, NOW).status).toBe('invalid')
   })
 })

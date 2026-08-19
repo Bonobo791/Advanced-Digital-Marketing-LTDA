@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
   import { PAGE_COPY } from '$lib/constants'
   import { submitContactForm } from '$lib/client/contact'
   import type { Locale } from '$lib/locale'
@@ -16,6 +17,16 @@
   // back so they know which address the link went to.
   let successEmail = $state<string | undefined>(undefined)
   let successHours = $state(72)
+  // Optional subject carried from a service-option CTA (?subject=… on the
+  // contact route): it travels through the verification token and lands in
+  // the owner notification so the lead names the requested service. The
+  // server re-validates it; this is only the prefill.
+  let subject = $state<string | undefined>(undefined)
+
+  onMount(() => {
+    const value = new URL(window.location.href).searchParams.get('subject')?.trim()
+    if (value) subject = value.slice(0, 120)
+  })
 
   // Mirrors the server's linear shape check in $lib/server/checkout.ts.
   const EMAIL_RE = /^[^\s@]+@[^\s@.]+\.[^\s@]{2,}$/
@@ -76,6 +87,7 @@
         email: email.trim(),
         consent: true,
         locale,
+        ...(subject ? { subject } : {}),
       })
       if (!result.ok) {
         errorMessage = errorMessageFor(result.errorCode)

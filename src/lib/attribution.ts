@@ -34,6 +34,19 @@ const QUERY_PARAM_KEYS: ReadonlyArray<readonly [keyof Attribution, string]> = [
 
 const STORAGE_KEY = 'adm:attribution'
 
+/**
+ * Routes whose query string carries a self-contained verification token
+ * (base64 payload includes the visitor's name and email). A verify page is
+ * never a marketing "first touch": persisting it would store the token + PII
+ * in localStorage beyond its 72-hour lifetime.
+ */
+const VERIFY_PATHNAMES = ['/contact/verify/', '/pt-br/contato/verificar/']
+
+/** True when the URL is a contact-verification route (token in query string). */
+export function isVerificationUrl(url: URL): boolean {
+  return VERIFY_PATHNAMES.some((pathname) => url.pathname.startsWith(pathname))
+}
+
 /** Extracts UTM / click-id parameters from a URL (pure, no side effects). */
 export function parseAttribution(url: URL): Attribution {
   const attribution: Attribution = {}
@@ -99,6 +112,10 @@ export function captureAttribution(): Attribution | undefined {
   if (existing) return existing
 
   const url = new URL(window.location.href)
+  // Verification links (token + PII in the query string) must never become
+  // the persisted landing page — skip capture entirely on those routes.
+  if (isVerificationUrl(url)) return undefined
+
   const attribution: Attribution = parseAttribution(url)
   attribution.landingPage = `${url.pathname}${url.search}`.slice(0, MAX_FIELD_LENGTH)
   const referrer = cleanString(document.referrer)

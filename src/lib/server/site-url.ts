@@ -27,7 +27,11 @@ function isIpLiteral(hostname: string): boolean {
 
 /** A host that is a real public HTTPS origin — non-loopback, non-literal. */
 function isPublicHostname(hostname: string): boolean {
-  const host = hostname.toLowerCase()
+  // A fully qualified hostname may carry a terminal dot ("localhost.",
+  // "foo.local."); the URL parser preserves it, so normalize it away before
+  // the loopback/suffix checks — otherwise a loopback origin would silently
+  // pass validation and produce unusable verification links/callbacks.
+  const host = hostname.toLowerCase().replace(/\.$/, '')
   return (
     host.length > 0 &&
     !LOOPBACK_HOSTS.has(host) &&
@@ -44,7 +48,18 @@ function isPublicHostname(hostname: string): boolean {
  * back-links to this site must use: PUBLIC_SITE_URL when it is a public HTTPS
  * URL, otherwise the canonical `SITE_ORIGIN` constant — with a loud server log
  * whenever the configured value is missing, malformed, or not public HTTPS.
+ *
+ * A fully qualified hostname keeps its terminal dot in `URL.origin`
+ * ("https://example.com."); the returned origin drops it so back-links are
+ * canonical.
  */
+function normalizedOrigin(url: URL): string {
+  const hostname = url.hostname.toLowerCase()
+  if (!hostname.endsWith('.')) return url.origin
+  const host = hostname.slice(0, -1)
+  return `${url.protocol}//${host}${url.port ? `:${url.port}` : ''}`
+}
+
 export function publicSiteOrigin(): string {
   const siteUrl = process.env.PUBLIC_SITE_URL?.trim()
   if (siteUrl) {
@@ -54,7 +69,7 @@ export function publicSiteOrigin(): string {
         console.error('[site-url] PUBLIC_SITE_URL is not a public HTTPS URL; using the SITE_ORIGIN constant')
         return SITE_ORIGIN
       }
-      return url.origin
+      return normalizedOrigin(url)
     } catch {
       console.error('[site-url] PUBLIC_SITE_URL is malformed; using the SITE_ORIGIN constant')
       return SITE_ORIGIN

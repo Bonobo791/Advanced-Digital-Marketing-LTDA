@@ -126,14 +126,21 @@ describe('verifyContactRequest', () => {
     expect(mockSend).not.toHaveBeenCalled()
   })
 
-  it('still reports verified when the owner notification fails (loud log, not an error page)', async () => {
+  it('reports notification_failed when the owner notification fails (loud log + honest page state)', async () => {
+    // AGENTS.md: "show to the user". A silent 'verified' would claim the
+    // request reached the owner when it did not — the visitor must see that
+    // the notification failed and that re-opening the link retries it.
     const { MailjetError } = await import('./mailjet')
     mockSend.mockRejectedValueOnce(new MailjetError('api_error', 'MailJet down'))
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
       const { token } = createContactToken(validSubmission, NOW, SECRET)
       const result = await verifyContactRequest(token, NOW + 60_000)
-      expect(result.status).toBe('verified')
+      expect(result).toEqual({
+        status: 'notification_failed',
+        name: 'Ada Lovelace',
+        email: 'ada@example.com',
+      })
       expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('owner notification failed'))
     } finally {
       errorSpy.mockRestore()
@@ -150,7 +157,7 @@ describe('verifyContactRequest', () => {
     try {
       const { token } = createContactToken(validSubmission, NOW, SECRET)
       const first = await verifyContactRequest(token, NOW + 60_000)
-      expect(first.status).toBe('verified')
+      expect(first.status).toBe('notification_failed')
       expect(mockSend).toHaveBeenCalledTimes(1)
 
       const second = await verifyContactRequest(token, NOW + 120_000)
@@ -160,6 +167,31 @@ describe('verifyContactRequest', () => {
     } finally {
       errorSpy.mockRestore()
     }
+  })
+
+  it('reports unconfigured (not invalid) when the token secret is missing', async () => {
+    vi.stubEnv('CONTACT_FORM_TOKEN_SECRET', '')
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const { token } = createContactToken(validSubmission, NOW, SECRET)
+      expect(await verifyContactRequest(token, NOW + 60_000)).toEqual({ status: 'unconfigured' })
+      expect(mockSend).not.toHaveBeenCalled()
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('CONTACT_FORM_TOKEN_SECRET'))
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
+  it('carries the option subject through to the owner notification and sets Reply-To', async () => {
+    const { token } = createContactToken({ ...validSubmission, subject: 'Account audit request' }, NOW, SECRET)
+    const result = await verifyContactRequest(token, NOW + 60_000)
+    expect(result.status).toBe('verified')
+
+    expect(mockSend).toHaveBeenCalledTimes(1)
+    const call = mockSend.mock.calls[0][0]
+    expect(call.textPart).toContain('Subject: Account audit request')
+    // The owner's Reply must reach the verified lead, not the site's sender.
+    expect(call.replyToEmail).toBe('ada@example.com')
   })
 })
 
@@ -185,7 +217,7 @@ describe('contact helpers', () => {
   })
 })
 
-describe('processed-verification dedupe cap', () => {
+describe('processed-verification test hooks', () => {
   beforeEach(() => resetProcessedVerifications())
   afterEach(() => resetProcessedVerifications())
 

@@ -13,10 +13,11 @@
  * mail system of record — matching how Mercado Pago owns all checkout state.
  *
  * Failure philosophy (AGENTS.md): every misconfiguration fails loud on the
- * server log with a stable error code for the caller. The one deliberate
- * exception is the owner notification inside `verifyContactRequest`: the
- * visitor already proved their address, so a notification failure must not
- * turn a valid verification into an error page — it is logged loudly instead.
+ * server log with a stable error code for the caller. The owner notification
+ * inside `verifyContactRequest` is the one flow that reports failure *to the
+ * visitor* as well as the log: the address is verified, but if the owner was
+ * not notified the page says so and the token stays unmarked so the next
+ * click retries — never a silent "verified" that hides a lost lead.
  */
 import { createHash } from 'node:crypto'
 import { EMAIL } from '$lib/constants'
@@ -49,6 +50,8 @@ export type ContactSubmitInput = {
   name: string
   email: string
   locale: Locale
+  /** Free-text subject carried from the CTA that opened the form (optional). */
+  subject?: string
 }
 
 export type ContactSubmitResult = {
@@ -58,8 +61,13 @@ export type ContactSubmitResult = {
 
 export type ContactVerifyResult =
   | { status: 'verified'; name: string; email: string }
+  /** The address was verified but the owner notification failed; the token is
+   *  unmarked, so clicking the link again retries the notification. */
+  | { status: 'notification_failed'; name: string; email: string }
   | { status: 'invalid' }
   | { status: 'expired' }
+  /** `CONTACT_FORM_TOKEN_SECRET` is missing — a server problem, not a bad link. */
+  | { status: 'unconfigured' }
 
 /** Full verification URL for the localized route (public HTTPS origin). */
 export function contactVerificationUrl(token: string, locale: Locale): string {
@@ -145,7 +153,13 @@ function ownerNotificationSubject(name: string, email: string, locale: Locale): 
     : `New verified contact: ${name} <${email}>`
 }
 
-function ownerNotificationText(name: string, email: string, issuedAt: number, locale: Locale): string {
+function ownerNotificationText(
+  name: string,
+  email: string,
+  issuedAt: number,
+  locale: Locale,
+  subject: string | undefined,
+): string {
   const when = new Date(issuedAt * 1000).toISOString()
   const consent =
     locale === 'pt-BR'
@@ -155,9 +169,10 @@ function ownerNotificationText(name: string, email: string, issuedAt: number, lo
     locale === 'pt-BR'
       ? 'Responda a este contato pelo e-mail acima em até um dia útil.'
       : 'Reply to this contact at the address above within one business day.'
+  const subjectLine = subject ? `Subject: ${subject}\n` : ''
   return `Name: ${name}
 Email: ${email}
-${consent} at: ${when} (UTC)
+${subjectLine}${consent} at: ${when} (UTC)
 Locale: ${locale}
 
 ${next}
@@ -173,7 +188,12 @@ ${next}
  * or `MailjetError`; callers map codes to HTTP statuses.
  */
 export async function submitContactRequest(input: ContactSubmitInput): Promise<ContactSubmitResult> {
-  const { token } = createContactToken(input)
+  const { token } = createContactToken({
+    email: input.email,
+    name: input.name,
+    locale: input.locale,
+    ...(input.subject ? { subject: input.subject } : {}),
+  })
   const url = contactVerificationUrl(token, input.locale)
   await sendMailjetMessage({
     toEmail: input.email,
@@ -242,9 +262,11 @@ export function processedVerificationCount(): number {
 export async function verifyContactRequest(token: string, now: number = Date.now()): Promise<ContactVerifyResult> {
   const result: ContactTokenResult = verifyContactToken(token, now)
   if (result.status !== 'verified') {
-    return result.status === 'expired' ? { status: 'expired' } : { status: 'invalid' }
+    if (result.status === 'expired') return { status: 'expired' }
+    if (result.status === 'unconfigured') return { status: 'unconfigured' }
+    return { status: 'invalid' }
   }
-  const { name, email, locale, issuedAt, expiresAt } = result.payload
+  const { name, email, locale, issuedAt, expiresAt, subject } = result.payload
 
   if (markProcessed(token, expiresAt * 1000, now)) {
     try {
@@ -252,20 +274,34 @@ export async function verifyContactRequest(token: string, now: number = Date.now
         toEmail: contactOwnerEmail(),
         toName: 'Advanced Digital Marketing',
         subject: ownerNotificationSubject(name, email, locale),
-        textPart: ownerNotificationText(name, email, issuedAt, locale),
+        textPart: ownerNotificationText(name, email, issuedAt, locale, subject),
+        // The owner's normal Reply action must reach the verified lead, not
+        // bounce back to the site's own inbox (sender) address.
+        replyToEmail: email,
       })
     } catch (error) {
       // The address is verified; only the notification failed. Fail loud on
-      // the server log, never turn the visitor's valid link into an error —
-      // and unmark the token so a later click retries the notification
-      // instead of permanently losing the lead on this instance.
+      // the server log AND tell the visitor (a silent 'verified' would claim
+      // the request reached the owner when it did not) — and unmark the token
+      // so a later click retries the notification instead of losing the lead.
       unmarkProcessed(token)
       if (error instanceof MailjetError) {
         console.error(`[contact] owner notification failed after verification; will retry on next click: ${error.code}`)
       } else {
         console.error('[contact] owner notification failed after verification; will retry on next click', error)
       }
+      return { status: 'notification_failed', name, email }
     }
   }
   return { status: 'verified', name, email }
+}
+
+/**
+ * Shared verify-page loader used by both localized routes — the en and pt-BR
+ * loaders call this so the token extraction + verification behavior cannot
+ * diverge (AGENTS.md: DO create reusable code).
+ */
+export async function contactVerifyPageData(url: URL): Promise<{ verify: ContactVerifyResult }> {
+  const token = url.searchParams.get('token') ?? ''
+  return { verify: await verifyContactRequest(token) }
 }

@@ -92,6 +92,43 @@ describe('POST /api/contact/submit', () => {
     expect(mockSend).not.toHaveBeenCalled()
   })
 
+  it('rejects missing or unsupported locales instead of defaulting to en-US', async () => {
+    for (const locale of [undefined, 'fr-FR', '', 'EN-us', 42]) {
+      const response = await POST(requestEvent({ ...validBody, locale }))
+      expect(response.status).toBe(400)
+      expect(await response.json()).toEqual({ error: 'invalid_locale' })
+    }
+    expect(mockSend).not.toHaveBeenCalled()
+  })
+
+  it('carries an optional subject through to the verification email and token', async () => {
+    const response = await POST(requestEvent({ ...validBody, subject: 'Account audit request' }))
+    expect(response.status).toBe(200)
+    const call = mockSend.mock.calls[0][0]
+    expect(call.subject).toBe('Confirm your contact request — Advanced Digital Marketing')
+
+    // The subject is embedded in the signed token: extract it from the email
+    // link and verify it survives verification (it is what the owner
+    // notification will show).
+    const match = call.htmlPart!.match(/https:\/\/advanceddigitalmarketingltda\.com\/contact\/verify\/\?token=([^"<&]+)/)
+    expect(match).not.toBeNull()
+    const { verifyContactToken } = await import('$lib/server/contact-token')
+    const result = verifyContactToken(match![1], Date.now())
+    expect(result.status).toBe('verified')
+    if (result.status === 'verified') {
+      expect(result.payload.subject).toBe('Account audit request')
+    }
+  })
+
+  it('rejects an out-of-range or control-character subject', async () => {
+    for (const subject of ['x'.repeat(121), 'bad\nsubject']) {
+      const response = await POST(requestEvent({ ...validBody, subject }))
+      expect(response.status).toBe(400)
+      expect(await response.json()).toEqual({ error: 'invalid_subject' })
+    }
+    expect(mockSend).not.toHaveBeenCalled()
+  })
+
   it('rejects malformed JSON', async () => {
     const event = {
       request: new Request('http://localhost/api/contact/submit', {

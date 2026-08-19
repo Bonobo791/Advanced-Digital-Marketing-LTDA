@@ -11,6 +11,13 @@
       verifiedTitle: 'Email verified.',
       verifiedLead: (name: string) =>
         `Thanks, ${name} — your email address is confirmed and your contact request is with the owner. Expect a reply within one business day.`,
+      // The address is verified, but the owner was not notified; the link is
+      // still valid, so clicking it again retries the notification.
+      notificationFailedTitle: 'Email verified — one more step.',
+      notificationFailedLead: (name: string) =>
+        `Thanks, ${name} — your email address is confirmed, but we could not notify the owner just now. Please open this link again to retry.`,
+      unconfiguredTitle: 'Temporary problem.',
+      unconfiguredLead: 'The verification service is temporarily unavailable. Please try the link again in a few minutes.',
       invalidTitle: 'This link is not valid.',
       invalidLead: 'The verification link is not valid. It may have been copied incorrectly — or it belongs to another address. Please submit the form again to receive a fresh link.',
       expiredTitle: 'This link has expired.',
@@ -21,6 +28,11 @@
       verifiedTitle: 'E-mail verificado.',
       verifiedLead: (name: string) =>
         `Obrigado, ${name} — seu e-mail foi confirmado e sua solicitação de contato está com o responsável. A resposta chega em até um dia útil.`,
+      notificationFailedTitle: 'E-mail verificado — falta um passo.',
+      notificationFailedLead: (name: string) =>
+        `Obrigado, ${name} — seu e-mail foi confirmado, mas não conseguimos avisar o responsável agora. Abra este link novamente para tentar de novo.`,
+      unconfiguredTitle: 'Problema temporário.',
+      unconfiguredLead: 'O serviço de verificação está temporariamente indisponível. Tente abrir o link novamente em alguns minutos.',
       invalidTitle: 'Este link não é válido.',
       invalidLead: 'O link de verificação não é válido. Ele pode ter sido copiado incorretamente — ou pertence a outro endereço. Envie o formulário novamente para receber um novo link.',
       expiredTitle: 'Este link expirou.',
@@ -31,14 +43,26 @@
 
   let text = $derived(copy[locale])
   let title = $derived(
-    verify.status === 'verified' ? text.verifiedTitle : verify.status === 'expired' ? text.expiredTitle : text.invalidTitle,
+    verify.status === 'verified'
+      ? text.verifiedTitle
+      : verify.status === 'notification_failed'
+        ? text.notificationFailedTitle
+        : verify.status === 'unconfigured'
+          ? text.unconfiguredTitle
+          : verify.status === 'expired'
+            ? text.expiredTitle
+            : text.invalidTitle,
   )
   let lead = $derived(
     verify.status === 'verified'
       ? text.verifiedLead(verify.name)
-      : verify.status === 'expired'
-        ? text.expiredLead
-        : text.invalidLead,
+      : verify.status === 'notification_failed'
+        ? text.notificationFailedLead(verify.name)
+        : verify.status === 'unconfigured'
+          ? text.unconfiguredLead
+          : verify.status === 'expired'
+            ? text.expiredLead
+            : text.invalidLead,
   )
 </script>
 

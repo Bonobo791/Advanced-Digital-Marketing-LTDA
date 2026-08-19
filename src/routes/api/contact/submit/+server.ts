@@ -4,8 +4,9 @@ import type { Locale } from '$lib/locale'
 import { isValidEmail } from '$lib/server/checkout'
 import { handleApiPost, upstreamErrorResponse } from '$lib/server/api-route'
 import { submitContactRequest } from '$lib/server/contact'
-import { ContactTokenError } from '$lib/server/contact-token'
+import { CONTACT_TOKEN_SUBJECT_MAX_LENGTH, ContactTokenError } from '$lib/server/contact-token'
 import { MailjetError } from '$lib/server/mailjet'
+import { containsControlCharacter } from '$lib/server/text'
 
 // API routes run as Netlify Functions; the root layout's prerender/trailingSlash
 // settings must not apply to them.
@@ -14,24 +15,24 @@ export const trailingSlash = 'ignore'
 
 const NAME_MAX_LENGTH = 100
 
-/**
- * Name is echoed into email copy and the owner notification, so control
- * characters are rejected up front (log-forging / terminal escape injection).
- * Written as a code-point scan rather than a character-class regex so no
- * control character ever appears inside a pattern literal.
- */
-function containsControlCharacter(value: string): boolean {
-  for (let index = 0; index < value.length; index++) {
-    const code = value.charCodeAt(index)
-    if (code <= 0x1f || code === 0x7f) return true
-  }
-  return false
-}
-
 function isValidName(value: unknown): value is string {
   if (typeof value !== 'string') return false
   const trimmed = value.trim()
   return trimmed.length >= 1 && trimmed.length <= NAME_MAX_LENGTH && !containsControlCharacter(trimmed)
+}
+
+/**
+ * Optional subject carried from the originating CTA (service option). Capped
+ * and control-character-free like the name — it reaches email copy and the
+ * owner notification.
+ */
+function isValidSubject(value: string): boolean {
+  return value.length <= CONTACT_TOKEN_SUBJECT_MAX_LENGTH && !containsControlCharacter(value)
+}
+
+/** Only the two shipped locales are accepted — never a silent default (AGENTS.md). */
+function isValidLocale(value: unknown): value is Locale {
+  return value === 'en-US' || value === 'pt-BR'
 }
 
 /** Fields extracted from the request body after validation. */
@@ -39,6 +40,7 @@ interface ValidPayload {
   name: string
   email: string
   locale: Locale
+  subject?: string
 }
 
 /** Validation outcome: the typed payload, or the error code to return. */
@@ -56,8 +58,13 @@ function validatePayload(payload: Record<string, unknown>): ValidationOutcome {
   // basis for the contact and must be a deliberate boolean choice.
   if (payload.consent !== true) return { error: 'consent_required' }
 
-  const locale: Locale = payload.locale === 'pt-BR' ? 'pt-BR' : 'en-US'
-  return { payload: { name, email, locale } }
+  if (!isValidLocale(payload.locale)) return { error: 'invalid_locale' }
+  const locale = payload.locale
+
+  const subject = typeof payload.subject === 'string' ? payload.subject.trim() : ''
+  if (subject && !isValidSubject(subject)) return { error: 'invalid_subject' }
+
+  return { payload: { name, email, locale, ...(subject ? { subject } : {}) } }
 }
 
 async function submitOrError(payload: ValidPayload): Promise<Response> {
@@ -79,7 +86,7 @@ async function submitOrError(payload: ValidPayload): Promise<Response> {
 /**
  * POST /api/contact/submit
  *
- * Request:  { name, email, consent: true, locale? }
+ * Request:  { name, email, consent: true, locale, subject? }
  * Response: { ok: true, expiresInHours } — the verification email is sent;
  * the client then tells the visitor to check their inbox. A token is never
  * returned to the browser; the verification link only goes out by email.
