@@ -142,9 +142,9 @@ describe('waitForCoolifyDeploy', () => {
         new Promise<Response>((_resolve, reject) => {
           // Real fetch rejects on abort; the mock must mirror that so the
           // abort signal's deadline enforcement is what the test exercises.
-          init?.signal?.addEventListener('abort', () =>
-            reject(new DOMException('Aborted', 'AbortError')),
-          )
+          init?.signal?.addEventListener('abort', () => {
+            reject(new DOMException('Aborted', 'AbortError'))
+          })
         }),
     )
     await expect(
@@ -221,7 +221,7 @@ describe('waitForCoolifyDeploy', () => {
           fetchImpl,
           deployImpl,
           now: () => now,
-          sleep: async () => {
+          sleep: () => {
             now += 1
           },
         },

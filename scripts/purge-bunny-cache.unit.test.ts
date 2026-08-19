@@ -49,7 +49,7 @@ describe('purgePullZone', () => {
 
   it('fails loudly on a non-204 response', async () => {
     const fetchImpl = vi.fn(
-      async () => new Response('nope', { status: 401, statusText: 'Unauthorized' }),
+      () => new Response('nope', { status: 401, statusText: 'Unauthorized' }),
     )
     await expect(
       purgePullZone({ apiKey: 'secret', pullZoneId: '42', fetchImpl }),

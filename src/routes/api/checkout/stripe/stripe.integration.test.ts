@@ -43,7 +43,7 @@ describe('POST /api/checkout/stripe', () => {
     vi.stubEnv('STRIPE_SECRET_KEY', 'sk_test_123')
     vi.stubEnv('PUBLIC_SITE_URL', 'https://advanceddigitalmarketingltda.com')
     resetRateLimitBuckets()
-    vi.stubGlobal('fetch', vi.fn(async () => sessionResponse()))
+    vi.stubGlobal('fetch', vi.fn(() => sessionResponse()))
   })
 
   afterEach(() => {
@@ -109,7 +109,7 @@ describe('POST /api/checkout/stripe', () => {
   })
 
   it('maps Stripe upstream failures to stable statuses', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('{"error":{"message":"nope"}}', { status: 401 })))
+    vi.stubGlobal('fetch', vi.fn(() => new Response('{"error":{"message":"nope"}}', { status: 401 })))
     const response = await POST(requestEvent(validSubscription))
     expect(response.status).toBe(502)
     expect(await response.json()).toEqual({ error: 'unauthorized' })

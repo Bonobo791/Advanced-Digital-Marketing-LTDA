@@ -17,8 +17,6 @@ export const trailingSlash = 'ignore'
 
 const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
-type Flow = 'subscription' | 'build'
-
 type ValidPayload =
   | { flow: 'subscription'; email: string; serviceIds: unknown; config: unknown; idempotencyKey: string; locale: Locale }
   | { flow: 'build'; type: unknown; kind: unknown; idempotencyKey: string; locale: Locale }
@@ -68,15 +66,17 @@ function subscriptionLineItems(flow: Extract<ValidPayload, { flow: 'subscription
 }
 
 function buildLineItems(flow: Extract<ValidPayload, { flow: 'build' }>) {
-  if (!isWebsiteBuildType(flow.type) || !isWebsiteBuildKind(flow.kind)) {
+  const type = flow.type
+  const kind = flow.kind
+  if (!isWebsiteBuildType(type) || !isWebsiteBuildKind(kind)) {
     throw new PricingError('invalid_build', 'Invalid build selection')
   }
   return {
-    externalReference: `website-build:${flow.type}:${flow.kind}`,
+    externalReference: `website-build:${type}:${kind}`,
     items: [
       {
-        name: websiteBuildTitle(flow.locale, flow.type, flow.kind),
-        unitAmountUSD: websiteBuildPriceUSD(flow.type, flow.kind),
+        name: websiteBuildTitle(flow.locale, type, kind),
+        unitAmountUSD: websiteBuildPriceUSD(type, kind),
         quantity: 1,
         recurringMonthly: false,
       },
