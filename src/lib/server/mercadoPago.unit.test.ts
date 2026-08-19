@@ -289,6 +289,15 @@ describe('getSubscription', () => {
     stubFetch(() => jsonResponse({}, 503))
     await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'api_error' })
   })
+
+  it('rejects a 200 response with a missing or non-string status loudly', async () => {
+    // A malformed upstream response must surface as invalid_response (and the
+    // completion page's loud error state), never as a guessed pending state.
+    stubFetch(() => jsonResponse({ id: 's1' }))
+    await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'invalid_response' })
+    stubFetch(() => jsonResponse({ id: 's1', status: 200 }))
+    await expect(getSubscription('s1')).rejects.toMatchObject({ code: 'invalid_response' })
+  })
 })
 
 describe('createCheckoutPreference', () => {
@@ -495,6 +504,15 @@ describe('getPayment', () => {
 
   it('rejects a response without any id loudly', async () => {
     stubFetch(() => jsonResponse({ status: 'approved' }))
+    await expect(getPayment('123')).rejects.toMatchObject({ code: 'invalid_response' })
+  })
+
+  it('rejects a 200 response with a missing or non-string status loudly', async () => {
+    // A malformed upstream response must surface as invalid_response (and the
+    // completion page's loud error state), never as a guessed unconfirmed state.
+    stubFetch(() => jsonResponse({ id: '1234567890' }))
+    await expect(getPayment('123')).rejects.toMatchObject({ code: 'invalid_response' })
+    stubFetch(() => jsonResponse({ id: '1234567890', status: 42 }))
     await expect(getPayment('123')).rejects.toMatchObject({ code: 'invalid_response' })
   })
 

@@ -31,7 +31,7 @@ describe('buildPurgeConfig', () => {
 
 describe('purgePullZone', () => {
   it('POSTs to the pull-zone purge endpoint with the AccessKey header and accepts 204', async () => {
-    const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }))
+    const fetchImpl = vi.fn(() => new Response(null, { status: 204 }))
     const status = await purgePullZone({
       apiKey: 'secret',
       pullZoneId: '42',
@@ -57,7 +57,7 @@ describe('purgePullZone', () => {
   })
 
   it('fails loudly when the request throws (network error)', async () => {
-    const fetchImpl = vi.fn(async () => {
+    const fetchImpl = vi.fn(() => {
       throw new Error('ECONNRESET')
     })
     await expect(
@@ -72,7 +72,7 @@ describe('main', () => {
   it('is a loud dev no-op without creds', async () => {
     vi.stubEnv('BUNNY_API_KEY', '')
     vi.stubEnv('BUNNY_PULL_ZONE_ID', '')
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined)
     try {
       await expect(main()).resolves.toBe(0)
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('skip'))
@@ -91,8 +91,8 @@ describe('main', () => {
   it('purges when creds are present and logs success', async () => {
     vi.stubEnv('BUNNY_API_KEY', 'secret')
     vi.stubEnv('BUNNY_PULL_ZONE_ID', '42')
-    const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }))
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const fetchImpl = vi.fn(() => new Response(null, { status: 204 }))
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined)
     try {
       await expect(main(process.env, fetchImpl)).resolves.toBe(0)
       expect(logSpy).toHaveBeenCalledWith(

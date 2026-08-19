@@ -35,12 +35,20 @@ container.
    - `MERCADO_PAGO_ACCESS_TOKEN` (and `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN` for
      test mode), `MERCADO_PAGO_WEBHOOK_SECRET`, `PUBLIC_MERCADO_PAGO_PUBLIC_KEY`
    - `MAILJET_API_KEY`, `MAILJET_API_SECRET`, `MAILJET_SENDER_EMAIL`,
-     `MAILJET_SENDER_NAME`, `MAILJET_SANDBOX_MODE`
+     `MAILJET_SENDER_NAME`, `MAILJET_SANDBOX_MODE` (local/testing only — the
+     server refuses to send in sandbox mode when `NODE_ENV=production`, so
+     never leave it enabled here)
    - `CONTACT_FORM_TOKEN_SECRET` (`openssl rand -hex 32`),
      `CONTACT_FORM_OWNER_EMAIL`
    - `PUBLIC_SITE_URL=https://advanceddigitalmarketingltda.com`
    - Recommended: `ORIGIN=https://advanceddigitalmarketingltda.com` so
      SvelteKit generates absolute URLs from the canonical origin.
+   - **Rate limiting behind the proxy (required):** adapter-node only reads a
+     forwarded client address when it is configured to trust one. Set
+     `ADDRESS_HEADER=X-Forwarded-For` and `XFF_DEPTH=1` (one trusted proxy:
+     Coolify's reverse proxy in front of the container). Without these, every
+     visitor shares the proxy/container address and the per-IP rate limiter
+     throttles the whole site after a few aggregate requests.
    Full descriptions: `docs/mercado-pago-subscriptions.md`,
    `docs/contact-form.md`, `.env.example`.
 5. **Healthcheck**: point Coolify's healthcheck at `GET /api/health` (returns
@@ -65,21 +73,25 @@ container.
   carries `node_modules` (production only). Dev tooling and secrets never
   enter the image (`.dockerignore` excludes `.env*`, `.git`, `node_modules`,
   build artifacts, IDE/tool state).
-- API routes resolve the client IP from `X-Forwarded-For` (set by the
-  Coolify reverse proxy) for rate limiting; make sure trusted-proxy forwarding
-  is enabled so the per-IP rate limit keeps working.
+- API routes resolve the client IP for rate limiting from
+  `getClientAddress()`. With adapter-node that only reads `X-Forwarded-For`
+  when `ADDRESS_HEADER=X-Forwarded-For` and `XFF_DEPTH=1` are set (step 4
+  above) — without them every visitor shares the proxy address and the whole
+  site shares one rate-limit bucket.
 
 ## Verify-then-trigger fallback (auto-deploy webhook died)
 
 If pushes stop auto-deploying (the Coolify GitHub webhook silently failing is
-the known failure mode), trigger a deploy from CI and keep the purge
-guarantee:
+the known failure mode), the purge workflow self-heals and keeps the purge
+guarantee — implemented in `scripts/wait-for-coolify-deploy.mjs`:
 
-- On push, the purge workflow polls `GET /api/v1/deployments/applications/{uuid}`
-  for the commit. If no deployment appears within a grace window, call
-  `POST /api/v1/deploy?uuid=<app-uuid>` to start one, then continue waiting
-  for `finished` before purging. This never double-deploys when auto-deploy
-  works and self-heals when it does not.
+- The wait script polls `GET /api/v1/deployments/applications/{uuid}` for the
+  commit. If **no deployment for the commit appears** within the grace window
+  (`COOLIFY_TRIGGER_AFTER_MS`, default 3 minutes), it calls
+  `POST /api/v1/deploy?uuid=<app-uuid>` **exactly once** to start the deploy,
+  then keeps waiting for `finished` before the purge is allowed. The trigger
+  never fires when the webhook worked (a deployment already exists), so it
+  never double-deploys, and it fires at most once per run.
 
 ## Rollback
 

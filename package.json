@@ -1,13 +1,8 @@
 {
   "name": "adm-ltda",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
-  "packageManager": "npm@11",
-  "engines": {
-    "node": ">=24 <25",
-    "npm": ">=11 <12"
-  },
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
@@ -21,6 +16,17 @@
     "prepare": "svelte-kit sync",
     "predev": "node scripts/sync-assets.mjs",
     "prebuild": "node scripts/sync-assets.mjs"
+  },
+  "overrides": {
+    "cookie": "^0.7.2",
+    "nanoid": "^3.3.18",
+    "qs": "^6.15.2"
+  },
+  "dependencies": {
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/overpass": "^5.3.0",
+    "mercadopago": "^3.4.0"
   },
   "devDependencies": {
     "@stryker-mutator/core": "^9.0.0",
@@ -39,10 +45,9 @@
     "vitest": "^4.0.0",
     "@sveltejs/adapter-node": "^5.0.0"
   },
-  "dependencies": {
-    "@fontsource-variable/archivo": "^5.3.0",
-    "@fontsource/jetbrains-mono": "^5.3.0",
-    "@fontsource/overpass": "^5.3.0",
-    "mercadopago": "^3.4.0"
-  }
+  "engines": {
+    "node": ">=24 <25",
+    "npm": ">=11 <12"
+  },
+  "packageManager": "npm@11"
 }

@@ -44,8 +44,8 @@ const GEO_HEADERS = ['bunny-country', 'x-country-code', 'cf-ipcountry', 'x-geo-c
 /** Normalized (uppercase) country code from the CDN/proxy headers, if any. */
 export function geoCountryFromHeaders(headers: Headers): string | undefined {
   for (const name of GEO_HEADERS) {
-    const value = headers.get(name)
-    if (value && value.trim()) return value.trim().toUpperCase()
+    const value = headers.get(name)?.trim()
+    if (value) return value.toUpperCase()
   }
   return undefined
 }

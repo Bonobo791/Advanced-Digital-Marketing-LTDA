@@ -320,7 +320,7 @@ export async function verifyContactRequest(token: string, now: number = Date.now
 
   const hash = createHash('sha256').update(token).digest('hex')
   let notification = inFlightNotifications.get(hash)
-  if (!notification) {
+  if (notification === undefined) {
     if (markProcessed(token, expiresAt * 1000, now)) {
       notification = deliverOwnerNotification({ token, name, email, locale, issuedAt, subject })
       inFlightNotifications.set(hash, notification)
@@ -335,7 +335,7 @@ export async function verifyContactRequest(token: string, now: number = Date.now
     }
   }
 
-  if (notification) {
+  if (notification !== undefined) {
     try {
       await notification
     } catch {

@@ -5,8 +5,11 @@ import {
   getPayment,
   getSubscription,
   type PaymentStatus,
+  type SubscriptionStatus,
 } from '$lib/server/mercadoPago'
 import { WEBSITE_BUILD_KINDS, WEBSITE_BUILD_TYPES, websiteBuildExternalReference, websiteBuildPriceBRL } from '$lib/website-builds'
+import { getService } from '$lib/catalog'
+import { authoritativeSubscriptionTotalBRL } from '$lib/server/pricing'
 import { ClientAddressError, clientIpAddress } from '$lib/server/client-ip'
 import { checkRateLimit, rateLimitKey } from '$lib/server/rate-limit'
 
@@ -109,6 +112,17 @@ async function verifySubscription(
   if (!subscription) return { state: 'error', kind: 'subscription' }
 
   if (subscription.status === 'authorized') {
+    if (!isSiteSubscription(subscription)) {
+      // The preapproval is real and authorized but is not bound to a checkout
+      // this server created (wrong external_reference, amount or currency).
+      // Showing "sua assinatura foi processada" for it would be a false claim,
+      // so refuse the success state and log loudly instead.
+      console.warn(
+        `[checkout] authorized subscription ${subscription.id} does not match a server-created subscription ` +
+          `(external_reference=${subscription.externalReference}, amount=${subscription.transactionAmount}, currency=${subscription.currencyId}); refusing success claim`,
+      )
+      return { state: 'error', kind: 'subscription' }
+    }
     return { state: 'confirmed', subscriptionId: subscription.id }
   }
   // Paused/cancelled are terminal — the subscription will never progress to
@@ -189,6 +203,24 @@ async function verifyPayment(
     return { state: 'payment_pending', paymentId: payment.id }
   }
   return { state: 'payment_unconfirmed', paymentId: payment.id }
+}
+
+/**
+ * True only when an authorized subscription is bound to a checkout this server
+ * actually created: the Mercado Pago `external_reference` must be a valid
+ * catalog package (fixed-price amounts must match exactly; ads-spend amounts
+ * must be at or above the minimum fee, since the recorded total tracks the
+ * customer's spend) and the currency must be BRL. An authorized preapproval
+ * for anything else never shows the subscription success claim.
+ */
+function isSiteSubscription(subscription: SubscriptionStatus): boolean {
+  if (subscription.currencyId !== 'BRL' || subscription.externalReference === null || subscription.transactionAmount === null) {
+    return false
+  }
+  const floor = authoritativeSubscriptionTotalBRL(subscription.externalReference)
+  if (floor === null) return false
+  const hasAdsSpend = subscription.externalReference.split('+').some((id) => getService(id)?.pricing.kind === 'ads-spend')
+  return hasAdsSpend ? subscription.transactionAmount >= floor : subscription.transactionAmount === floor
 }
 
 /**

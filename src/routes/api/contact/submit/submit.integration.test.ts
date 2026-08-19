@@ -64,6 +64,49 @@ describe('POST /api/contact/submit', () => {
     expect(body).not.toContain('token')
   })
 
+  it('accepts a native no-JavaScript form POST (urlencoded) end to end', async () => {
+    // With JS off, ContactForm.svelte falls back to a native POST
+    // (method=post + action=/api/contact/submit); the endpoint must accept
+    // urlencoded bodies, keep the visitor's data out of the URL, and send the
+    // same verification email as the JSON flow.
+    const form = new URLSearchParams({
+      name: 'Ada Lovelace',
+      email: 'ada@example.com',
+      consent: 'on',
+      locale: 'en-US',
+    })
+    const response = await POST({
+      request: new Request('http://localhost/api/contact/submit', {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: form.toString(),
+      }),
+      getClientAddress: () => '127.0.0.1',
+    } as Parameters<typeof POST>[0])
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ ok: true, expiresInHours: 72 })
+    expect(mockSend).toHaveBeenCalledTimes(1)
+  })
+
+  it('treats an unchecked consent checkbox in a native POST as no consent', async () => {
+    const form = new URLSearchParams({
+      name: 'Ada Lovelace',
+      email: 'ada@example.com',
+      locale: 'en-US',
+    })
+    const response = await POST({
+      request: new Request('http://localhost/api/contact/submit', {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: form.toString(),
+      }),
+      getClientAddress: () => '127.0.0.1',
+    } as Parameters<typeof POST>[0])
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'consent_required' })
+    expect(mockSend).not.toHaveBeenCalled()
+  })
+
   it('rejects invalid names without calling MailJet', async () => {
     const cases = ['', '   ', 'a'.repeat(101), 'bad\nname', 'line\rbreak']
     for (const name of cases) {
@@ -110,10 +153,11 @@ describe('POST /api/contact/submit', () => {
     // The subject is embedded in the signed token: extract it from the email
     // link and verify it survives verification (it is what the owner
     // notification will show).
-    const match = call.htmlPart!.match(/https:\/\/advanceddigitalmarketingltda\.com\/contact\/verify\/\?token=([^"<&]+)/)
+    const match = call.htmlPart?.match(/https:\/\/advanceddigitalmarketingltda\.com\/contact\/verify\/\?token=([^"<&]+)/)
     expect(match).not.toBeNull()
     const { verifyContactToken } = await import('$lib/server/contact-token')
-    const result = verifyContactToken(match![1], Date.now())
+    const token = match?.[1] ?? ''
+    const result = verifyContactToken(token, Date.now())
     expect(result.status).toBe('verified')
     if (result.status === 'verified') {
       expect(result.payload.subject).toBe('Account audit request')

@@ -38,6 +38,7 @@ export type MailjetErrorCode =
   | 'api_error'
   | 'timeout'
   | 'invalid_response'
+  | 'sandbox_in_production'
 
 export class MailjetError extends Error {
   code: MailjetErrorCode
@@ -108,7 +109,9 @@ function isTimeoutError(error: unknown): boolean {
  */
 function sanitizeForLog(value: string): string {
   const cleaned = value.replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim()
-  return cleaned.length > 2000 ? `${cleaned.slice(0, 2000)}…(truncated ${value.length} bytes)` : cleaned
+  if (cleaned.length <= 2000) return cleaned
+  const preview = cleaned.slice(0, 2000)
+  return `${preview}…(truncated ${value.length} bytes)`
 }
 
 /**
@@ -118,12 +121,29 @@ function sanitizeForLog(value: string): string {
  * redacted preview.
  */
 function redactEmails(value: string): string {
-  // Local part: labels joined by . _ % + -; domain: dot-joined labels; TLD:
-  // 2+ letters. No character class on both sides of the separators, so the
-  // pattern cannot backtrack quadratically over long separator runs
-  // (SonarCloud: super-linear regex).
-  const EMAIL_LIKE_RE = /[A-Za-z0-9]+(?:[._%+-][A-Za-z0-9]+)*@(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}/g
-  return value.replace(EMAIL_LIKE_RE, '[email redacted]')
+  // Single-pass scan, O(n) — the regex equivalent is super-linear and
+  // rejected by the analyzer (SonarCloud: S8786). Locate each '@', extend to
+  // the surrounding email characters (local part: word chars + . _ % + -;
+  // domain: word chars + . -), and replace the span. Over-redaction (e.g. a
+  // trailing sentence period) is safe: logs must never carry addresses.
+  const isEmailChar = (ch: string): boolean => /[A-Za-z0-9._%+-]/.test(ch)
+  let out = ''
+  let cursor = 0
+  while (cursor < value.length) {
+    const at = value.indexOf('@', cursor)
+    if (at === -1) {
+      out += value.slice(cursor)
+      break
+    }
+    let start = at
+    while (start > cursor && isEmailChar(value[start - 1])) start -= 1
+    let end = at + 1
+    while (end < value.length && isEmailChar(value[end])) end += 1
+    out += value.slice(cursor, start)
+    out += start < at ? '[email redacted]' : '@'
+    cursor = end
+  }
+  return out
 }
 
 /**
@@ -239,25 +259,35 @@ async function readSendMessage(response: Response): Promise<Record<string, unkno
   const record = parsed as Record<string, unknown>
   const messages = Array.isArray(record.Messages) ? (record.Messages as Record<string, unknown>[]) : []
   const message = messages[0]
-  if (message?.Status !== 'success') {
-    // HTTP 200 with a per-message error Status: log only the classification
-    // fields (ErrorCode / StatusCode / ErrorIdentifier) — the free-text
-    // Errors entries are dropped because they can echo the recipient address.
-    const classified = (Array.isArray(message.Errors) ? (message.Errors as Record<string, unknown>[]) : [])
-      .map((entry) => {
-        const code = typeof entry.ErrorCode === 'string' ? entry.ErrorCode : undefined
-        const status = typeof entry.StatusCode === 'string' ? entry.StatusCode : undefined
-        const identifier = typeof entry.ErrorIdentifier === 'string' ? entry.ErrorIdentifier : undefined
-        const parts = [code, status, identifier].filter((part): part is string => part !== undefined)
-        return parts.length > 0 ? parts.join(' ') : undefined
-      })
-      .filter((part): part is string => part !== undefined)
-      .join('; ')
-    const classifiedLabel = classified ? `: ${classified}` : ''
-    console.error(`[mailjet] message_rejected${classifiedLabel}`)
-    throw new MailjetError('message_rejected', 'MailJet rejected the message payload')
-  }
+  if (message?.Status !== 'success') rejectMessage(message)
   return message
+}
+
+/**
+ * Extracts the non-sensitive classification fields from one rejected-message
+ * Errors entry (ErrorCode / StatusCode / ErrorIdentifier). The free-text
+ * fields are dropped because they can echo the recipient address.
+ */
+function classifiedErrorOf(entry: Record<string, unknown>): string | undefined {
+  const code = typeof entry.ErrorCode === 'string' ? entry.ErrorCode : undefined
+  const status = typeof entry.StatusCode === 'string' ? entry.StatusCode : undefined
+  const identifier = typeof entry.ErrorIdentifier === 'string' ? entry.ErrorIdentifier : undefined
+  const parts = [code, status, identifier].filter((part): part is string => part !== undefined)
+  return parts.length > 0 ? parts.join(' ') : undefined
+}
+
+/** Logs a rejected-message payload (classification fields only) and throws. */
+function rejectMessage(message: Record<string, unknown> | undefined): never {
+  // HTTP 200 with a per-message error Status: log only ErrorCode /
+  // StatusCode / ErrorIdentifier — never the free-text Errors entries, which
+  // can echo the recipient address.
+  const classified = (Array.isArray(message?.Errors) ? (message.Errors as Record<string, unknown>[]) : [])
+    .map(classifiedErrorOf)
+    .filter((part): part is string => part !== undefined)
+    .join('; ')
+  const classifiedLabel = classified ? `: ${classified}` : ''
+  console.error(`[mailjet] message_rejected${classifiedLabel}`)
+  throw new MailjetError('message_rejected', 'MailJet rejected the message payload')
 }
 
 /**
@@ -285,6 +315,16 @@ export async function sendMailjetMessage(input: MailjetMessageInput): Promise<Ma
   const { apiKey, apiSecret } = readCredentials()
   if (!apiKey || !apiSecret) {
     throw new MailjetError('missing_credentials', 'MailJet API credentials are not configured')
+  }
+  if (mailjetSandboxMode() && process.env.NODE_ENV === 'production') {
+    // Sandbox mode validates payloads WITHOUT delivering; left on in
+    // production it would silently report success while sending nothing
+    // (AGENTS.md: no silent fallbacks). Refuse loudly so the operator sees
+    // the misconfiguration and the visitor gets the honest error state.
+    console.error(
+      '[mailjet] MAILJET_SANDBOX_MODE=true is set in production — messages would be validation-only; refusing to send',
+    )
+    throw new MailjetError('sandbox_in_production', 'MailJet sandbox mode is enabled in production')
   }
 
   const response = await sendRequest(input, apiKey, apiSecret)

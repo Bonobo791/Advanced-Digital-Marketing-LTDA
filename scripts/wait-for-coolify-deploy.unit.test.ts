@@ -1,9 +1,10 @@
 /**
  * Guards the wait-for-commit-marker contract (scripts/wait-for-coolify-deploy.mjs):
  * the purge must never run at deploy-start and never blindly — the script only
- * returns once the deployment for the expected commit is 'finished', and it
- * fails loudly on Coolify API errors, failed/cancelled deployments, or timeout
- * (never purging stale content).
+ * returns once the deployment for the expected commit is 'finished', it fails
+ * loudly on Coolify API errors, failed/cancelled deployments, or timeout
+ * (never purging stale content), and it enforces the deadline even while the
+ * Coolify API request is still pending.
  */
 import { describe, expect, it, vi } from 'vitest'
 import { resolveCoolifyDeployment, waitForCoolifyDeploy } from './wait-for-coolify-deploy.mjs'
@@ -19,7 +20,14 @@ const DEPLOYMENTS = [
   { deployment_uuid: 'ghi', commit: 'other', status: 'finished', updated_at: '2026-08-19T09:00:00Z' },
 ]
 
-const ok = (body) => vi.fn(async () => new Response(JSON.stringify(body), { status: 200 }))
+const ok = (body: unknown) => vi.fn(() => new Response(JSON.stringify(body), { status: 200 }))
+
+const BASE_ARGS = {
+  apiUrl: 'https://coolify.example.com',
+  apiToken: 't',
+  applicationUuid: 'app-1',
+  expectedCommit: 'sha1',
+}
 
 describe('resolveCoolifyDeployment', () => {
   it('reports ready for the newest finished deployment of the commit', () => {
@@ -78,11 +86,8 @@ describe('waitForCoolifyDeploy', () => {
   it('returns when the commit deployment is finished', async () => {
     const fetchImpl = ok(DEPLOYMENTS)
     const result = await waitForCoolifyDeploy({
-      apiUrl: 'https://coolify.example.com',
-      apiToken: 't',
-      applicationUuid: 'app-1',
-      expectedCommit: 'sha1',
-      fetchImpl,
+      ...BASE_ARGS,
+      test: { fetchImpl },
     })
     expect(result.status).toBe('ready')
     expect(fetchImpl).toHaveBeenCalledWith(
@@ -93,10 +98,10 @@ describe('waitForCoolifyDeploy', () => {
 
   it('fails loudly when the Coolify API errors', async () => {
     const fetchImpl = vi.fn(
-      async () => new Response('unauthorized', { status: 401, statusText: 'Unauthorized' }),
+      () => new Response('unauthorized', { status: 401, statusText: 'Unauthorized' }),
     )
     await expect(
-      waitForCoolifyDeploy({ apiUrl: 'https://coolify.example.com', apiToken: 'bad', applicationUuid: 'app-1', expectedCommit: 'sha1', fetchImpl }),
+      waitForCoolifyDeploy({ ...BASE_ARGS, apiToken: 'bad', test: { fetchImpl } }),
     ).rejects.toThrow(/401/)
   })
 
@@ -104,8 +109,8 @@ describe('waitForCoolifyDeploy', () => {
     for (const status of ['failed', 'cancelled-by-user']) {
       const fetchImpl = ok([{ deployment_uuid: 'x', commit: 'sha1', status }])
       await expect(
-        waitForCoolifyDeploy({ apiUrl: 'https://coolify.example.com', apiToken: 't', applicationUuid: 'app-1', expectedCommit: 'sha1', fetchImpl }),
-      ).rejects.toThrow(new RegExp(status))
+        waitForCoolifyDeploy({ ...BASE_ARGS, test: { fetchImpl } }),
+      ).rejects.toThrow(status)
     }
   })
 
@@ -114,33 +119,120 @@ describe('waitForCoolifyDeploy', () => {
     let now = 0
     await expect(
       waitForCoolifyDeploy({
-        apiUrl: 'https://coolify.example.com',
-        apiToken: 't',
-        applicationUuid: 'app-1',
-        expectedCommit: 'sha1',
-        fetchImpl,
-        pollIntervalMs: 1,
-        timeoutMs: 50,
-        now: () => now,
-        sleep: async () => {
-          now += 1000
+        ...BASE_ARGS,
+        timing: { pollIntervalMs: 1, timeoutMs: 50 },
+        test: {
+          fetchImpl,
+          now: () => now,
+          sleep: async () => {
+            now += 1000
+          },
         },
       }),
     ).rejects.toThrow(/timed out/)
   })
 
+  it('enforces the deadline while the Coolify API request is still pending', async () => {
+    // A fetch that never resolves must not keep the script alive past the
+    // documented budget: the request runs under an abort signal tied to the
+    // remaining deadline, so the wait rejects with the timeout error instead
+    // of hanging until the 30-minute GitHub Actions job timeout.
+    const pendingFetch = vi.fn(
+      (_url: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          // Real fetch rejects on abort; the mock must mirror that so the
+          // abort signal's deadline enforcement is what the test exercises.
+          init?.signal?.addEventListener('abort', () =>
+            reject(new DOMException('Aborted', 'AbortError')),
+          )
+        }),
+    )
+    await expect(
+      waitForCoolifyDeploy({
+        ...BASE_ARGS,
+        timing: { timeoutMs: 50 },
+        test: { fetchImpl: pendingFetch },
+      }),
+    ).rejects.toThrow(/timed out/)
+  })
+
+  it('triggers a deploy from CI once when the webhook never starts one, then waits for it', async () => {
+    // Self-healing fallback (docs/coolify-deployment.md): after the grace
+    // window with NO deployment for the commit (the webhook silently failed),
+    // POST /api/v1/deploy exactly once; polling continues until the triggered
+    // deployment finishes.
+    const states = [
+      [], // webhook missed the push: no deployment record yet
+      [], // still nothing after one more poll
+      [], // grace window elapsed — the trigger fires on this poll
+      [{ deployment_uuid: 'x', commit: 'sha1', status: 'queued' }],
+      [{ deployment_uuid: 'x', commit: 'sha1', status: 'in_progress' }],
+      [{ deployment_uuid: 'x', commit: 'sha1', status: 'finished' }],
+    ]
+    let calls = 0
+    const fetchImpl = vi.fn(() => {
+      const body = states[Math.min(calls, states.length - 1)]
+      calls += 1
+      return new Response(JSON.stringify(body), { status: 200 })
+    })
+    const deployImpl = vi.fn(() => new Response(null, { status: 200 }))
+    let now = 0
+    const result = await waitForCoolifyDeploy({
+      ...BASE_ARGS,
+      timing: { pollIntervalMs: 1, timeoutMs: 60_000, triggerAfterMs: 2 },
+      test: {
+        fetchImpl,
+        deployImpl,
+        now: () => now,
+        sleep: async () => {
+          now += 1
+        },
+      },
+    })
+    expect(result.status).toBe('ready')
+    expect(deployImpl).toHaveBeenCalledTimes(1)
+    expect(deployImpl).toHaveBeenCalledWith(
+      'https://coolify.example.com',
+      't',
+      'app-1',
+    )
+  })
+
+  it('never double-triggers a deploy once one has been sent', async () => {
+    // The commit stays absent the whole wait: the trigger fires on the first
+    // poll past the grace window and must never fire again before the timeout.
+    const fetchImpl = vi.fn(() => new Response(JSON.stringify([]), { status: 200 }))
+    const deployImpl = vi.fn(() => new Response(null, { status: 200 }))
+    let now = 0
+    await expect(
+      waitForCoolifyDeploy({
+        ...BASE_ARGS,
+        timing: { pollIntervalMs: 1, timeoutMs: 50, triggerAfterMs: 2 },
+        test: {
+          fetchImpl,
+          deployImpl,
+          now: () => now,
+          sleep: async () => {
+            now += 10
+          },
+        },
+      }),
+    ).rejects.toThrow(/timed out/)
+    expect(deployImpl).toHaveBeenCalledTimes(1)
+  })
+
   it('fails loudly when a required input is missing', async () => {
     await expect(
-      waitForCoolifyDeploy({ apiUrl: '', apiToken: 't', applicationUuid: 'app-1', expectedCommit: 'sha1' }),
+      waitForCoolifyDeploy({ ...BASE_ARGS, apiUrl: '' }),
     ).rejects.toThrow(/COOLIFY_API_URL/)
     await expect(
-      waitForCoolifyDeploy({ apiUrl: 'https://c.example.com', apiToken: '', applicationUuid: 'app-1', expectedCommit: 'sha1' }),
+      waitForCoolifyDeploy({ ...BASE_ARGS, apiToken: '' }),
     ).rejects.toThrow(/COOLIFY_API_TOKEN/)
     await expect(
-      waitForCoolifyDeploy({ apiUrl: 'https://c.example.com', apiToken: 't', applicationUuid: 'app-1', expectedCommit: '' }),
+      waitForCoolifyDeploy({ ...BASE_ARGS, expectedCommit: '' }),
     ).rejects.toThrow(/EXPECTED_COMMIT/)
     await expect(
-      waitForCoolifyDeploy({ apiUrl: 'https://c.example.com', apiToken: 't', applicationUuid: '', expectedCommit: 'sha1' }),
+      waitForCoolifyDeploy({ ...BASE_ARGS, applicationUuid: '' }),
     ).rejects.toThrow(/COOLIFY_APPLICATION_UUID/)
   })
 })

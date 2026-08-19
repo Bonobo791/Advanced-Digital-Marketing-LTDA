@@ -34,6 +34,10 @@ function isPublicHostname(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/\.$/, '')
   return (
     host.length > 0 &&
+    // A public origin must be a real FQDN: single-label values like
+    // "https://staging" parse fine but are usually a typo and not resolvable —
+    // accepting them would emit unusable verification links and callbacks.
+    host.includes('.') &&
     !LOOPBACK_HOSTS.has(host) &&
     !host.endsWith('.localhost') &&
     !host.endsWith('.local') &&
@@ -57,7 +61,8 @@ function normalizedOrigin(url: URL): string {
   const hostname = url.hostname.toLowerCase()
   if (!hostname.endsWith('.')) return url.origin
   const host = hostname.slice(0, -1)
-  return `${url.protocol}//${host}${url.port ? `:${url.port}` : ''}`
+  const port = url.port ? `:${url.port}` : ''
+  return `${url.protocol}//${host}${port}`
 }
 
 export function publicSiteOrigin(): string {

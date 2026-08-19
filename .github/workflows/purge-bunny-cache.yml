@@ -29,7 +29,12 @@ jobs:
       PURGE_REQUIRE_CREDS: '1'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        # Pinned to an immutable commit (zizmor: unpinned action reference in a
+        # job with deployment credentials) and Git credentials are not persisted
+        # — later steps only use API tokens, never git auth.
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
 
       # Never purge at deploy-start and never blindly: block until the exact
       # commit's Coolify deployment reaches 'finished' (the new code is

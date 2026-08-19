@@ -37,11 +37,12 @@ export async function purgePullZone({ apiKey, pullZoneId, fetchImpl = fetch }) {
     )
   }
   if (response.status !== 204) {
-    const body = await response.text().catch(() => '')
+    // Status/statusText only — never the response body: the API could echo
+    // request data, and CI logs must stay free of externally controlled
+    // content (SonarCloud: jssecurity:S5145).
     throw new Error(
       `[purge-bunny-cache] FATAL: Bunny API responded ${response.status} ${response.statusText}` +
-        ` for pull zone ${pullZoneId}` +
-        (body ? ` — ${body.slice(0, 300)}` : ''),
+        ` for pull zone ${pullZoneId}`,
     )
   }
   return response.status

@@ -22,14 +22,17 @@ const loadArgs = (query: string, ip = '203.0.113.9') => ({
   getClientAddress: (): string => ip,
 })
 
+// A real authorized preapproval is bound to a server-created subscription:
+// external_reference is a catalog package, the amount equals the catalog
+// price (or the ad-spend floor) and the currency is BRL.
 const authorizedSubscription = {
   id: 'sub-42',
   status: 'authorized',
-  reason: null,
-  externalReference: null,
-  payerEmail: null,
-  transactionAmount: null,
-  currencyId: null,
+  reason: 'Conteúdo SEO',
+  externalReference: 'seo-content',
+  payerEmail: 'customer@example.com',
+  transactionAmount: 2000,
+  currencyId: 'BRL',
 }
 
 describe('checkout/complete load', () => {
@@ -55,6 +58,75 @@ describe('checkout/complete load', () => {
       subscriptionId: 'sub-42',
     })
     expect(mockGetSubscription).toHaveBeenCalledWith('sub-42')
+  })
+
+  it('never claims success for an authorized preapproval not bound to this checkout', async () => {
+    // An authorized preapproval for another product / older integration must
+    // not render the subscription-confirmed page: same binding rule as the
+    // one-time payment branch (reference + amount + currency).
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const mismatches = [
+        { externalReference: 'unrelated:product:1', transactionAmount: 2000, currencyId: 'BRL' },
+        { externalReference: 'seo-content', transactionAmount: 1999, currencyId: 'BRL' },
+        { externalReference: 'seo-content', transactionAmount: 2000, currencyId: 'USD' },
+        { externalReference: null, transactionAmount: 2000, currencyId: 'BRL' },
+        { externalReference: 'seo-content+seo-content', transactionAmount: 4000, currencyId: 'BRL' },
+        { externalReference: 'backlinks+seo-content', transactionAmount: 5000, currencyId: 'BRL' },
+        { externalReference: 'ai-automation', transactionAmount: 2000, currencyId: 'BRL' },
+        { externalReference: 'unknown-service', transactionAmount: 2000, currencyId: 'BRL' },
+      ]
+      for (const patch of mismatches) {
+        mockGetSubscription.mockResolvedValue({ ...authorizedSubscription, ...patch })
+        expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toEqual({
+          state: 'error',
+          kind: 'subscription',
+        })
+      }
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('does not match a server-created subscription'))
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('confirms every server-created catalog package', async () => {
+    const combos = [
+      { externalReference: 'seo-content', transactionAmount: 2000 },
+      { externalReference: 'backlinks', transactionAmount: 3000 },
+      { externalReference: 'hosting', transactionAmount: 300 },
+      { externalReference: 'seo-content+backlinks+hosting', transactionAmount: 5300 },
+    ]
+    for (const patch of combos) {
+      mockGetSubscription.mockResolvedValue({ ...authorizedSubscription, ...patch })
+      expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toEqual({
+        state: 'confirmed',
+        subscriptionId: 'sub-42',
+      })
+    }
+  })
+
+  it('confirms ads-spend subscriptions at or above the minimum fee', async () => {
+    // Ads-spend packages record the fee for the customer's spend at creation
+    // (>= the R$ 500 minimum); any amount at or above the floor is a
+    // legitimate server-created package.
+    const atFloor = { externalReference: 'paid-search', transactionAmount: 500, currencyId: 'BRL' }
+    mockGetSubscription.mockResolvedValue({ ...authorizedSubscription, ...atFloor })
+    expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toEqual({
+      state: 'confirmed',
+      subscriptionId: 'sub-42',
+    })
+    const aboveFloor = { externalReference: 'meta-ads', transactionAmount: 1250, currencyId: 'BRL' }
+    mockGetSubscription.mockResolvedValue({ ...authorizedSubscription, ...aboveFloor })
+    expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toEqual({
+      state: 'confirmed',
+      subscriptionId: 'sub-42',
+    })
+    const belowFloor = { externalReference: 'paid-search', transactionAmount: 499, currencyId: 'BRL' }
+    mockGetSubscription.mockResolvedValue({ ...authorizedSubscription, ...belowFloor })
+    expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toEqual({
+      state: 'error',
+      kind: 'subscription',
+    })
   })
 
   it('reserves pending for statuses that can still progress', async () => {

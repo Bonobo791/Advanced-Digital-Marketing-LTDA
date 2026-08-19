@@ -25,6 +25,10 @@ export type ServiceOption = {
    *  Explicit `null` forces the contact form — for one-time/free options that
    *  have no pricing section and must never land on the recurring checkout. */
   pricingAnchor?: string | null
+  /** Catalog subscription this option's CTA preselects in the configurator
+   *  (e.g. Technical SEO's per-option CTAs), so clicking one option never
+   *  seeds a package that includes the others. */
+  preselect?: CatalogServiceId
 }
 
 export type ServiceStep = { jp: string; title: string; text: string }
@@ -75,12 +79,20 @@ export function contactHref(contactRoute: string, subject: string | undefined): 
  *    service has none.
  */
 export function resolveOptionCtaHref(
-  option: Pick<ServiceOption, 'pricingAnchor'> & { subject?: string },
+  option: Pick<ServiceOption, 'pricingAnchor'> & { subject?: string; preselect?: CatalogServiceId },
   service: Pick<ServiceContent, 'pricingAnchor'>,
   contactRoute: string,
 ): string {
+  // Explicit `null` must NOT inherit the service default (one-time options
+  // force the contact form), so the ternary cannot be replaced with `??` —
+  // nullish coalescing would collapse explicit null into the service default.
   const anchor = option.pricingAnchor === null ? null : option.pricingAnchor ?? service.pricingAnchor ?? null
-  return anchor !== null ? anchor : contactHref(contactRoute, option.subject)
+  if (anchor === null) return contactHref(contactRoute, option.subject)
+  // An option that must seed the configurator with ONLY the clicked service
+  // carries it in the URL (?preselect=…), which ServicePage reads to override
+  // the service-level default preselect set.
+  if (option.preselect) return `?preselect=${encodeURIComponent(option.preselect)}#${anchor.slice(1)}`
+  return anchor
 }
 
 export const SERVICE_ROUTES: Record<ServiceId, Record<Locale, string>> = {
@@ -224,6 +236,9 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Start content development',
           subject: 'Content development request',
+          // Clicking one option must seed the configurator with ONLY that
+          // service — the service default preselects both SEO options.
+          preselect: 'seo-content',
         },
         {
           jp: '検索',
@@ -240,6 +255,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Start link building',
           subject: 'Backlinks request',
+          preselect: 'backlinks',
         },
       ],
       optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
@@ -320,6 +336,10 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Talk retainers',
           subject: 'Visibility retainer inquiry',
+          // GEO has no subscription configurator (SERVICE_SUBSCRIPTIONS is
+          // empty), so the service default '#subscribe' anchor would scroll to
+          // nothing — keep the retainer CTA in the contact flow.
+          pricingAnchor: null,
         },
       ],
       optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
@@ -405,7 +425,11 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Talk retainers',
           subject: 'Build retainer inquiry',
-          pricingAnchor: '#subscribe',
+          // The R$2,900 build retainer has no catalog entry — the #subscribe
+          // configurator only knows the R$300/mo hosting product, so sending
+          // this CTA there would let the visitor buy hosting instead. Route
+          // the fixed-price retainer to the contact form with its subject.
+          pricingAnchor: null,
         },
       ],
       optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
@@ -488,6 +512,12 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Talk retainers',
           subject: 'Paid retainer inquiry',
+          // The R$2,900 fixed-price retainer is not the spend-based
+          // 'paid-search' catalog product the #subscribe configurator prices
+          // (max(10% × spend, R$ 500)); routing it there would quote a
+          // different product. Keep the fixed-price retainer CTA in the
+          // contact flow with its subject.
+          pricingAnchor: null,
         },
       ],
       optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
@@ -570,6 +600,9 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Talk retainers',
           subject: 'Meta retainer inquiry',
+          // Fixed-price retainer: same rule as the Paid Retainer — the
+          // configurator only prices the spend-based meta-ads product.
+          pricingAnchor: null,
         },
       ],
       optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
@@ -685,6 +718,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Começar com conteúdo',
           subject: 'Content development request',
+          preselect: 'seo-content',
         },
         {
           jp: '検索',
@@ -701,6 +735,7 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Começar com link building',
           subject: 'Backlinks request',
+          preselect: 'backlinks',
         },
       ],
       optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
@@ -781,6 +816,8 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Falar sobre mensalidade',
           subject: 'Visibility retainer inquiry',
+          // GEO não tem configurador de assinaturas — CTA vai para o contato.
+          pricingAnchor: null,
         },
       ],
       optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
@@ -866,7 +903,10 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Falar sobre mensalidade',
           subject: 'Build retainer inquiry',
-          pricingAnchor: '#subscribe',
+          // Mensalidade fixa de R$ 2.900 sem entrada no catálogo (o
+          // configurador #subscribe só conhece a hospedagem de R$ 300/mês) —
+          // o CTA vai para o formulário de contato com o assunto.
+          pricingAnchor: null,
         },
       ],
       optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
@@ -949,6 +989,9 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Falar sobre mensalidade',
           subject: 'Paid retainer inquiry',
+          // Mensalidade fixa (R$ 2.900) ≠ produto por investimento do
+          // configurador #subscribe — o CTA vai para o formulário de contato.
+          pricingAnchor: null,
         },
       ],
       optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
@@ -1031,6 +1074,8 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Falar sobre mensalidade',
           subject: 'Meta retainer inquiry',
+          // Mensalidade fixa: mesma regra do retainer de mídia paga.
+          pricingAnchor: null,
         },
       ],
       optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',

@@ -27,6 +27,10 @@ describe('publicSiteOrigin', () => {
       'https://[::1]',
       'https://foo.localhost',
       'https://foo.local',
+      // Single-label values parse fine but are not real public FQDNs — usually
+      // a typo (https://staging) that would emit unusable links.
+      'https://staging',
+      'https://dev',
       'https://192.168.1.10',
       'https://10.0.0.2',
       'ftp://example.com',

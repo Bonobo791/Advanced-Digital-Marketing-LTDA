@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import type { Locale } from '$lib/locale'
 import { isValidEmail } from '$lib/server/checkout'
-import { handleApiPost, upstreamErrorResponse } from '$lib/server/api-route'
+import { parseJsonBody, resolveClientAddress, rateLimitOrError, upstreamErrorResponse, type ParseOutcome } from '$lib/server/api-route'
 import { submitContactRequest } from '$lib/server/contact'
 import { CONTACT_TOKEN_SUBJECT_MAX_LENGTH, ContactTokenError } from '$lib/server/contact-token'
 import { MailjetError } from '$lib/server/mailjet'
@@ -67,6 +67,35 @@ function validatePayload(payload: Record<string, unknown>): ValidationOutcome {
   return { payload: { name, email, locale, ...(subject ? { subject } : {}) } }
 }
 
+/**
+ * Parses the request body as JSON (the JS flow) or urlencoded (the native
+ * no-JavaScript form POST: method=post + action=/api/contact/submit). The
+ * consent checkbox only appears in urlencoded bodies when checked, so a
+ * native submission maps checked → true, absent → not consented — the same
+ * deliberate boolean requirement as the JSON flow.
+ */
+async function parseContactBody(request: Request): Promise<ParseOutcome> {
+  const contentType = request.headers.get('content-type') ?? ''
+  if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
+    let form: FormData
+    try {
+      form = await request.formData()
+    } catch {
+      return { response: json({ error: 'invalid_json' }, { status: 400 }) }
+    }
+    const payload: Record<string, unknown> = {
+      name: typeof form.get('name') === 'string' ? String(form.get('name')) : '',
+      email: typeof form.get('email') === 'string' ? String(form.get('email')) : '',
+      consent: form.get('consent') !== null,
+      locale: typeof form.get('locale') === 'string' ? String(form.get('locale')) : '',
+    }
+    const subject = form.get('subject')
+    if (typeof subject === 'string' && subject.trim()) payload.subject = subject
+    return { payload }
+  }
+  return parseJsonBody(request)
+}
+
 async function submitOrError(payload: ValidPayload): Promise<Response> {
   try {
     const result = await submitContactRequest(payload)
@@ -94,13 +123,18 @@ async function submitOrError(payload: ValidPayload): Promise<Response> {
  * Every accepted request here calls the paid MailJet API, so abuse is
  * throttled per client IP before any email is sent.
  */
-export const POST: RequestHandler = ({ request, getClientAddress }) =>
-  handleApiPost({
-    request,
-    getClientAddress,
-    logTag: 'contact',
-    bucket: 'contactSubmit',
-    rejectedWhat: 'contact submission',
-    validate: validatePayload,
-    run: submitOrError,
-  })
+export const POST: RequestHandler = async ({ request, getClientAddress }) => {
+  const parsed = await parseContactBody(request)
+  if ('response' in parsed) return parsed.response
+
+  const validated = validatePayload(parsed.payload)
+  if ('error' in validated) return json({ error: validated.error }, { status: 400 })
+
+  const resolved = resolveClientAddress(getClientAddress, 'contact')
+  if ('response' in resolved) return resolved.response
+
+  const rateLimited = rateLimitOrError('contactSubmit', resolved.address, 'contact', 'contact submission')
+  if ('response' in rateLimited) return rateLimited.response
+
+  return submitOrError(validated.payload)
+}

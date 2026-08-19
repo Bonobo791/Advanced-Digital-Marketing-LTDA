@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SERVICES, type CatalogService, type CatalogServiceId } from '$lib/catalog'
-import { PricingError, computeMonthlyQuote } from './pricing'
+import { PricingError, authoritativeSubscriptionTotalBRL, computeMonthlyQuote } from './pricing'
 
 const CATALOG = SERVICES as Record<CatalogServiceId, CatalogService>
 
@@ -171,3 +171,34 @@ describe('computeMonthlyQuote — validation', () => {
     }
   })
 })
+
+describe('authoritativeSubscriptionTotalBRL — checkout binding', () => {
+  it('returns the exact monthly total for fixed-price packages', () => {
+    expect(authoritativeSubscriptionTotalBRL('seo-content')).toBe(2000)
+    expect(authoritativeSubscriptionTotalBRL('seo-content+backlinks')).toBe(5000)
+    expect(authoritativeSubscriptionTotalBRL('seo-content+backlinks+hosting')).toBe(5300)
+  })
+
+  it('returns the ad-spend floor for ads-spend packages', () => {
+    // The recorded amount can be higher (fee tracks the customer's spend);
+    // the floor is the minimum fee the server can ever create.
+    expect(authoritativeSubscriptionTotalBRL('paid-search')).toBe(500)
+    expect(authoritativeSubscriptionTotalBRL('meta-ads')).toBe(500)
+    expect(authoritativeSubscriptionTotalBRL('seo-content+paid-search')).toBe(2500)
+  })
+
+  it('rejects references this server never creates', () => {
+    for (const reference of [
+      '',
+      'unknown-service',
+      'ai-automation', // quote-only — never subscribable
+      'seo-content+seo-content', // duplicated id
+      'backlinks+seo-content', // out of catalog order
+      'paid-search+seo-content', // out of catalog order
+      'constructor', // inherited Object.prototype key
+    ]) {
+      expect(authoritativeSubscriptionTotalBRL(reference)).toBeNull()
+    }
+  })
+})
+

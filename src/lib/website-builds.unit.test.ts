@@ -136,4 +136,10 @@ describe('WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS (Checkout Pro policy)', () => {
       expect(WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS.excludedPaymentTypes).not.toContain(type)
     }
   })
+
+  it('never lists account_money as excluded (the wallet cannot be excluded)', () => {
+    // Mercado Pago always keeps account_money available in Checkout Pro; the
+    // derived list must not claim to exclude it.
+    expect(WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS.excludedPaymentTypes).not.toContain('account_money')
+  })
 })

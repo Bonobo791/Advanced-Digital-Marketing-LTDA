@@ -411,7 +411,14 @@ export async function getSubscription(subscriptionId: string): Promise<Subscript
   if (!id) {
     throw new MercadoPagoError('invalid_response', 'Mercado Pago response is missing id')
   }
-  return mapSubscriptionStatus(result.record, id)
+  const status = mapSubscriptionStatus(result.record, id)
+  if (!status.status) {
+    // A 200 with an absent/non-string status is a malformed upstream response,
+    // not a subscription that is merely unconfirmed — the completion page
+    // must show the loud error state, never a guessed pending/confirmed claim.
+    throw new MercadoPagoError('invalid_response', 'Mercado Pago response is missing subscription status')
+  }
+  return status
 }
 
 export type PaymentStatus = {
@@ -441,7 +448,14 @@ export async function getPayment(paymentId: string): Promise<PaymentStatus | und
   if (!id) {
     throw new MercadoPagoError('invalid_response', 'Mercado Pago response is missing id')
   }
-  return mapPaymentStatus(result.record, id)
+  const status = mapPaymentStatus(result.record, id)
+  if (!status.status) {
+    // A 200 with an absent/non-string status is a malformed upstream response,
+    // not a payment that is merely unconfirmed — the completion page must show
+    // the loud error state, never a guessed unconfirmed/pending claim.
+    throw new MercadoPagoError('invalid_response', 'Mercado Pago response is missing payment status')
+  }
+  return status
 }
 
 /**

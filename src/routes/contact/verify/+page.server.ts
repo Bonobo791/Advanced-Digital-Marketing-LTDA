@@ -5,4 +5,10 @@ import { contactVerifyPageData } from '$lib/server/contact'
 // be prerendered (SSR, like everything else).
 export const prerender = false
 
-export const load: PageServerLoad = async ({ url }) => contactVerifyPageData(url)
+export const load: PageServerLoad = ({ url, setHeaders }) => {
+  // The rendered state is token-specific and must never be cached by the CDN:
+  // a cached notification_failed page would swallow the promised retry (the
+  // next click has to reach verifyContactRequest again).
+  setHeaders({ 'Cache-Control': 'private, no-store' })
+  return contactVerifyPageData(url)
+}

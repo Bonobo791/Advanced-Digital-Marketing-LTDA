@@ -7,9 +7,11 @@
  * browser picks services, server prices them, Mercado Pago bills them.
  */
 import {
+  ADS_SPEND_RULE,
   CATALOG_SERVICE_IDS,
   SERVICES,
   adSpendFeeBRL,
+  getService,
   isSubscribable,
   type CatalogService,
   type CatalogServiceId,
@@ -156,4 +158,33 @@ export function computeMonthlyQuote(
     reason: items.map((item) => item.name).join(' + '),
     externalReference,
   }
+}
+
+/**
+ * Validates a Mercado Pago preapproval `external_reference` against the
+ * subscription catalog and returns the authoritative monthly total in BRL
+ * that a server-created subscription of that package carries — the minimum
+ * for ads-spend services (their recorded amount can be higher because the
+ * fee tracks the customer's monthly spend). Returns `null` for any reference
+ * this server never creates (unknown ids, quote-only services, duplicates,
+ * or ids out of catalog order — `computeMonthlyQuote` always emits
+ * catalog-ordered, deduplicated references).
+ *
+ * Used by the checkout-completion page to refuse success claims for
+ * authorized preapprovals that are not bound to a checkout this site created.
+ */
+export function authoritativeSubscriptionTotalBRL(reference: string): number | null {
+  const ids = reference.split('+')
+  if (ids.length === 0) return null
+  let total = 0
+  let previousPosition = -1
+  for (const id of ids) {
+    const service = getService(id)
+    if (!service || !isSubscribable(service)) return null
+    const position = CATALOG_SERVICE_IDS.indexOf(id as CatalogServiceId)
+    if (position <= previousPosition) return null
+    previousPosition = position
+    total += service.pricing.kind === 'fixed' ? service.pricing.monthlyBRL : ADS_SPEND_RULE.minimumBRL
+  }
+  return total
 }

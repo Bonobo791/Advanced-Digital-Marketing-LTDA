@@ -134,6 +134,7 @@ export type ContactCopy = {
   consentLabel: string
   submit: string
   submitting: string
+  noscript: string
   successTitle: string
   successLead: string
   invalidName: string
@@ -227,6 +228,7 @@ export const PAGE_COPY: Record<Locale, PageCopy> = {
       emailLabel: 'Email', emailPlaceholder: 'you@company.com',
       consentLabel: 'I agree that Advanced Digital Marketing LTDA may use the details I provide to reply to my enquiry, and I consent to being contacted by email. I understand I can withdraw my consent at any time.',
       submit: 'Send request', submitting: 'Sending…',
+      noscript: 'JavaScript is off: the form still works — submitting sends your request directly and you will see the server response on this page.',
       successTitle: 'Check your inbox.',
       successLead: 'We sent a confirmation link to {email}. Click it to verify your address and complete your request. The link expires in {hours} hours.',
       invalidName: 'Enter your name (max 100 characters).',
@@ -313,6 +315,7 @@ export const PAGE_COPY: Record<Locale, PageCopy> = {
       emailLabel: 'E-mail', emailPlaceholder: 'voce@empresa.com.br',
       consentLabel: 'Concordo que a Advanced Digital Marketing LTDA utilize os dados informados para responder à minha solicitação e consinto em ser contatado(a) por e-mail. Entendo que posso revogar meu consentimento a qualquer momento.',
       submit: 'Enviar solicitação', submitting: 'Enviando…',
+      noscript: 'JavaScript está desativado: o formulário continua funcionando — o envio é feito diretamente e a resposta do servidor aparece nesta página.',
       successTitle: 'Verifique sua caixa de entrada.',
       successLead: 'Enviamos um link de confirmação para {email}. Clique nele para verificar seu endereço e concluir sua solicitação. O link expira em {hours} horas.',
       invalidName: 'Informe seu nome (máximo de 100 caracteres).',

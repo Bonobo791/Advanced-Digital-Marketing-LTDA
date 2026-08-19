@@ -91,6 +91,23 @@ describe('sendMailjetMessage', () => {
     expect(body.SandboxMode).toBe(true)
   })
 
+  it('refuses loudly when sandbox mode is left on in production', async () => {
+    // Sandbox mode validates payloads without delivering; in production that
+    // would report success while sending nothing, so the send must fail with
+    // a loud, typed error instead of pretending the mail went out.
+    vi.stubEnv('MAILJET_SANDBOX_MODE', 'true')
+    vi.stubEnv('NODE_ENV', 'production')
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      await expect(sendMailjetMessage(validInput)).rejects.toMatchObject({
+        code: 'sandbox_in_production',
+      })
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('MAILJET_SANDBOX_MODE=true'))
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
   it('returns the message id on success', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => okResponse()))
     const result = await sendMailjetMessage(validInput)

@@ -49,6 +49,48 @@ describe('service option CTA anchors', () => {
     }
   })
 
+  it('preselects only the clicked Technical SEO option in the configurator', () => {
+    // Content Development / Backlinks share the #subscribe panel but are
+    // different catalog services: the CTA must carry the clicked option so
+    // the panel never seeds the other one too (and never the R$5,000
+    // combined package for a single-card click).
+    for (const locale of ['en-US', 'pt-BR'] as const) {
+      const technicalSeo = SERVICE_CONTENT[locale]['technical-seo']
+      const content = technicalSeo.options.find((o) => o.subject === 'Content development request')!
+      const backlinks = technicalSeo.options.find((o) => o.subject === 'Backlinks request')!
+      expect(resolveOptionCtaHref(content, technicalSeo, CONTACT_ROUTE)).toBe(
+        '?preselect=seo-content#subscribe',
+      )
+      expect(resolveOptionCtaHref(backlinks, technicalSeo, CONTACT_ROUTE)).toBe(
+        '?preselect=backlinks#subscribe',
+      )
+    }
+  })
+
+  it('keeps fixed-price retainer CTAs out of the recurring checkout configurator', () => {
+    // The Build/Paid/Meta/Visibility retainers are fixed-price monthly
+    // products the subscription catalog does not contain (the configurator
+    // prices the spend-based ads products or only hosting), so their CTAs
+    // must go to the contact form with the subject — never to #subscribe,
+    // where the visitor would be quoted a different product.
+    const retainerSubjects = [
+      'Build retainer inquiry',
+      'Paid retainer inquiry',
+      'Meta retainer inquiry',
+      'Visibility retainer inquiry',
+    ]
+    for (const locale of ['en-US', 'pt-BR'] as const) {
+      for (const service of Object.values(SERVICE_CONTENT[locale])) {
+        for (const option of service.options) {
+          if (!retainerSubjects.includes(option.subject)) continue
+          const href = resolveOptionCtaHref(option, service, CONTACT_ROUTE)
+          expect(href.startsWith(CONTACT_ROUTE), `${locale} · ${service.navLabel} · ${option.name} (got ${href})`).toBe(true)
+          expect(href).toContain(encodeURIComponent(option.subject))
+        }
+      }
+    }
+  })
+
   it('carries the option subject into the contact URL when the anchor resolves to the form', () => {
     // The shared resolver must produce the same href ServicePage renders:
     // explicit null → /contact/?subject=… when the option has one.

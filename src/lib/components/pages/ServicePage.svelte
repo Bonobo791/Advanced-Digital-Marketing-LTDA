@@ -1,12 +1,13 @@
 <script lang="ts">
   import { getContext, onMount } from 'svelte'
+  import { page } from '$app/state'
   import { JP } from '$lib/constants'
   import { SITE_MOTION, type SiteMotion } from '$lib/client/site-motion'
   import { setupReveals } from '$lib/client/reveal'
   import { resolveOptionCtaHref, SERVICE_CONTENT, SERVICE_SUBSCRIPTIONS, type ServiceId } from '$lib/services'
   import SubscribeSection from './SubscribeSection.svelte'
   import WebsiteBuildPricing from './WebsiteBuildPricing.svelte'
-  import { getService, formatOptionPrice } from '$lib/catalog'
+  import { getService, isServiceId, isSubscribable, formatOptionPrice, type CatalogServiceId } from '$lib/catalog'
   import { LOCALE_ROUTES, type Locale } from '$lib/locale'
   import { words } from '$lib/text'
 
@@ -20,6 +21,18 @@
   // channel); option cards that have a pricing section keep scrolling to it.
   let contactRoute = $derived(LOCALE_ROUTES.contact[locale])
   const motion = getContext<SiteMotion>(SITE_MOTION)
+
+  // The Technical SEO option CTAs carry ?preselect=<catalog-id>#subscribe so
+  // the configurator seeds ONLY the clicked option instead of the whole
+  // service default set (clicking Content Development must not also preselect
+  // Backlinks). Unknown/unsafe values fall back to the service default.
+  let preselect = $derived.by(() => {
+    const raw = page.url.searchParams.get('preselect')
+    const candidate = typeof raw === 'string' && isServiceId(raw) ? getService(raw) : undefined
+    return typeof raw === 'string' && candidate && isSubscribable(candidate)
+      ? ([raw] as CatalogServiceId[])
+      : SERVICE_SUBSCRIPTIONS[service]
+  })
 
   onMount(() => {
     motion.registerHero()
@@ -51,7 +64,7 @@
   {/if}
 
   {#if SERVICE_SUBSCRIPTIONS[service].length > 0}
-    <SubscribeSection locale={locale} preselect={SERVICE_SUBSCRIPTIONS[service]} />
+    <SubscribeSection locale={locale} preselect={preselect} />
   {/if}
 
   <section id="process"><div class="kanji" style="right:-5vw;bottom:-14%" aria-hidden="true">工程</div><div class="sec-inner"><span class="sec-jp rise">{content.processLabel}<span class="font-jp">プロセス</span></span><h2 class="shear">{#each words(content.processHeading) as word, i}<span class="w">{word}{i < words(content.processHeading).length - 1 ? ' ' : ''}</span>{/each}</h2><div class="steps">{#each content.steps as step (step.title)}<div class="step rise"><div class="step-in"><span class="step-jp font-jp">{step.jp}</span><span class="step-en">{step.title}</span><p>{step.text}</p></div></div>{/each}</div><div class="proc-cta rise"><a class="btn btn-solid" href={contactRoute}>{content.auditCta}</a></div></div></section>

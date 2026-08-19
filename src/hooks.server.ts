@@ -25,7 +25,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   const language = event.url.pathname === '/pt-br' || event.url.pathname.startsWith('/pt-br/') ? 'pt-BR' : 'en'
 
-  return resolve(event, {
+  const response = await resolve(event, {
     transformPageChunk: ({ html }) => html.replace('<html lang="en">', `<html lang="${language}">`),
   })
+  // The root HTML depends on the language cookie (307 vs 200 above): if Bunny
+  // cached it, a visitor with language=pt-BR could be served the English root
+  // without ever reaching this hook. The root must never be shared-cacheable.
+  if (event.url.pathname === '/') {
+    response.headers.set('Cache-Control', 'private, no-store')
+  }
+  return response
 }

@@ -13,6 +13,21 @@ import { CONTACT_REQUEST_TIMEOUT_MS } from '$lib/constants'
 
 export type ContactSubmitFetchResult = { ok: true; expiresInHours: number } | { ok: false; errorCode?: string }
 
+/**
+ * Normalizes a parsed JSON body to a non-array record, or undefined for
+ * null/array/primitive bodies — property access on those would throw.
+ */
+function asRecord(raw: unknown): { ok?: unknown; expiresInHours?: unknown; error?: unknown } | undefined {
+  return typeof raw === 'object' && raw !== null && !Array.isArray(raw)
+    ? (raw as { ok?: unknown; expiresInHours?: unknown; error?: unknown })
+    : undefined
+}
+
+/** True only for a server-computed positive finite expiry (the response contract). */
+function isValidExpiry(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+}
+
 export async function submitContactForm(endpoint: string, body: unknown): Promise<ContactSubmitFetchResult> {
   const controller = new AbortController()
   const timeout = globalThis.setTimeout(() => controller.abort(), CONTACT_REQUEST_TIMEOUT_MS)
@@ -24,17 +39,14 @@ export async function submitContactForm(endpoint: string, body: unknown): Promis
       signal: controller.signal,
     })
     const raw: unknown = await response.json().catch(() => undefined)
-    const parsed =
-      typeof raw === 'object' && raw !== null && !Array.isArray(raw)
-        ? (raw as { ok?: unknown; expiresInHours?: unknown; error?: unknown })
-        : undefined
+    const parsed = asRecord(raw)
     if (!response.ok) {
       return { ok: false, errorCode: typeof parsed?.error === 'string' ? parsed.error : undefined }
     }
+    // A 200 without ok:true (or a non-object body) is a malformed success:
+    // log it loudly instead of failing silently (AGENTS.md: no silent
+    // fallbacks).
     if (parsed?.ok !== true) {
-      // A 200 without ok:true (or a non-object body) is a malformed success:
-      // log it loudly instead of failing silently (AGENTS.md: no silent
-      // fallbacks).
       console.error('[contact] malformed success response from the contact endpoint', raw)
       return { ok: false, errorCode: 'invalid_response' }
     }
@@ -42,11 +54,7 @@ export async function submitContactForm(endpoint: string, body: unknown): Promis
     // fallback would silently show wrong copy (AGENTS.md: no silent
     // fallbacks). Treat a malformed success (null/array/primitive body, or a
     // missing/non-positive/non-finite expiry) as a failure, logged loudly.
-    if (
-      typeof parsed.expiresInHours !== 'number' ||
-      !Number.isFinite(parsed.expiresInHours) ||
-      parsed.expiresInHours <= 0
-    ) {
+    if (!isValidExpiry(parsed.expiresInHours)) {
       console.error('[contact] malformed success response from the contact endpoint', raw)
       return { ok: false, errorCode: 'invalid_response' }
     }

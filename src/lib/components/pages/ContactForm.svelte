@@ -56,6 +56,7 @@
       case 'api_error':
       case 'timeout':
       case 'invalid_response':
+      case 'sandbox_in_production':
       case 'client_address_unavailable':
         return content.serverMisconfigured
       default:
@@ -113,7 +114,26 @@
     </p>
   </div>
 {:else}
-  <form class="contact-form" onsubmit={(e) => { e.preventDefault(); submit() }} novalidate>
+  {#if !successEmail && !submitting}
+    <noscript>
+      <p class="contact-form__noscript" role="note">
+        {content.noscript}
+      </p>
+    </noscript>
+  {/if}
+  <!-- method/action give a server-handled fallback when JavaScript is off or
+       hydration fails: the native POST goes to /api/contact/submit (which
+       accepts urlencoded bodies), so the visitor's data never lands in the
+       URL query string and the request still reaches the server. With JS on,
+       the onsubmit handler below preventDefaults and runs the normal flow. -->
+  <form
+    class="contact-form"
+    method="post"
+    action="/api/contact/submit"
+    onsubmit={(e) => { e.preventDefault(); submit() }}
+    novalidate
+  >
+    <input type="hidden" name="locale" value={locale} />
     <label class="contact-form__field">
       <span>{content.nameLabel}</span>
       <input
