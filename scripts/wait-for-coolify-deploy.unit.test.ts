@@ -184,7 +184,7 @@ describe('waitForCoolifyDeploy', () => {
         fetchImpl,
         deployImpl,
         now: () => now,
-        sleep: async () => {
+        sleep: () => {
           now += 1
         },
       },
@@ -243,7 +243,7 @@ describe('waitForCoolifyDeploy', () => {
           fetchImpl,
           deployImpl,
           now: () => now,
-          sleep: async () => {
+          sleep: () => {
             now += 10
           },
         },
