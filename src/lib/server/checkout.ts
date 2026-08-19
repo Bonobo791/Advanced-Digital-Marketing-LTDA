@@ -54,3 +54,12 @@ import { publicSiteOrigin } from './site-url.ts'
 export function checkoutBackUrl(): string {
   return new URL('/pt-br/checkout/complete/', publicSiteOrigin()).toString()
 }
+
+/** Success/cancel URLs for the Stripe (en-US) hosted checkout. */
+export function stripeCheckoutUrls(): { successUrl: string; cancelUrl: string } {
+  const origin = publicSiteOrigin()
+  return {
+    successUrl: new URL('/checkout/complete/', origin).toString(),
+    cancelUrl: new URL('/services/', origin).toString(),
+  }
+}

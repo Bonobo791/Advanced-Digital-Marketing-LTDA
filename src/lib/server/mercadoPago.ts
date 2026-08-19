@@ -428,6 +428,8 @@ export type PaymentStatus = {
   externalReference: string | null
   transactionAmount: number | null
   currencyId: string | null
+  /** Payer email from the payment record (used by the owner notification). */
+  payerEmail: string | null
 }
 
 /**
@@ -464,6 +466,7 @@ export async function getPayment(paymentId: string): Promise<PaymentStatus | und
  * response (card data, tokens, …) is dropped.
  */
 function mapPaymentStatus(record: Record<string, unknown>, id: string): PaymentStatus {
+  const payer = typeof record.payer === 'object' && record.payer !== null ? (record.payer as Record<string, unknown>) : {}
   return {
     id,
     status: typeof record.status === 'string' ? record.status : null,
@@ -471,6 +474,7 @@ function mapPaymentStatus(record: Record<string, unknown>, id: string): PaymentS
     externalReference: typeof record.external_reference === 'string' ? record.external_reference : null,
     transactionAmount: typeof record.transaction_amount === 'number' ? record.transaction_amount : null,
     currencyId: typeof record.currency_id === 'string' ? record.currency_id : null,
+    payerEmail: typeof payer.email === 'string' ? payer.email : null,
   }
 }
 

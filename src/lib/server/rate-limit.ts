@@ -41,6 +41,8 @@ export const RATE_LIMIT_BUCKETS = {
   buildCreate: 'build-create',
   paymentVerify: 'payment-verify',
   contactSubmit: 'contact-submit',
+  stripeCreate: 'stripe-create',
+  stripeVerify: 'stripe-verify',
 } as const
 
 export type RateLimitBucket = keyof typeof RATE_LIMIT_BUCKETS

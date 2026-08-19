@@ -24,6 +24,7 @@ export type PricingErrorCode =
   | 'quote_only_service'
   | 'invalid_ad_spend'
   | 'no_services_selected'
+  | 'invalid_build'
 
 export class PricingError extends Error {
   code: PricingErrorCode

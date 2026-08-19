@@ -53,7 +53,7 @@ describe('checkout/complete load', () => {
 
   it('confirms only an authorized preapproval and surfaces the reference', async () => {
     mockGetSubscription.mockResolvedValue(authorizedSubscription)
-    expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toEqual({
+    expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toMatchObject({
       state: 'confirmed',
       subscriptionId: 'sub-42',
     })
@@ -98,7 +98,7 @@ describe('checkout/complete load', () => {
     ]
     for (const patch of combos) {
       mockGetSubscription.mockResolvedValue({ ...authorizedSubscription, ...patch })
-      expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toEqual({
+      expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toMatchObject({
         state: 'confirmed',
         subscriptionId: 'sub-42',
       })
@@ -111,13 +111,13 @@ describe('checkout/complete load', () => {
     // legitimate server-created package.
     const atFloor = { externalReference: 'paid-search', transactionAmount: 500, currencyId: 'BRL' }
     mockGetSubscription.mockResolvedValue({ ...authorizedSubscription, ...atFloor })
-    expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toEqual({
+    expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toMatchObject({
       state: 'confirmed',
       subscriptionId: 'sub-42',
     })
     const aboveFloor = { externalReference: 'meta-ads', transactionAmount: 1250, currencyId: 'BRL' }
     mockGetSubscription.mockResolvedValue({ ...authorizedSubscription, ...aboveFloor })
-    expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toEqual({
+    expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toMatchObject({
       state: 'confirmed',
       subscriptionId: 'sub-42',
     })
@@ -203,7 +203,7 @@ describe('checkout/complete load', () => {
           kind: 'subscription',
         })
       }
-      expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toEqual({
+      expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toMatchObject({
         state: 'confirmed',
         subscriptionId: 'sub-42',
       })
@@ -224,7 +224,7 @@ describe('checkout/complete load', () => {
         // Window is 10 requests per minute; the 11th from the same IP is
         // refused without calling Mercado Pago again.
         for (let i = 0; i < 10; i++) {
-          expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toEqual({
+          expect(await load(loadArgs('?preapproval_id=sub-42') as never)).toMatchObject({
             state: 'confirmed',
             subscriptionId: 'sub-42',
           })
@@ -277,6 +277,7 @@ describe('checkout/complete load — one-time payments (Checkout Pro)', () => {
     externalReference: 'website-build:website:new',
     transactionAmount: 3000,
     currencyId: 'BRL',
+    payerEmail: 'customer@example.com',
   }
 
   it('reports missing when the redirect carries neither preapproval_id nor payment_id', async () => {
@@ -287,7 +288,7 @@ describe('checkout/complete load — one-time payments (Checkout Pro)', () => {
 
   it('confirms only an approved payment and surfaces the reference', async () => {
     mockGetPayment.mockResolvedValue(approvedPayment)
-    expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
+    expect(await load(loadArgs('?payment_id=1234567890') as never)).toMatchObject({
       state: 'payment_confirmed',
       paymentId: '1234567890',
     })
@@ -296,7 +297,7 @@ describe('checkout/complete load — one-time payments (Checkout Pro)', () => {
 
   it('accepts the legacy collection_id parameter for one-time checkouts', async () => {
     mockGetPayment.mockResolvedValue(approvedPayment)
-    expect(await load(loadArgs('?collection_id=1234567890') as never)).toEqual({
+    expect(await load(loadArgs('?collection_id=1234567890') as never)).toMatchObject({
       state: 'payment_confirmed',
       paymentId: '1234567890',
     })
@@ -335,7 +336,7 @@ describe('checkout/complete load — one-time payments (Checkout Pro)', () => {
     ]
     for (const patch of combos) {
       mockGetPayment.mockResolvedValue({ ...approvedPayment, ...patch })
-      expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
+      expect(await load(loadArgs('?payment_id=1234567890') as never)).toMatchObject({
         state: 'payment_confirmed',
         paymentId: '1234567890',
       })
@@ -434,7 +435,7 @@ describe('checkout/complete load — one-time payments (Checkout Pro)', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     try {
       for (let i = 0; i < 10; i++) {
-        expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
+        expect(await load(loadArgs('?payment_id=1234567890') as never)).toMatchObject({
           state: 'payment_confirmed',
           paymentId: '1234567890',
         })
@@ -458,7 +459,7 @@ describe('checkout/complete load — one-time payments (Checkout Pro)', () => {
         kind: 'payment',
       })
     }
-    expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
+    expect(await load(loadArgs('?payment_id=1234567890') as never)).toMatchObject({
       state: 'payment_confirmed',
       paymentId: '1234567890',
     })

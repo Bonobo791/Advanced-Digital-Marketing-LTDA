@@ -152,6 +152,16 @@ export function adSpendFeeBRL(monthlyAdSpend: number): number {
   return Math.round(fee * 100) / 100
 }
 
+/**
+ * Monthly management fee for an ads service, in USD (Stripe en-US checkout):
+ * `max(monthlyAdSpendUSD × 10%, US$ 100)` — the USD twin of the BRL rule at
+ * the catalog's 5:1 reference rate.
+ */
+export function adSpendFeeUSD(monthlyAdSpendUSD: number): number {
+  const fee = Math.max(monthlyAdSpendUSD * ADS_SPEND_RULE.rate, ADS_SPEND_RULE.minimumUSD)
+  return Math.round(fee * 100) / 100
+}
+
 const brlFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const usdFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 

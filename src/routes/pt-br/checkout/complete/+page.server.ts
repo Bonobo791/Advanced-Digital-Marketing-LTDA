@@ -19,8 +19,8 @@ export const prerender = false
 
 export type CompletionState =
   | { state: 'missing' }
-  | { state: 'confirmed'; subscriptionId: string }
-  | { state: 'payment_confirmed'; paymentId: string }
+  | { state: 'confirmed'; subscriptionId: string; amountBRL: number | null; externalReference: string | null }
+  | { state: 'payment_confirmed'; paymentId: string; amountBRL: number | null; externalReference: string | null }
   | { state: 'payment_pending'; paymentId: string }
   | { state: 'payment_unconfirmed'; paymentId: string }
   | { state: 'pending'; subscriptionId: string }
@@ -123,7 +123,7 @@ async function verifySubscription(
       )
       return { state: 'error', kind: 'subscription' }
     }
-    return { state: 'confirmed', subscriptionId: subscription.id }
+    return { state: 'confirmed', subscriptionId: subscription.id, amountBRL: subscription.transactionAmount, externalReference: subscription.externalReference }
   }
   // Paused/cancelled are terminal — the subscription will never progress to
   // authorization, so claiming it is 'still being processed' would be wrong.
@@ -185,7 +185,7 @@ async function verifyPayment(
     return { state: 'error', kind: 'payment' }
   }
   if (payment.status === 'approved') {
-    return { state: 'payment_confirmed', paymentId: payment.id }
+    return { state: 'payment_confirmed', paymentId: payment.id, amountBRL: payment.transactionAmount, externalReference: payment.externalReference }
   }
   // Boleto and Pix are asynchronous: a customer redirected right after paying
   // may still be awaiting confirmation. That is pending, not a failure — but

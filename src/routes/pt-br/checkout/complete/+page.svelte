@@ -3,6 +3,8 @@
   import type { PageProps } from './$types'
   import { SITE_MOTION, type SiteMotion } from '$lib/client/site-motion'
   import { setupReveals } from '$lib/client/reveal'
+  import { firePurchase } from '$lib/client/analytics'
+  import { getSessionItem, setSessionItem } from '$lib/client/session-storage'
   import { absoluteUrl, LOCALE_ROUTES } from '$lib/locale'
 
   const motion = getContext<SiteMotion>(SITE_MOTION)
@@ -12,6 +14,30 @@
   onMount(() => {
     motion.registerHero()
     return setupReveals()
+  })
+
+  // Purchase conversion: fired only for the SERVER-verified confirmed states,
+  // once per payment/subscription id (sessionStorage dedupe) so a refresh or
+  // revisit of the return URL cannot double-count.
+  $effect(() => {
+    if (data.state !== 'confirmed' && data.state !== 'payment_confirmed') return
+    const id = data.state === 'confirmed' ? data.subscriptionId : data.paymentId
+    const key = 'adm-mp-purchase-fired'
+    const raw = getSessionItem(key)
+    let fired: Record<string, boolean> = {}
+    try {
+      fired = raw ? (JSON.parse(raw) as Record<string, boolean>) : {}
+    } catch {
+      // Corrupt storage value: ignore and overwrite with a fresh record.
+    }
+    if (fired[id]) return
+    firePurchase({
+      orderId: data.externalReference ?? id,
+      value: data.amountBRL ?? 0,
+      currency: 'BRL',
+      items: [],
+    })
+    setSessionItem(key, JSON.stringify({ ...fired, [id]: true }))
   })
 
   // Which flow a state belongs to, so error/rate-limit pages keep the right

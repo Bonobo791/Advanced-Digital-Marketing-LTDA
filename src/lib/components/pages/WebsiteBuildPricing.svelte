@@ -10,8 +10,9 @@
    * for the selected build (server-priced in BRL). The monthly hosting
    * subscription — maintenance + site changes — stays in the SubscribeSection
    * right below, preselected as the recurring monthly charge.
-   * en-US: informational state (Stripe checkout is future work) — prices shown
-   * with the USD reference, purchase by email.
+   * en-US: "Buy this website" starts a one-time Stripe Checkout payment
+   * (server-priced in USD; activated by STRIPE_SECRET_KEY — see
+   * docs/stripe-checkout.md).
    */
   import {
     WEBSITE_BUILD_KINDS,
@@ -22,7 +23,7 @@
     type WebsiteBuildKind,
     type WebsiteBuildType,
   } from '$lib/website-builds'
-  import { LOCALE_ROUTES, type Locale } from '$lib/locale'
+  import type { Locale } from '$lib/locale'
   import { words } from '$lib/text'
   import { fetchCheckoutUrl } from '$lib/client/checkout'
   import { fireBeginCheckout } from '$lib/client/analytics'
@@ -41,11 +42,9 @@
       oneTime: 'one-time',
       migrationNote: 'migration \u00B7 2\u00D7',
       buyCta: 'Buy this website',
-      comingSoon: 'One-time checkout is coming soon (Stripe). Until then, email us to start your build.',
-      emailCta: 'Email us to start a build',
       hostingNote: 'Then add hosting as your monthly charge below — maintenance and site changes included.',
-      submitting: 'Opening Mercado Pago...',
-      genericError: 'Could not start the Mercado Pago payment. Please try again.',
+      submitting: 'Opening Stripe...',
+      genericError: 'Could not start the Stripe payment. Please try again.',
       missingCredentials: 'Payments are not configured yet. Please try again later.',
       rateLimited: 'Too many attempts. Please try again in a few minutes.',
       invalidBuild: 'Invalid build selection. Refresh the page.',
@@ -61,8 +60,6 @@
       oneTime: 'pagamento único',
       migrationNote: 'migração \u00B7 2\u00D7',
       buyCta: 'Comprar site',
-      comingSoon: '',
-      emailCta: '',
       hostingNote: 'Depois de comprar o site, adicione a hospedagem como cobrança mensal abaixo — manutenção e alterações incluídas.',
       submitting: 'Abrindo o Mercado Pago...',
       genericError: 'Não foi possível iniciar o pagamento pelo Mercado Pago. Tente novamente.',
@@ -104,17 +101,21 @@
             item_name: WEBSITE_BUILD_NAMES[locale][type],
           },
         ],
-        // The pt-BR display price IS the billed BRL amount (the only checkout
-        // currency); en-US never reaches this code path.
-        websiteBuildPrice('pt-BR', type, kind),
+        // pt-BR: the display price IS the billed BRL amount. en-US: the USD
+        // display price is the billed amount too (Stripe).
+        websiteBuildPrice(locale, type, kind),
+        locale === 'en-US' ? 'USD' : 'BRL',
       )
 
-      const result = await fetchCheckoutUrl('/api/checkout/build', {
+      // pt-BR bills BRL through Mercado Pago; en-US bills USD through Stripe.
+      const endpoint = locale === 'en-US' ? '/api/checkout/stripe' : '/api/checkout/build'
+      const result = await fetchCheckoutUrl(endpoint, {
+        flow: 'build',
         type,
         kind,
-        // Fresh per click: Checkout Pro preferences are charged once when the
+        // Fresh per click: the checkout reference is charged once when the
         // customer pays, so retrying a lost response must never reuse a stale
-        // preference reference.
+        // reference.
         idempotencyKey: crypto.randomUUID(),
         locale,
       })
@@ -169,19 +170,13 @@
         <small>{kind === 'migration' ? text.migrationNote : text.oneTime}</small>
       </div>
       <div class="build-cta">
-        {#if locale === 'pt-BR'}
-          <button class="btn btn-solid" type="button" onclick={buy} disabled={submitting}>
-            {submitting ? text.submitting : text.buyCta}
-          </button>
-          {#if errorMessage}
-            <p class="sub-error" role="alert">{errorMessage}</p>
-          {/if}
-          <p class="build-note">{text.hostingNote}</p>
-        {:else}
-          <p class="sub-note sub-coming-soon">{text.comingSoon}</p>
-          <a class="btn btn-ghost-ink" href={LOCALE_ROUTES.contact[locale]}>{text.emailCta}</a>
-          <p class="build-note">{text.hostingNote}</p>
+        <button class="btn btn-solid" type="button" onclick={buy} disabled={submitting}>
+          {submitting ? text.submitting : text.buyCta}
+        </button>
+        {#if errorMessage}
+          <p class="sub-error" role="alert">{errorMessage}</p>
         {/if}
+        <p class="build-note">{text.hostingNote}</p>
       </div>
     </div>
   </div>

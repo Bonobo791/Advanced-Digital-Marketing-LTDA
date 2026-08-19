@@ -144,6 +144,7 @@ three server-only variables from `process.env` inside
 | Variable | Dev (sandbox) | Prod (live) |
 |---|---|---|
 | `MERCADO_PAGO_ACCESS_TOKEN` | **Test** Access Token from the panel's *Credenciais de teste* section (also `APP_USR-...` — the environment is the panel section, not the prefix). | **Production** Access Token from *Credenciais de produção*. |
+| `MERCADO_PAGO_WEBHOOK_SECRET` | Any value (webhooks are off in test). | Secret from the panel's webhook configuration — verifies `POST /api/webhooks/mercadopago` signatures. Without it the webhook endpoint refuses with 503. |
 | `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN` | Set to the **same test token** — exact equality with the access token is how sandbox mode is detected (`selectInitPoint` then uses `sandbox_init_point`, which Checkout Pro returns). | **Do not set** (or set to a different value). If it equals the production token, every real customer is redirected to the sandbox checkout and payments fail. |
 | `PUBLIC_SITE_URL` | Any public HTTPS domain MP accepts — the production domain works for local testing (`localhost`/non-public hosts are rejected by MP). | `https://advanceddigitalmarketingltda.com` — base for the `back_url` redirect to `/pt-br/checkout/complete/`. Falls back to the `SITE_ORIGIN` constant with a loud server-side warning if unset/malformed/not public HTTPS. |
 
@@ -163,9 +164,9 @@ Client ID/Secret pair.)
 > Note: local `.env` files are gitignored. The current dev `.env` follows the
 > dev row above (test token in both variables — the account resolves to a
 > seller **test user**, `TESTUSER...`, tagged `test_user` in
-> `GET /users/me`). `MERCADO_PAGO_WEBHOOK_SECRET` and `PUBLIC_KEY` in `.env`
-> are unused by this flow (the `PUBLIC_KEY` belongs to a different
-> application — ignore it).
+> `GET /users/me`). `PUBLIC_KEY` in `.env` belongs to a different application
+> — ignore it. `MERCADO_PAGO_WEBHOOK_SECRET` is only read by the webhook
+> endpoint.
 
 ---
 
@@ -374,10 +375,25 @@ Mercado Pago API.
 
 ## Webhooks
 
-Intentionally **not implemented**: there is no local billing database to sync,
-and no application-side action (onboarding email, CRM, access grant) depends on
-subscription events today. If one is added later, validate Mercado Pago webhook
-signatures properly and keep the handler to that single action.
+`POST /api/webhooks/mercadopago` receives Mercado Pago event notifications
+(`src/lib/server/mercadoPago-webhook.ts`).
+
+- **Signature:** `x-signature` (`ts=…,v1=…`) verified with
+  `MERCADO_PAGO_WEBHOOK_SECRET` (HMAC-SHA256 over
+  `id:<data.id>;request-id:<x-request-id>;ts:<ts>;`), with a 5-minute
+  timestamp recency check so a captured request cannot be replayed. A missing
+  secret returns 503 (operator misconfiguration, MP retries); a bad signature
+  returns 401 before any work.
+- **Action:** the single handoff that matters — email the owner when a
+  `payment` is `approved` or a `preapproval` (subscription) is `authorized`.
+  There is still no local billing database; everything else stays in Mercado
+  Pago.
+- **Redelivery:** MP retries non-2xx webhooks, so events are deduped in
+  memory by `type:data.id` (24 h window, bounded) — a replayed event is
+  acknowledged without a second owner email.
+- **Setup:** add the webhook to the Mercado Pago panel (Application →
+  Webhooks → URL `https://<site>/api/webhooks/mercadopago`) with the payment
+  and preapproval events, and set `MERCADO_PAGO_WEBHOOK_SECRET` on Coolify.
 
 ---
 
@@ -433,10 +449,11 @@ understandable inside Mercado Pago without any local database.
 
 Before redirecting, the client pushes a `begin_checkout` event to
 `window.dataLayer` when Google Tag Manager is present
-(`{ event, currency: "BRL", value, items: [{ item_id, item_name }] }`). It is a
-no-op when no `dataLayer` exists (logged with `console.info`). A purchase
-conversion is deliberately **not** fired on the return page — only reliable
-Mercado Pago payment/webhook data should ever drive that.
+(`{ event, currency, value, items: [{ item_id, item_name }] }`). A `purchase`
+conversion fires on the return page ONLY when the server has verified the
+payment/subscription live against the API (`confirmed`/`payment_confirmed`),
+with the verified amount and reference, deduped per id in sessionStorage so a
+refresh or revisit cannot double-count.
 
 ---
 
