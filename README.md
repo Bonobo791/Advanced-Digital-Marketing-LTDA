@@ -1,3 +1,5 @@
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/40e388c6a5724be0867d621ad4a10fac)](https://app.codacy.com/gh/Bonobo791/Advanced-Digital-Marketing-LTDA/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+
 # Advanced Digital Marketing LTDA
 
 Cyberpunk-themed marketing agency website. SvelteKit 2 + Svelte 5 (runes) + Tailwind CSS 3.4, deployed to Netlify with prerendered public pages.
