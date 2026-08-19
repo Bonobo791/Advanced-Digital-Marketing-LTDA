@@ -28,10 +28,11 @@ function isIpLiteral(hostname: string): boolean {
 /** A host that is a real public HTTPS origin — non-loopback, non-literal. */
 function isPublicHostname(hostname: string): boolean {
   // A fully qualified hostname may carry a terminal dot ("localhost.",
-  // "foo.local."); the URL parser preserves it, so normalize it away before
-  // the loopback/suffix checks — otherwise a loopback origin would silently
-  // pass validation and produce unusable verification links/callbacks.
-  const host = hostname.toLowerCase().replace(/\.$/, '')
+  // "foo.local."); the URL parser preserves it, so normalize ALL terminal
+  // dots away before the loopback/suffix checks — otherwise a loopback origin
+  // (or a typo like "localhost.." / "staging..") would silently pass
+  // validation and produce unusable verification links/callbacks.
+  const host = hostname.toLowerCase().replace(/\.+$/, '')
   return (
     host.length > 0 &&
     // A public origin must be a real FQDN: single-label values like

@@ -112,6 +112,22 @@ describe('POST /api/checkout/build', () => {
     expect(mockCreateCheckoutPreference).not.toHaveBeenCalled()
   })
 
+  it('rejects unsupported locales instead of coercing them', async () => {
+    for (const locale of ['fr-FR', '', undefined]) {
+      const response = await POST({
+        request: new Request('http://localhost/api/checkout/build', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ ...validBody, locale }),
+        }),
+        getClientAddress: () => '127.0.0.1',
+      } as Parameters<typeof POST>[0])
+      expect(response.status).toBe(400)
+      expect(await response.json()).toEqual({ error: 'invalid_locale' })
+    }
+    expect(mockCreateCheckoutPreference).not.toHaveBeenCalled()
+  })
+
   it('rejects malformed JSON', async () => {
     const event = {
       request: new Request('http://localhost/api/checkout/build', {

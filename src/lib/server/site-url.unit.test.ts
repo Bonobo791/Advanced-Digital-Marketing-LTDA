@@ -27,6 +27,11 @@ describe('publicSiteOrigin', () => {
       'https://[::1]',
       'https://foo.localhost',
       'https://foo.local',
+      // Multiple terminal dots: a typo must not pass after single-dot
+      // normalization ("localhost." passes a single strip and still ends in a
+      // dot, producing a dotted origin).
+      'https://localhost..',
+      'https://staging..',
       // Single-label values parse fine but are not real public FQDNs — usually
       // a typo (https://staging) that would emit unusable links.
       'https://staging',

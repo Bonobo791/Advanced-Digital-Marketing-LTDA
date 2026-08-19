@@ -85,11 +85,14 @@ describe('POST /api/checkout/stripe', () => {
 
   it('rejects invalid flows, emails and idempotency keys with 400', async () => {
     const cases = [
-      [{ flow: 'nope', idempotencyKey: UUID }, 'invalid_build'],
+      [{ flow: 'nope', idempotencyKey: UUID, locale: 'en-US' }, 'invalid_build'],
       [{ ...validSubscription, email: 'nope' }, 'invalid_email'],
       [{ ...validSubscription, idempotencyKey: 'not-a-uuid' }, 'invalid_idempotency_key'],
-      [{ flow: 'subscription', email: 'a@b.com', serviceIds: [], config: {}, idempotencyKey: UUID }, 'no_services_selected'],
-      [{ flow: 'build', type: 'hovercraft', kind: 'new', idempotencyKey: UUID }, 'invalid_build'],
+      [{ flow: 'subscription', email: 'a@b.com', serviceIds: [], config: {}, idempotencyKey: UUID, locale: 'en-US' }, 'no_services_selected'],
+      [{ flow: 'build', type: 'hovercraft', kind: 'new', idempotencyKey: UUID, locale: 'en-US' }, 'invalid_build'],
+      [{ ...validSubscription, locale: 'pt-BR' }, 'invalid_locale'],
+      [{ ...validSubscription, locale: 'fr-FR' }, 'invalid_locale'],
+      [{ ...validSubscription, locale: undefined }, 'invalid_locale'],
     ] as const
     for (const [body, code] of cases) {
       const response = await POST(requestEvent(body))

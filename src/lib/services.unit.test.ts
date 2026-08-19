@@ -16,11 +16,13 @@ const CONTACT_ROUTE = '/contact/'
 
 describe('service option CTA anchors', () => {
   it('routes every one-time or free option to the contact form (never a pricing section)', () => {
+    let checked = 0
     for (const locale of ['en-US', 'pt-BR'] as const) {
       for (const service of Object.values(SERVICE_CONTENT[locale])) {
         for (const option of service.options) {
           const isRecurring = option.per.includes('Per month') || option.per.includes('Por mês')
           if (!isRecurring) {
+            checked += 1
             const href = resolveOptionCtaHref(option, service, CONTACT_ROUTE)
             expect(
               href.startsWith(CONTACT_ROUTE),
@@ -30,14 +32,18 @@ describe('service option CTA anchors', () => {
         }
       }
     }
+    // Fails loudly if a `per` string is reworded and silently empties the guard.
+    expect(checked, 'no one-time option was classified — check the `per` copy match').toBe(20)
   })
 
   it('never points any option at the recurring checkout anchor', () => {
+    let checked = 0
     for (const locale of ['en-US', 'pt-BR'] as const) {
       for (const service of Object.values(SERVICE_CONTENT[locale])) {
         for (const option of service.options) {
           const isRecurring = option.per.includes('Per month') || option.per.includes('Por mês')
           if (!isRecurring) {
+            checked += 1
             const href = resolveOptionCtaHref(option, service, CONTACT_ROUTE)
             expect(
               href,
@@ -47,6 +53,7 @@ describe('service option CTA anchors', () => {
         }
       }
     }
+    expect(checked, 'no one-time option was classified — check the `per` copy match').toBe(20)
   })
 
   it('preselects only the clicked Technical SEO option in the configurator', () => {
@@ -79,16 +86,20 @@ describe('service option CTA anchors', () => {
       'Meta retainer inquiry',
       'Visibility retainer inquiry',
     ]
+    let checked = 0
     for (const locale of ['en-US', 'pt-BR'] as const) {
       for (const service of Object.values(SERVICE_CONTENT[locale])) {
         for (const option of service.options) {
           if (!retainerSubjects.includes(option.subject)) continue
+          checked += 1
           const href = resolveOptionCtaHref(option, service, CONTACT_ROUTE)
           expect(href.startsWith(CONTACT_ROUTE), `${locale} · ${service.navLabel} · ${option.name} (got ${href})`).toBe(true)
           expect(href).toContain(encodeURIComponent(option.subject))
         }
       }
     }
+    // One match per retainer subject per locale — a reworded subject must fail.
+    expect(checked, 'a retainer subject was reworded and dropped out of the guard').toBe(8)
   })
 
   it('carries the option subject into the contact URL when the anchor resolves to the form', () => {

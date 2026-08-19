@@ -44,8 +44,12 @@ function validatePayload(payload: Record<string, unknown>): ValidationOutcome {
   if (!UUID_V4_RE.test(idempotencyKey)) return { error: 'invalid_idempotency_key' }
 
   // Only the locale's title copy differs; the billed amount is always the
-  // authoritative BRL price, never a client-supplied number.
-  const locale: Locale = payload.locale === 'en-US' ? 'en-US' : 'pt-BR'
+  // authoritative BRL price, never a client-supplied number. Unsupported
+  // locales are rejected loudly — never coerced to a silent default.
+  if (payload.locale !== 'en-US' && payload.locale !== 'pt-BR') {
+    return { error: 'invalid_locale' }
+  }
+  const locale: Locale = payload.locale
   return {
     payload: { type: payload.type, kind: payload.kind, idempotencyKey, locale },
   }

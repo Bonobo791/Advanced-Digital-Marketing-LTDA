@@ -26,7 +26,10 @@ type ValidPayload =
 type ValidationOutcome = { payload: ValidPayload } | { error: string }
 
 function validatePayload(body: Record<string, unknown>): ValidationOutcome {
-  const locale: Locale = body.locale === 'pt-BR' ? 'pt-BR' : 'en-US'
+  // The en-US USD checkout must not silently serve pt-BR copy; any locale
+  // other than en-US is rejected loudly.
+  if (body.locale !== 'en-US') return { error: 'invalid_locale' }
+  const locale: Locale = body.locale
   const idempotencyKey = typeof body.idempotencyKey === 'string' ? body.idempotencyKey.trim() : ''
   if (!UUID_V4_RE.test(idempotencyKey)) return { error: 'invalid_idempotency_key' }
 
