@@ -1,8 +1,5 @@
 import { error } from '@sveltejs/kit'
-import { SERVICE_IDS, resolveServiceSlug } from '$lib/services'
-
-export const prerender = true
-export const entries = () => SERVICE_IDS.map((slug) => ({ slug }))
+import { resolveServiceSlug } from '$lib/services'
 
 export function load({ params }: { params: Record<string, string> }) {
   const service = resolveServiceSlug(params.slug)

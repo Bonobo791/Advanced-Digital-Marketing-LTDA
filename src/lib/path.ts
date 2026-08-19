@@ -6,7 +6,7 @@
  * so the helper cannot live in either).
  *
  * Edge-reachable: imports from this module must use the explicit `.ts`
- * extension (see `src/lib/edge-functions-imports.unit.test.ts`).
+ * extension.
  */
 
 /**

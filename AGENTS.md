@@ -19,9 +19,9 @@
 
 This is a SvelteKit 2 / Svelte 5 site using TypeScript, Vite, and Tailwind CSS.
 
-**Tech stack:** Node 24 / npm 11 · SvelteKit 2 + Svelte 5 (runes) · TypeScript (strict) · Vite 6 · Tailwind CSS 3 + PostCSS/autoprefixer · Fontsource (Archivo, JetBrains Mono, Overpass) · Vitest + fast-check (tests) · Stryker (mutation testing) · Netlify (adapter-netlify, Edge Functions).
+**Tech stack:** Node 24 / npm 11 · SvelteKit 2 + Svelte 5 (runes) · TypeScript (strict) · Vite 6 · Tailwind CSS 3 + PostCSS/autoprefixer · Fontsource (Archivo, JetBrains Mono, Overpass) · Vitest + fast-check (tests) · Stryker (mutation testing) · Docker + Coolify (adapter-node; Bunny CDN in front).
 
-- `src/routes/` — public pages (en + `pt-br/`): home, `about/`, `contact/`, the `services/` index + `services/[slug]/` details (and `pt-br/servicos/` variants), plus the `pt-br/checkout/complete/` return page. The only API route is `src/routes/api/checkout/subscription/` (POST, Netlify Function); there are no other `api/` routes.
+- `src/routes/` — public pages (en + `pt-br/`): home, `about/`, `contact/`, the `services/` index + `services/[slug]/` details (and `pt-br/servicos/` variants), plus the `pt-br/checkout/complete/` return page. API routes run on the Node server: `api/checkout/subscription/`, `api/checkout/build/`, `api/contact/submit/`, `api/health/`.
 - `src/lib/components/` contains reusable `chrome` (navigation and footer), `cyber` (visual effects), and `pages` components.
 - `src/lib/` contains locale logic, constants, client helpers, and tests.
 - `static/` contains public fonts and static assets; `src/lib/assets/` contains imported visual assets.

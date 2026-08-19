@@ -1,10 +1,11 @@
 name: Purge Bunny CDN after production deploy
 
 # Single purge trigger per deploy event. This workflow is the ONLY place the
-# cache is ever purged: Netlify deploys from main, the workflow waits for the
-# exact commit to be live (wait-for-commit-marker), then purges the Bunny
-# pull zone. There is deliberately no in-container entrypoint — see
-# docs/bunny-cdn-purge.md for why, and for the CI-less fallback design.
+# cache is ever purged: Coolify deploys from main (via its GitHub webhook), the
+# workflow waits for the deployment of the exact commit to finish
+# (wait-for-commit-marker), then purges the Bunny pull zone. There is
+# deliberately no in-container purge entrypoint — see docs/bunny-cdn-purge.md
+# for why, and for the CI-less fallback design.
 on:
   push:
     branches: [main]
@@ -19,10 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      NETLIFY_SITE_ID: ${{ vars.NETLIFY_SITE_ID }}
-      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      COOLIFY_API_URL: ${{ vars.COOLIFY_API_URL }}
+      COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+      COOLIFY_APPLICATION_UUID: ${{ vars.COOLIFY_APPLICATION_UUID }}
       EXPECTED_COMMIT: ${{ github.sha }}
-      EXPECTED_BRANCH: main
       BUNNY_PULL_ZONE_ID: ${{ vars.BUNNY_PULL_ZONE_ID }}
       BUNNY_API_KEY: ${{ secrets.BUNNY_API_KEY }}
       PURGE_REQUIRE_CREDS: '1'
@@ -31,11 +32,11 @@ jobs:
         uses: actions/checkout@v4
 
       # Never purge at deploy-start and never blindly: block until the exact
-      # commit is serving (deploy state 'ready'), then purge. On timeout,
-      # deploy failure, or API error the job fails loudly instead of purging
-      # against stale content.
-      - name: Wait until the new commit is serving (wait-for-commit-marker)
-        run: node scripts/wait-for-netlify-deploy.mjs
+      # commit's Coolify deployment reaches 'finished' (the new code is
+      # serving). On timeout, deploy failure, or API error the job fails
+      # loudly instead of purging against stale content.
+      - name: Wait until the new commit is deployed (wait-for-commit-marker)
+        run: node scripts/wait-for-coolify-deploy.mjs
 
       # With creds set (they always are here), a failed purge must log loudly
       # and fail the job. PURGE_REQUIRE_CREDS=1 turns the script's dev no-op

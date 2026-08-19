@@ -52,8 +52,8 @@ Mercado Pago:  customer + subscription + checkout + payments + recurring billing
 
 ## Architecture
 
-- **Stack:** SvelteKit 2 / Svelte 5 (runes), adapter-netlify. Pages are
-  prerendered; the checkout endpoint runs as a Netlify Function.
+- **Stack:** SvelteKit 2 / Svelte 5 (runes), adapter-node (Docker on Coolify). Pages are
+  server-rendered; the checkout endpoint runs on the Node server.
 - **Catalog:** `src/lib/catalog.ts` — the single source of truth for what can be
   subscribed to and what it costs. Isomorphic (no secrets); the client uses it
   only to *display* prices.
@@ -145,7 +145,7 @@ three server-only variables from `process.env` inside
 |---|---|---|
 | `MERCADO_PAGO_ACCESS_TOKEN` | **Test** Access Token from the panel's *Credenciais de teste* section (also `APP_USR-...` — the environment is the panel section, not the prefix). | **Production** Access Token from *Credenciais de produção*. |
 | `MERCADO_PAGO_SANDBOX_ACCESS_TOKEN` | Set to the **same test token** — exact equality with the access token is how sandbox mode is detected (`selectInitPoint` then uses `sandbox_init_point`, which Checkout Pro returns). | **Do not set** (or set to a different value). If it equals the production token, every real customer is redirected to the sandbox checkout and payments fail. |
-| `PUBLIC_SITE_URL` | Any public HTTPS domain MP accepts — the production domain works for local testing (`localhost`/`*.netlify.app` are rejected by MP). | `https://advanceddigitalmarketingltda.com` — base for the `back_url` redirect to `/pt-br/checkout/complete/`. Falls back to the `SITE_ORIGIN` constant with a loud server-side warning if unset/malformed/not public HTTPS. |
+| `PUBLIC_SITE_URL` | Any public HTTPS domain MP accepts — the production domain works for local testing (`localhost`/non-public hosts are rejected by MP). | `https://advanceddigitalmarketingltda.com` — base for the `back_url` redirect to `/pt-br/checkout/complete/`. Falls back to the `SITE_ORIGIN` constant with a loud server-side warning if unset/malformed/not public HTTPS. |
 
 The token is read only inside `src/lib/server/mercadoPago.ts` and never appears
 in API responses, HTML, or logs. Do **not** add a Mercado Pago public key —
@@ -175,7 +175,7 @@ Client ID/Secret pair.)
 2. Create an application in the Mercado Pago Developer panel
    (`https://www.mercadopago.com.br/developers/panel/app`).
 3. Copy the **Access Token** (production) into `MERCADO_PAGO_ACCESS_TOKEN` on
-   Netlify (Site settings → Environment variables) and locally.
+   Coolify (Application → Environment Variables) and locally.
 4. Confirm **Subscriptions** is enabled for the application
    (Subscriptions → Integration → create a subscription).
 5. Add `https://<site>/pt-br/checkout/complete/` to the application's
@@ -287,7 +287,7 @@ returned:
 | 502 | `unauthorized`, `api_error`, `invalid_response`, `missing_init_point`, `invalid_init_point` |
 | 503 | `missing_credentials`, `timeout`, `client_address_unavailable` |
 
-Unexpected errors are re-thrown so the server logs them (Sentry/Netlify logs).
+Unexpected errors are re-thrown so the server logs them (Coolify container logs).
 
 ### `POST /api/checkout/build` (one-time website build)
 
@@ -445,7 +445,7 @@ Mercado Pago payment/webhook data should ever drive that.
 ```bash
 npm run check      # svelte-check, strict TS
 npm run test       # all unit + integration tests (Mercado Pago is mocked)
-npm run build      # Netlify build; confirms prerender/function split
+npm run build      # adapter-node build; confirms SSR pages + API routes
 ```
 
 Coverage highlights:
@@ -473,7 +473,7 @@ Coverage highlights:
   MP response body (`[mercadoPago] api_error (HTTP ...): ...`). Verified causes
   on this account:
   - `400 invalid_field_content` — `back_url` domain rejected by MP
-    (`*.netlify.app` and `localhost` are disallowed; use a public HTTPS
+    (`localhost` and non-public hosts are disallowed; use a public HTTPS
     domain).
   - `500 Internal server error` on `/preapproval` — the `payer_email` is not a
     sandbox test user. In sandbox, the buyer email must be a test account on
@@ -486,7 +486,7 @@ Coverage highlights:
   is determined by the credential itself.
 - **Back URL wrong:** set `PUBLIC_SITE_URL` to a public HTTPS domain Mercado
   Pago accepts (e.g. `https://advanceddigitalmarketingltda.com` — not
-  `localhost` or `*.netlify.app`); otherwise the canonical `SITE_ORIGIN`
+  `localhost` or non-public hosts); otherwise the canonical `SITE_ORIGIN`
   constant is used with a server-side warning.
 - **USD prices on EN pages:** display-only reference; checkout always charges
   BRL (MP Subscriptions does not support USD from this account).

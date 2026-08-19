@@ -8,7 +8,7 @@ import { CONTACT_TOKEN_SUBJECT_MAX_LENGTH, ContactTokenError } from '$lib/server
 import { MailjetError } from '$lib/server/mailjet'
 import { containsControlCharacter } from '$lib/server/text'
 
-// API routes run as Netlify Functions; the root layout's prerender/trailingSlash
+// API routes run on the Node server (adapter-node); the root layout's prerender/trailingSlash
 // settings must not apply to them.
 export const prerender = false
 export const trailingSlash = 'ignore'

@@ -3,8 +3,8 @@
  * entry points: POST /api/checkout/subscription and the
  * /pt-br/checkout/complete/ return page. Shared so both behave identically.
  *
- * Only the platform-provided address (adapter-netlify populates
- * `getClientAddress` from the trusted connection info Netlify sets itself) is
+ * Only the platform-provided address (adapter-node populates
+ * `getClientAddress` from the X-Forwarded-For header the reverse proxy sets) is
  * accepted. Proxy headers like `x-forwarded-for` and `x-real-ip` are
  * client-controllable, so trusting them would let an attacker rotate the
  * rate-limit key at will and bypass the throttle.

@@ -13,7 +13,7 @@
  * Mercado Pago must not consume the budget that protects the paid
  * subscription-creation call, and vice versa).
  *
- * LIMITATION (deliberate and documented): Netlify Functions are serverless —
+ * LIMITATION (deliberate and documented): the Node server may be restarted —
  * each warm instance keeps its OWN in-memory bucket, so this is a
  * per-instance throttle, not a global limit. It raises the cost of abuse
  * without adding infrastructure; if real abuse appears, replace it with a

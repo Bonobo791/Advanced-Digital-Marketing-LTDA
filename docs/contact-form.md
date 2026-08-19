@@ -40,8 +40,8 @@ No local DB:   the token is self-contained (signed payload), so nothing is
 
 ## Architecture
 
-- **Stack:** SvelteKit 2 / Svelte 5 (runes), adapter-netlify. Pages are
-  prerendered; the form endpoint runs as a Netlify Function; the verify pages
+- **Stack:** SvelteKit 2 / Svelte 5 (runes), adapter-node (Docker on Coolify). Pages are
+  server-rendered; the form endpoint runs on the Node server; the verify pages
   are server-rendered (`prerender = false`) because they read `?token=` at
   request time.
 - **Token:** `src/lib/server/contact-token.ts` — versioned JSON payload
@@ -99,7 +99,8 @@ is not a **validated sender** in the MailJet account — see setup below.
 ## Environment variables
 
 All server-only; none are ever exposed to the browser (the client only ever
-sees the error codes above). Add them to Netlify (site settings) and to
+sees the error codes above). Add them to Coolify (Application → Environment
+  Variables) and to
 `.env.local` for local dev (the repo's `vite.config.ts` loads `.env*` into
 `process.env`).
 
@@ -135,7 +136,7 @@ browser (by design), and `publicSiteOrigin()` refuses local/loopback
 so a locally generated verification link would point at the production site.
 
 The full browser submit → verify round trip therefore needs a public HTTPS
-environment: use a **Netlify deploy preview** (or a tunnel such as `ngrok` /
+environment: use a **Coolify preview deployment** (or a tunnel such as `ngrok` /
 `cloudflared`) with the real env vars and test against the preview URL.
 
 For local verification logic without any mail, run the service-level tests

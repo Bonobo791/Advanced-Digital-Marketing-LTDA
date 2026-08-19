@@ -15,7 +15,7 @@ import { MercadoPagoError, createCheckoutPreference } from '$lib/server/mercadoP
 import { checkoutBackUrl } from '$lib/server/checkout'
 import { handleApiPost, upstreamErrorResponse } from '$lib/server/api-route'
 
-// API routes run as Netlify Functions; the root layout's prerender/trailingSlash
+// API routes run on the Node server (adapter-node); the root layout's prerender/trailingSlash
 // settings must not apply to them.
 export const prerender = false
 export const trailingSlash = 'ignore'
