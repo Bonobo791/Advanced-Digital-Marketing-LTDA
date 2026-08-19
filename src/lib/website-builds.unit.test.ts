@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  BRAZIL_CHECKOUT_PAYMENT_TYPES,
   MIGRATION_MULTIPLIER,
+  OFFERED_CHECKOUT_PAYMENT_TYPES,
   WEBSITE_BUILD_BASE_PRICE,
   WEBSITE_BUILD_BASE_PRICE_BRL,
   WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS,
@@ -110,6 +112,28 @@ describe('WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS (Checkout Pro policy)', () => {
     expect(WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS.excludedPaymentTypes.length).toBeGreaterThan(0)
     for (const id of WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS.excludedPaymentTypes) {
       expect(id.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('excludes every known Brazil payment type outside the offered set (complete policy)', () => {
+    // Checkout Pro enables all account methods unless excluded, so the
+    // exclusion list must be the complement of the offered set — otherwise
+    // e.g. prepaid cards or digital currency would appear in the checkout.
+    const offered = OFFERED_CHECKOUT_PAYMENT_TYPES as readonly string[]
+    for (const type of BRAZIL_CHECKOUT_PAYMENT_TYPES) {
+      if (offered.includes(type)) {
+        expect(WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS.excludedPaymentTypes).not.toContain(type)
+      } else if (type !== 'account_money') {
+        // account_money (the Mercado Pago wallet) cannot be excluded by
+        // preference — the docs say so — every other type must be.
+        expect(WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS.excludedPaymentTypes).toContain(type)
+      }
+    }
+  })
+
+  it('never excludes an offered method', () => {
+    for (const type of OFFERED_CHECKOUT_PAYMENT_TYPES) {
+      expect(WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS.excludedPaymentTypes).not.toContain(type)
     }
   })
 })

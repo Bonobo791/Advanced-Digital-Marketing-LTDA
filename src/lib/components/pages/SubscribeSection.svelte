@@ -267,13 +267,13 @@
         {@const price = priceOf(id)}
         <div class="sub-row" class:on={selected.has(id)}>
           <label class="sub-check">
+            <!-- Selection is a display-only calculator on every locale (the
+                 checkout form itself only renders on pt-BR); disabling it on
+                 en-US made the ad-spend total impossible to explore there. -->
             <input
               type="checkbox"
               checked={selected.has(id)}
               onchange={() => toggle(id)}
-              // Selection is a display-only calculator on every locale (the
-              // checkout form itself only renders on pt-BR); disabling it on
-              // en-US made the ad-spend total impossible to explore there.
               disabled={submitting}
             />
             <span class="sub-name">

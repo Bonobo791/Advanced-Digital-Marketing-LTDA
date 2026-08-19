@@ -174,8 +174,18 @@ async function verifyPayment(
     return { state: 'payment_confirmed', paymentId: payment.id }
   }
   // Boleto and Pix are asynchronous: a customer redirected right after paying
-  // may still be awaiting confirmation. That is pending, not a failure.
+  // may still be awaiting confirmation. That is pending, not a failure — but
+  // only when the payment is actually bound to a checkout this server created;
+  // a pending payment for another product/amount/currency is never labeled as
+  // this site's purchase (same binding rule as the approved branch).
   if (payment.status === 'pending' || payment.status === 'in_process') {
+    if (!isWebsiteBuildPayment(payment)) {
+      console.warn(
+        `[checkout] pending payment ${payment.id} does not match a server-created website build ` +
+          `(external_reference=${payment.externalReference}, amount=${payment.transactionAmount}, currency=${payment.currencyId}); refusing pending claim`,
+      )
+      return { state: 'error', kind: 'payment' }
+    }
     return { state: 'payment_pending', paymentId: payment.id }
   }
   return { state: 'payment_unconfirmed', paymentId: payment.id }

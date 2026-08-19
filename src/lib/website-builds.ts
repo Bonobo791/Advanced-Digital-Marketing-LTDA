@@ -45,20 +45,49 @@ export const WEBSITE_BUILD_BASE_PRICE_BRL: Record<WebsiteBuildType, number> = {
  * - Offered methods: credit card (`credit_card` — à vista by default, or
  *   parcelado up to `maxInstallments`), debit card (`debit_card`), Pix /
  *   bank transfer (`bank_transfer`), and boleto (`ticket`).
- * - Mercado Pago's wallet (`account_money`, "Dinheiro em conta") cannot be
- *   excluded by preference and therefore stays available.
- * - `excludedPaymentTypes` removes every other Checkout Pro payment type
- *   (Brazil: `prepaid_card`) from the hosted checkout.
+ * - Checkout Pro enables every other account-enabled payment type unless it
+ *   is excluded, so `excludedPaymentTypes` is the COMPLEMENT of the offered
+ *   set: every known Brazil payment type outside it is excluded. Mercado
+ *   Pago's wallet (`account_money`, "Dinheiro em conta") cannot be excluded
+ *   by preference and therefore stays available despite the policy.
+ *
+ * `BRAZIL_CHECKOUT_PAYMENT_TYPES` is the known Checkout Pro type set for
+ * Brazil; `OFFERED_CHECKOUT_PAYMENT_TYPES` is the site's offering. The
+ * exclusion list is derived (never hand-maintained) and pinned by
+ * `website-builds.unit.test.ts` so the two cannot drift.
  *
  * Values are server-side policy; the browser never sends them.
  */
+/** Checkout Pro payment types available in Brazil (incl. the wallet, which
+ *  cannot be excluded). Kept as a single source for the exclusion derivation. */
+export const BRAZIL_CHECKOUT_PAYMENT_TYPES = [
+  'credit_card',
+  'debit_card',
+  'prepaid_card',
+  'bank_transfer',
+  'ticket',
+  'account_money',
+  'digital_currency',
+] as const
+
+/** The types this checkout offers (matches the site copy: credit/debit/Pix/boleto). */
+export const OFFERED_CHECKOUT_PAYMENT_TYPES = ['credit_card', 'debit_card', 'bank_transfer', 'ticket'] as const
+
+const excludedPaymentTypes = BRAZIL_CHECKOUT_PAYMENT_TYPES.filter(
+  (type) => !(OFFERED_CHECKOUT_PAYMENT_TYPES as readonly string[]).includes(type),
+)
+
 export const WEBSITE_BUILD_CHECKOUT_PAYMENT_METHODS = {
   /** Maximum credit-card installments offered (parcelado). */
   maxInstallments: 12,
   /** Installments preselected in the hosted checkout — 1 means à vista. */
   defaultInstallments: 1,
-  /** Checkout Pro payment types excluded from the hosted checkout. */
-  excludedPaymentTypes: ['prepaid_card'],
+  /**
+   * Checkout Pro payment types excluded from the hosted checkout: every
+   * known Brazil type outside the offered set (`account_money` is listed
+   * but cannot actually be excluded — Mercado Pago keeps the wallet).
+   */
+  excludedPaymentTypes,
 } as const
 
 /** One-time build price in BRL (checkout currency), including the kind multiplier. */

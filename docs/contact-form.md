@@ -8,17 +8,22 @@ people sections, about, service pages, subscribe and website-build panels)
 points to the contact form page; the form is the single contact channel.
 
 ```text
-Visitor submits name + email + consent box on /contact/
+Visitor submits name + email + consent box on /contact/ (optionally via a
+service-option CTA that carries ?subject=…)
     ↓  POST /api/contact/submit
-Server validates (name, email, consent === true) + rate-limits per IP
+Server validates (name, email, consent === true, locale, optional subject)
+    + rate-limits per IP
     ↓
-Server signs a stateless HMAC token (72h) and sends a verification email
+Server signs a stateless HMAC token (72h, versioned payload incl. subject)
+    and sends a verification email
     ↓  POST https://api.mailjet.com/v3.1/send
 Visitor clicks the link in their inbox
     ↓  GET /contact/verify/?token=…  (or /pt-br/contato/verificar/?token=…)
 Server verifies the token signature + expiry
     ↓
-Owner is emailed the verified contact (name, email, consent timestamp)
+Owner is emailed the verified contact (name, email, subject, consent
+    timestamp); the verified address is the Reply-To, so the owner's Reply
+    reaches the lead directly
 ```
 
 Design principle (same as Mercado Pago checkout):
@@ -77,9 +82,11 @@ body is only logged server-side (sanitized/truncated):
 | `invalid_name` | 400 | Name missing, >100 chars, or contains control chars |
 | `invalid_email` | 400 | Email fails the shared `isValidEmail` shape check |
 | `consent_required` | 400 | `consent` is not exactly `true` — the opt-in box must be checked |
+| `invalid_locale` | 400 | `locale` is not `en-US` or `pt-BR` (missing/unsupported values are rejected, never defaulted) |
+| `invalid_subject` | 400 | Optional `subject` exceeds 120 chars or contains control characters |
 | `rate_limited` | 429 | Per-IP window exhausted (10/min, same limiter as checkout) |
 | `client_address_unavailable` | 503 | No platform client IP; refuses loudly instead of pooling clients |
-| `server_misconfigured` | 503 | `CONTACT_FORM_TOKEN_SECRET` missing |
+| `server_misconfigured` | 503 | `CONTACT_FORM_TOKEN_SECRET` missing (the verify page shows a distinct "temporary problem" state, never a misleading invalid-link message) |
 | `missing_credentials` | 503 | MailJet API key/secret missing |
 | `timeout` | 503 | MailJet did not answer in 15s |
 | `unauthorized` / `sender_not_authorized` / `message_rejected` / `api_error` / `invalid_response` | 502 | MailJet auth, unvalidated sender, rejected payload, upstream errors |
@@ -120,10 +127,24 @@ sees the error codes above). Add them to Netlify (site settings) and to
 
 ### Local testing without sending real mail
 
-Set `MAILJET_SANDBOX_MODE=true` with real-looking credentials — MailJet
-validates the payload and returns `Status: "success"` but never delivers.
-Combined with `CONTACT_FORM_TOKEN_SECRET` set locally, the full submit →
-verify round trip works without any mail leaving the account.
+`MAILJET_SANDBOX_MODE=true` makes MailJet validate the payload and return
+`Status: "success"` **without delivering** — so the verification email never
+reaches an inbox. The submit endpoint also never returns the token to the
+browser (by design), and `publicSiteOrigin()` refuses local/loopback
+`PUBLIC_SITE_URL` values and falls back to the canonical production origin,
+so a locally generated verification link would point at the production site.
+
+The full browser submit → verify round trip therefore needs a public HTTPS
+environment: use a **Netlify deploy preview** (or a tunnel such as `ngrok` /
+`cloudflared`) with the real env vars and test against the preview URL.
+
+For local verification logic without any mail, run the service-level tests
+instead (they cover token signing/verification, the verify flow, the
+owner-notification retry and the MailJet payload handling):
+
+```bash
+npx vitest run src/lib/server/contact.unit.test.ts src/lib/server/contact-token.unit.test.ts src/lib/server/mailjet.unit.test.ts
+```
 
 ---
 

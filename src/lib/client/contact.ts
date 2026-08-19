@@ -23,19 +23,32 @@ export async function submitContactForm(endpoint: string, body: unknown): Promis
       body: JSON.stringify(body),
       signal: controller.signal,
     })
-    const parsed = (await response.json().catch(() => ({}))) as { ok?: unknown; expiresInHours?: unknown; error?: unknown }
+    const raw: unknown = await response.json().catch(() => undefined)
+    const parsed =
+      typeof raw === 'object' && raw !== null && !Array.isArray(raw)
+        ? (raw as { ok?: unknown; expiresInHours?: unknown; error?: unknown })
+        : undefined
     if (!response.ok) {
-      return { ok: false, errorCode: typeof parsed.error === 'string' ? parsed.error : undefined }
+      return { ok: false, errorCode: typeof parsed?.error === 'string' ? parsed.error : undefined }
     }
-    if (parsed.ok !== true) {
-      return { ok: false }
+    if (parsed?.ok !== true) {
+      // A 200 without ok:true (or a non-object body) is a malformed success:
+      // log it loudly instead of failing silently (AGENTS.md: no silent
+      // fallbacks).
+      console.error('[contact] malformed success response from the contact endpoint', raw)
+      return { ok: false, errorCode: 'invalid_response' }
     }
     // A 200 success must carry the server-computed expiry; inventing a
     // fallback would silently show wrong copy (AGENTS.md: no silent
-    // fallbacks). Treat a malformed success as a failure, logged loudly.
-    if (typeof parsed.expiresInHours !== 'number') {
-      console.error('[contact] malformed success response from the contact endpoint', parsed)
-      return { ok: false }
+    // fallbacks). Treat a malformed success (null/array/primitive body, or a
+    // missing/non-positive/non-finite expiry) as a failure, logged loudly.
+    if (
+      typeof parsed.expiresInHours !== 'number' ||
+      !Number.isFinite(parsed.expiresInHours) ||
+      parsed.expiresInHours <= 0
+    ) {
+      console.error('[contact] malformed success response from the contact endpoint', raw)
+      return { ok: false, errorCode: 'invalid_response' }
     }
     return { ok: true, expiresInHours: parsed.expiresInHours }
   } catch (error) {

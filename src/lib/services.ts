@@ -339,6 +339,9 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Start with the build audit',
           subject: 'Build audit request',
+          // One-time diagnostic — there is no pricing section for it in the
+          // website-build checkout below, so it must not inherit '#builds'.
+          pricingAnchor: null,
         },
         {
           flag: 'Most chosen',
@@ -356,6 +359,9 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Book the sprint',
           subject: 'Build sprint request',
+          // One-time engagement — the #builds panel prices the website/
+          // ecommerce build itself, not this sprint, so it goes to the form.
+          pricingAnchor: null,
         },
         {
           jp: '計測',
@@ -794,6 +800,9 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Começar com a auditoria de build',
           subject: 'Build audit request',
+          // Diagnóstico de pagamento único — o painel #builds precifica o
+          // site/e-commerce, não esta auditoria; vai para o formulário.
+          pricingAnchor: null,
         },
         {
           flag: 'Mais escolhido',
@@ -811,6 +820,9 @@ export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> 
           ],
           cta: 'Agendar o sprint',
           subject: 'Build sprint request',
+          // Engajamento de pagamento único — não herda '#builds' (o painel
+          // precifica o site/e-commerce, não este sprint).
+          pricingAnchor: null,
         },
         {
           jp: '計測',

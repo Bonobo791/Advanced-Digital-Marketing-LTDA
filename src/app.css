@@ -725,7 +725,7 @@ img { display: block; max-width: 100%; }
   font: inherit;
   font-size: 15px;
 }
-.contact-form__field input:focus { outline: none; border-color: var(--verm); }
+.contact-form__field input:focus-visible { border-color: var(--verm); outline: 2px solid var(--verm); outline-offset: 2px; }
 .contact-form__field input:disabled { cursor: not-allowed; opacity: 0.55; }
 .contact-form__consent { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
 .contact-form__consent input { flex: none; width: 18px; height: 18px; margin-top: 2px; accent-color: var(--verm); }
@@ -1187,7 +1187,7 @@ img { display: block; max-width: 100%; }
   font-size: 15px;
 }
 .sub-email input:focus,
-.sub-spend input:focus { outline: none; border-color: var(--index-verm); }
+.sub-spend input:focus-visible { border-color: var(--index-verm); outline: 2px solid var(--index-verm); outline-offset: 2px; }
 .sub-email input:disabled,
 .sub-spend input:disabled { cursor: not-allowed; opacity: 0.55; }
 .sub-total {

@@ -292,6 +292,31 @@ describe('checkout/complete load — one-time payments (Checkout Pro)', () => {
     }
   })
 
+  it('never labels a pending payment bound to another product as this site’s purchase', async () => {
+    // The pending branch must apply the same binding rule as the approved
+    // branch: a pending payment for a different external_reference/amount/
+    // currency is not this checkout and must not promise website development.
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const mismatches = [
+        { externalReference: 'unrelated:product:1', status: 'pending' },
+        { externalReference: 'website-build:website:new', transactionAmount: 2999, status: 'in_process' },
+        { externalReference: 'website-build:website:new', currencyId: 'USD', status: 'pending' },
+        { externalReference: null, status: 'pending' },
+      ]
+      for (const patch of mismatches) {
+        mockGetPayment.mockResolvedValue({ ...approvedPayment, ...patch })
+        expect(await load(loadArgs('?payment_id=1234567890') as never)).toEqual({
+          state: 'error',
+          kind: 'payment',
+        })
+      }
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('does not match a server-created website build'))
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
   it('renders the error state (loudly) when payment verification fails', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {

@@ -27,12 +27,21 @@ export async function fetchCheckoutUrl(endpoint: string, body: unknown): Promise
       body: JSON.stringify(body),
       signal: controller.signal,
     })
-    const parsed = (await response.json().catch(() => ({}))) as { checkoutUrl?: unknown; error?: unknown }
+    const raw: unknown = await response.json().catch(() => undefined)
+    const parsed =
+      typeof raw === 'object' && raw !== null && !Array.isArray(raw)
+        ? (raw as { checkoutUrl?: unknown; error?: unknown })
+        : undefined
     if (!response.ok) {
-      return { ok: false, errorCode: typeof parsed.error === 'string' ? parsed.error : undefined }
+      return { ok: false, errorCode: typeof parsed?.error === 'string' ? parsed.error : undefined }
     }
-    if (typeof parsed.checkoutUrl !== 'string') {
-      return { ok: false }
+    if (typeof parsed?.checkoutUrl !== 'string') {
+      // A 200 without a usable checkoutUrl (or a non-JSON body from a gateway
+      // or truncated upstream response) is a malformed success: log it loudly
+      // and fail with a stable code instead of a silent generic error
+      // (AGENTS.md: no silent fallbacks).
+      console.error(`[checkout] malformed success response from ${endpoint}`, raw)
+      return { ok: false, errorCode: 'invalid_response' }
     }
     return { ok: true, checkoutUrl: parsed.checkoutUrl }
   } catch (error) {
