@@ -1,4 +1,13 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/40e388c6a5724be0867d621ad4a10fac)](https://app.codacy.com/gh/Bonobo791/Advanced-Digital-Marketing-LTDA/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Bonobo791_Advanced-Digital-Marketing-LTDA&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Bonobo791_Advanced-Digital-Marketing-LTDA)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=Bonobo791_Advanced-Digital-Marketing-LTDA&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=Bonobo791_Advanced-Digital-Marketing-LTDA)
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=Bonobo791_Advanced-Digital-Marketing-LTDA&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=Bonobo791_Advanced-Digital-Marketing-LTDA)
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=Bonobo791_Advanced-Digital-Marketing-LTDA&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=Bonobo791_Advanced-Digital-Marketing-LTDA)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=Bonobo791_Advanced-Digital-Marketing-LTDA&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=Bonobo791_Advanced-Digital-Marketing-LTDA)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Bonobo791_Advanced-Digital-Marketing-LTDA&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=Bonobo791_Advanced-Digital-Marketing-LTDA)
+[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=Bonobo791_Advanced-Digital-Marketing-LTDA&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=Bonobo791_Advanced-Digital-Marketing-LTDA)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=Bonobo791_Advanced-Digital-Marketing-LTDA&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=Bonobo791_Advanced-Digital-Marketing-LTDA)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Bonobo791_Advanced-Digital-Marketing-LTDA&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Bonobo791_Advanced-Digital-Marketing-LTDA)
 
 # Advanced Digital Marketing LTDA
 
