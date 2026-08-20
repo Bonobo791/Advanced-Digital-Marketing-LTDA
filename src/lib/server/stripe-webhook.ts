@@ -24,6 +24,11 @@ export type StripeWebhookOutcome =
   | { handled: true; action: string }
   | { handled: false; code: 'missing_secret' | 'bad_signature' | 'stale_timestamp' | 'malformed' | 'processing_failed' }
 
+/**
+ * Determines the inbox address used for owner notifications.
+ *
+ * @returns The configured owner email address, or the site contact address when no owner email is configured.
+ */
 function ownerEmail(): string {
   const configured = process.env.CONTACT_FORM_OWNER_EMAIL?.trim()
   if (configured) return configured
@@ -48,8 +53,12 @@ function sessionNotificationText(session: CheckoutSessionStatus): string {
 }
 
 /**
- * Processes one Stripe webhook event. Idempotent — redeliveries are
- * acknowledged without a second owner email.
+ * Processes a verified Stripe webhook event and sends an owner notification for paid checkout sessions.
+ *
+ * Duplicate events are acknowledged without sending another notification. Unsupported event types are acknowledged without action, while processing failures remain retryable.
+ *
+ * @param input - Webhook payload, signature, optional timestamp, and injectable session and email handlers.
+ * @returns The webhook handling result, including whether the event was handled and the resulting action or failure code.
  */
 export async function processStripeWebhookEvent(input: {
   payload: string

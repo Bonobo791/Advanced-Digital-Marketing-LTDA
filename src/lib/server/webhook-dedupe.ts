@@ -13,7 +13,12 @@ const MAX_PROCESSED_EVENTS = 5_000
 /** Redelivered events within this window are treated as already handled. */
 const DEDUPE_TTL_MS = 24 * 60 * 60_000
 
-/** True when the event was already processed (redelivery dedupe). */
+/**
+ * Determines whether an event has a valid processed marker.
+ *
+ * @param key - The event key used for deduplication
+ * @returns `true` if the event has an unexpired processed marker, `false` otherwise.
+ */
 export function isProcessed(key: string): boolean {
   const expiry = processedEvents.get(key)
   if (expiry === undefined) return false
@@ -24,7 +29,11 @@ export function isProcessed(key: string): boolean {
   return true
 }
 
-/** Marks an event as processed, bounding the map when it grows too large. */
+/**
+ * Records an event as processed for deduplication.
+ *
+ * @param key - The unique key identifying the webhook event
+ */
 export function markProcessed(key: string): void {
   if (processedEvents.size >= MAX_PROCESSED_EVENTS) {
     const now = Date.now()

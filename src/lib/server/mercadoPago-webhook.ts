@@ -57,11 +57,10 @@ function hexEqual(a: string, b: string): boolean {
 }
 
 /**
- * Verifies the webhook signature per Mercado Pago's scheme. The manifest's id
- * component is the URL query `data.id` (the value Mercado Pago signed),
- * lowercased per the docs — uppercase ids in the query must be lowercased
- * before hashing. Returns the parsed timestamp when valid (caller checks
- * recency).
+ * Verifies a Mercado Pago webhook signature using the request metadata and configured secret.
+ *
+ * @param input - The webhook body, signature headers, URL `data.id`, and signing secret.
+ * @returns A success result with the parsed timestamp, or a failure code describing why verification failed.
  */
 export function verifyWebhookSignature(input: {
   body: string
@@ -80,7 +79,11 @@ export function verifyWebhookSignature(input: {
   return { ok: true, ts: parsed.ts }
 }
 
-/** Owner inbox — same default as the contact flow (loud fallback). */
+/**
+ * Resolves the owner email address for webhook notifications.
+ *
+ * @returns The configured `CONTACT_FORM_OWNER_EMAIL`, or the site contact address when no configured address is available.
+ */
 function ownerEmail(): string {
   const configured = process.env.CONTACT_FORM_OWNER_EMAIL?.trim()
   if (configured) return configured
@@ -153,8 +156,10 @@ function parseEvent(body: string): { dataId: string | undefined; type: string } 
 }
 
 /**
- * Signature + recency check (the "authorize" step). The manifest id comes from
- * the URL query `data.id` (lowercased), not the body.
+ * Authorizes a webhook request using its signature and timestamp.
+ *
+ * @param input - The request payload, signature headers, URL data ID, secret, and current timestamp.
+ * @returns `{ ok: true }` for a valid, recent signature; otherwise, an error code identifying the authorization failure.
  */
 function authorize(input: {
   body: string
