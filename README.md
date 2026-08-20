@@ -1,4 +1,5 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/40e388c6a5724be0867d621ad4a10fac)](https://app.codacy.com/gh/Bonobo791/Advanced-Digital-Marketing-LTDA/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+[![Quality gate status](https://sonarcloud.io/api/project_badges/measure?project=Bonobo791_Advanced-Digital-Marketing-LTDA&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Bonobo791_Advanced-Digital-Marketing-LTDA)
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Bonobo791_Advanced-Digital-Marketing-LTDA&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Bonobo791_Advanced-Digital-Marketing-LTDA)
 [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=Bonobo791_Advanced-Digital-Marketing-LTDA&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=Bonobo791_Advanced-Digital-Marketing-LTDA)
 [![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=Bonobo791_Advanced-Digital-Marketing-LTDA&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=Bonobo791_Advanced-Digital-Marketing-LTDA)
