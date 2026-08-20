@@ -15,49 +15,14 @@ import {
   verifyStripeWebhookSignature,
   type CheckoutSessionStatus,
 } from './stripe.ts'
+import { isProcessed, markProcessed, unmarkProcessed } from './webhook-dedupe.ts'
 
-/** Removes the dedupe marker so a Stripe redelivery can be processed again. */
-function unmarkProcessed(key: string): void {
-  processedEvents.delete(key)
-}
-
-/** Clears the in-memory redelivery dedupe (test isolation). */
-export function resetWebhookDedupe(): void {
-  processedEvents.clear()
-}
-
-/** Bounded in-memory dedupe: event id -> expiry epoch ms. */
-const processedEvents = new Map<string, number>()
-const MAX_PROCESSED_EVENTS = 5_000
-const DEDUPE_TTL_MS = 24 * 60 * 60_000
+// Re-exported so existing consumers/tests keep importing it from this module.
+export { resetWebhookDedupe } from './webhook-dedupe.ts'
 
 export type StripeWebhookOutcome =
   | { handled: true; action: string }
   | { handled: false; code: 'missing_secret' | 'bad_signature' | 'stale_timestamp' | 'malformed' | 'processing_failed' }
-
-function isProcessed(key: string): boolean {
-  const expiry = processedEvents.get(key)
-  if (expiry === undefined) return false
-  if (expiry < Date.now()) {
-    processedEvents.delete(key)
-    return false
-  }
-  return true
-}
-
-function markProcessed(key: string): void {
-  if (processedEvents.size >= MAX_PROCESSED_EVENTS) {
-    const now = Date.now()
-    for (const [k, expiry] of processedEvents) {
-      if (expiry < now) processedEvents.delete(k)
-    }
-    if (processedEvents.size >= MAX_PROCESSED_EVENTS) {
-      const oldest = processedEvents.keys().next().value
-      if (oldest !== undefined) processedEvents.delete(oldest)
-    }
-  }
-  processedEvents.set(key, Date.now() + DEDUPE_TTL_MS)
-}
 
 function ownerEmail(): string {
   const configured = process.env.CONTACT_FORM_OWNER_EMAIL?.trim()
@@ -100,7 +65,10 @@ export async function processStripeWebhookEvent(input: {
   const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim() ?? ''
   const verified = verifyStripeWebhookSignature({ payload: input.payload, signatureHeader: input.signatureHeader, secret })
   if (!verified.ok) return { handled: false, code: verified.code }
-  if (now - verified.ts * 1000 > STRIPE_SIGNATURE_MAX_AGE_SECONDS * 1000) {
+  // Reject BOTH directions outside the window (same rule as the Mercado Pago
+  // webhook): a future-dated signature would otherwise ride the replay window.
+  const age = now - verified.ts * 1000
+  if (age < 0 || age > STRIPE_SIGNATURE_MAX_AGE_SECONDS * 1000) {
     return { handled: false, code: 'stale_timestamp' }
   }
 

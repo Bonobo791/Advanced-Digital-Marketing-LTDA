@@ -27,15 +27,13 @@ import {
   type PaymentStatus,
   type SubscriptionStatus,
 } from './mercadoPago.ts'
+import { isProcessed, markProcessed, unmarkProcessed } from './webhook-dedupe.ts'
 
-/** Webhook signature timestamps older than this are rejected as replays. */
+// Re-exported so existing consumers/tests keep importing it from this module.
+export { resetWebhookDedupe } from './webhook-dedupe.ts'
+
+/** Webhook signature timestamps older (or further in the future) than this are rejected as replays. */
 export const SIGNATURE_MAX_AGE_SECONDS = 5 * 60
-
-/** Bounded in-memory dedupe: `type:data.id` -> expiry epoch ms. */
-const processedEvents = new Map<string, number>()
-const MAX_PROCESSED_EVENTS = 5_000
-/** Redelivered events within this window are treated as already handled. */
-const DEDUPE_TTL_MS = 24 * 60 * 60_000
 
 export type WebhookOutcome =
   | { handled: true; action: string }
@@ -80,42 +78,6 @@ export function verifyWebhookSignature(input: {
   const expected = createHmac('sha256', input.secret).update(manifest).digest('hex')
   if (!hexEqual(expected, parsed.v1)) return { ok: false, code: 'bad_signature' }
   return { ok: true, ts: parsed.ts }
-}
-
-/** True when the event was already processed (redelivery dedupe). */
-function isProcessed(key: string): boolean {
-  const expiry = processedEvents.get(key)
-  if (expiry === undefined) return false
-  if (expiry < Date.now()) {
-    processedEvents.delete(key)
-    return false
-  }
-  return true
-}
-
-function markProcessed(key: string): void {
-  if (processedEvents.size >= MAX_PROCESSED_EVENTS) {
-    // Bound the map: drop expired entries; if still full, drop the oldest.
-    const now = Date.now()
-    for (const [k, expiry] of processedEvents) {
-      if (expiry < now) processedEvents.delete(k)
-    }
-    if (processedEvents.size >= MAX_PROCESSED_EVENTS) {
-      const oldest = processedEvents.keys().next().value
-      if (oldest !== undefined) processedEvents.delete(oldest)
-    }
-  }
-  processedEvents.set(key, Date.now() + DEDUPE_TTL_MS)
-}
-
-/** Removes the dedupe marker so a Mercado Pago redelivery can be processed again. */
-function unmarkProcessed(key: string): void {
-  processedEvents.delete(key)
-}
-
-/** Clears the in-memory redelivery dedupe (test isolation). */
-export function resetWebhookDedupe(): void {
-  processedEvents.clear()
 }
 
 /** Owner inbox — same default as the contact flow (loud fallback). */
@@ -210,7 +172,12 @@ function authorize(input: {
     secret: input.secret,
   })
   if (!verified.ok) return { ok: false, code: verified.code }
-  if (input.now - verified.ts * 1000 > SIGNATURE_MAX_AGE_SECONDS * 1000) {
+  // Reject BOTH directions outside the window: a stale signature is a replay,
+  // and a future-dated one (negative age) would otherwise ride the window
+  // until it becomes old — an attacker replaying a valid payload must not get
+  // a free pass forward in time.
+  const age = input.now - verified.ts * 1000
+  if (age < 0 || age > SIGNATURE_MAX_AGE_SECONDS * 1000) {
     return { ok: false, code: 'stale_timestamp' }
   }
   return { ok: true }

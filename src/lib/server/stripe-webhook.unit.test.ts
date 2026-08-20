@@ -108,6 +108,12 @@ describe('processStripeWebhookEvent', () => {
     expect(outcome).toEqual({ handled: false, code: 'stale_timestamp' })
   })
 
+  it('rejects a future-dated timestamp (replay window must not ride forward)', async () => {
+    const future = signedEvent(completedEvent(), { ts: Math.floor(Date.now() / 1000) + 3600 })
+    const outcome = await processStripeWebhookEvent({ payload: future.payload, signatureHeader: future.signatureHeader, sendEmail: vi.fn() })
+    expect(outcome).toEqual({ handled: false, code: 'stale_timestamp' })
+  })
+
   it('reports missing_secret when unconfigured', async () => {
     vi.unstubAllEnvs()
     const { payload, signatureHeader } = signedEvent(completedEvent())

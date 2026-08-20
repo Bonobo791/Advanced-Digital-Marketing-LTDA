@@ -1,8 +1,8 @@
 # Stripe checkout (en-US, USD)
 
 Mercado Pago bills BRL from the Brazilian account, so English pages get a
-**Stripe hosted Checkout** billed in USD. This is the previously-planned
-"Stripe is future work" piece, now implemented.
+**Stripe hosted Checkout** billed in USD for the en-US pages (activated by
+`STRIPE_SECRET_KEY`).
 
 ## How it works
 
