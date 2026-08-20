@@ -98,9 +98,9 @@ Rules live in one place: `ADS_SPEND_RULE` in `src/lib/catalog.ts`
 
 The currency is **BRL only**. Mercado Pago Subscriptions is available in
 AR/BR/CL/CO/MX/PE/UY — there is no USD subscription checkout from this
-(Brazilian) account. English pages are informational (USD amounts shown as a
-reference); an English checkout via **Stripe is planned future work** and is
-not implemented here.
+(Brazilian) account. English (en-US) pages run their own checkout via **Stripe
+in USD** — see `docs/stripe-checkout.md` — while this document covers the
+pt-BR Mercado Pago flow.
 
 ### One-time website build pricing
 
@@ -328,8 +328,8 @@ Server procedure:
 Response: `{ "checkoutUrl": "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=…" }`
 
 Error responses reuse the subscription codes plus `invalid_build` (400). The
-UI only renders the purchase button on pt-BR pages (Mercado Pago bills BRL);
-en-US pages show the informational email CTA until the Stripe checkout lands.
+purchase button on pt-BR pages bills BRL through Mercado Pago; en-US pages
+bill USD through Stripe (see `docs/stripe-checkout.md`).
 
 ---
 

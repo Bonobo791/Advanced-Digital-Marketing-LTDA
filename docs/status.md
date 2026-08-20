@@ -1,6 +1,6 @@
 # Project status & remaining work
 
-> Last updated: 2026-08-19 · PR #2 · branch `dev`
+> Last updated: 2026-08-19 (post-merge) · PR #2 merged · branch `dev`
 
 This file is the handoff for finishing this repository and completing the
 Netlify → Coolify migration. It records what is done, what is left, and which
@@ -8,11 +8,14 @@ remaining items are owner/ops actions rather than code changes.
 
 ## TL;DR
 
-The repository work is **essentially done and merge-ready**. The Coolify
-migration is **complete in code and docs**. What remains is: (1) merging PR #2,
-(2) fixing one GitHub-Copilot-agent check that fails for a tooling reason (not
-code), and (3) performing the documented go-live steps in the Coolify / Bunny /
-GitHub consoles.
+**PR #2 was merged** (`dev` → `main`, merge commit `4be3ba6`). The Coolify
+migration is **complete in code and docs**. What remains is: (1) the go-live
+steps in the Coolify / Bunny / GitHub consoles (the purge workflow currently
+fails only because `COOLIFY_API_URL` is not configured), (2) one
+GitHub-Copilot-agent check that fails for a tooling reason (not code), and
+(3) the SonarCloud **main** duplication gate (8.2% vs ≤3%, driven by the
+en/pt copy structures), which needs a threshold decision or a dedicated
+refactor.
 
 ---
 
@@ -20,15 +23,18 @@ GitHub consoles.
 
 | Item | Status |
 |---|---|
-| PR #2 | OPEN, mergeable (`dev` → `main`, 30 commits, +9,834 / −850) |
+| PR #2 | **MERGED** (`4be3ba6`, 22:34) |
 | Branch protection on `main` | none |
 | `npm run check` | 0 errors, 0 warnings |
-| `npm run test` | 385 passed (31 files) |
-| SonarCloud quality gate | **PASSED** |
+| `npm run test` | 385+ passed (31 files) |
+| SonarCloud quality gate (PR) | **PASSED** |
+| SonarCloud quality gate (main) | **FAILED** — 8.2% duplication on new code (≤3%) |
 | CodeQL | **PASSED** |
 | `npm audit` | 0 vulnerabilities |
 | OSV lockfile scan (363 packages) | 0 vulnerabilities |
-| Local `dev` | `884b85e` (1 commit ahead of `origin/dev`; not pushed — AGENTS.md forbids the agent from pushing) |
+| Purge workflow on the merge | FAILED — `COOLIFY_API_URL is not set` (expected pre-go-live) |
+| GitHub Copilot agent check | FAILED — model not supported (`claude-opus-4.6`) / bad credentials (tooling) |
+| Local `dev` | one commit ahead (post-merge fixes; not pushed — AGENTS.md) |
 
 ---
 
@@ -67,11 +73,35 @@ GitHub consoles.
 
 ---
 
+## Post-merge fixes (CodeAnt follow-up)
+
+After the merge, CodeAnt asked a follow-up "Question" with three findings —
+all three were valid and are fixed on `dev`:
+
+1. **Future-dated webhook signatures were accepted.** Both webhooks only
+   rejected timestamps OLDER than the window; a future timestamp (negative
+   age) rode the replay window forward. Now `age < 0 || age > MAX_AGE` is
+   rejected in `mercadoPago-webhook.ts` and `stripe-webhook.ts`, with tests
+   for both.
+2. **Stripe pending sessions were not bound.** The en-US completion page
+   returned `payment_pending` for any open/processing session; it now applies
+   the same `isSiteStripeSession` binding as the paid branch (mismatch →
+   error state), with tests.
+3. **Stale docs/PR description.** The PR body and
+   `docs/mercado-pago-subscriptions.md` still described the English Stripe
+   checkout as "future work"; the PR body was updated and the docs now state
+   the en-US Stripe checkout is live.
+
+Also extracted the duplicated bounded dedupe map from both webhook modules
+into one shared `src/lib/server/webhook-dedupe.ts` (removes the remaining
+CodeRabbit/Codacy duplication between the webhooks).
+
+---
+
 ## Remaining work
 
-### 1. Merge PR #2
-Open and mergeable; nothing blocks it technically (no required checks). Squash
-or merge `dev` into `main` when ready.
+### 1. (Done) PR #2 merged
+Merged `dev` → `main` at 22:34 (`4be3ba6`).
 
 ### 2. Fix the failing "GitHub Advanced Security" check (tooling, not code)
 This check is the **GitHub Copilot agentic PR reviewer**

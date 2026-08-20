@@ -104,6 +104,19 @@ describe('verifyWebhookSignature', () => {
     })
     expect(outcome).toEqual({ handled: false, code: 'stale_timestamp' })
   })
+
+  it('rejects a future-dated timestamp (replay window must not ride forward)', async () => {
+    vi.stubEnv('MERCADO_PAGO_WEBHOOK_SECRET', SECRET)
+    const future = signedBody(paymentEvent(), { ts: Math.floor(Date.now() / 1000) + 3600 })
+    const outcome = await processWebhookEvent({
+      body: future.body,
+      xSignature: future.xSignature,
+      xRequestId: future.xRequestId,
+      urlDataId: future.urlDataId,
+      getPaymentImpl: vi.fn(),
+    })
+    expect(outcome).toEqual({ handled: false, code: 'stale_timestamp' })
+  })
 })
 
 describe('processWebhookEvent', () => {

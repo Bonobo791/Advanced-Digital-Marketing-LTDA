@@ -112,6 +112,30 @@ describe('checkout/complete (Stripe) load', () => {
     })
   })
 
+  it('never labels a pending session for another product as this site’s checkout', async () => {
+    // The pending branch applies the same binding rule as the paid branch: an
+    // open/processing session with a wrong client_reference_id, amount or
+    // currency must render the error state, not "your payment is being
+    // processed" for a checkout this server never created.
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    try {
+      const mismatches = [
+        { clientReferenceId: 'unrelated:product:1', amountTotal: 460, currency: 'usd' },
+        { clientReferenceId: 'seo-content+hosting', amountTotal: 459, currency: 'usd' },
+        { clientReferenceId: 'seo-content+hosting', amountTotal: 460, currency: 'brl' },
+        { clientReferenceId: null, amountTotal: 460, currency: 'usd' },
+        { clientReferenceId: 'website-build:website:new', amountTotal: 749, currency: 'usd' },
+      ]
+      for (const patch of mismatches) {
+        mockGetSession.mockResolvedValue({ ...paidSession, status: 'open', paymentStatus: 'unpaid', ...patch })
+        expect(await load(loadArgs('?session_id=cs_test_1') as never)).toEqual({ state: 'error' })
+      }
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('refusing pending claim'))
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
   it('reports unconfirmed for a complete-but-unpaid session (never claims success)', async () => {
     mockGetSession.mockResolvedValue({ ...paidSession, status: 'complete', paymentStatus: 'unpaid' })
     expect(await load(loadArgs('?session_id=cs_test_1') as never)).toEqual({
