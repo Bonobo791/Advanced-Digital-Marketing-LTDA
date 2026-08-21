@@ -63,6 +63,7 @@ export const CHROME_COPY: Record<Locale, {
   footerBase: string
   footerTagline: string
   languageLabel: string
+  blog: string
 }> = {
   'en-US': {
     navigation: { home: 'Home', about: 'About', contact: 'Contact' },
@@ -78,6 +79,7 @@ export const CHROME_COPY: Record<Locale, {
     footerBase: 'CNPJ 68.425.709/0001-72 · São Paulo, Brazil',
     footerTagline: 'SEO / GEO engineering',
     languageLabel: 'Language',
+    blog: 'Blog',
   },
   'pt-BR': {
     navigation: { home: 'Início', about: 'Sobre', contact: 'Contato' },
@@ -93,6 +95,7 @@ export const CHROME_COPY: Record<Locale, {
     footerBase: 'CNPJ 68.425.709/0001-72 · São Paulo, Brasil',
     footerTagline: 'Engenharia de SEO / GEO',
     languageLabel: 'Idioma',
+    blog: 'Blog',
   },
 }
 
@@ -166,11 +169,14 @@ export function absoluteUrl(pathname: string) {
 }
 
 export function navigationForLocale(locale: Locale) {
-  return PAGE_IDS.map((page) => ({
-    to: LOCALE_ROUTES[page][locale],
-    label: CHROME_COPY[locale].navigation[page],
-    jp: PAGE_JP[page],
-  }))
+  return [
+    ...PAGE_IDS.map((page) => ({
+      to: LOCALE_ROUTES[page][locale],
+      label: CHROME_COPY[locale].navigation[page],
+      jp: PAGE_JP[page],
+    })),
+    { to: '/blog/', label: CHROME_COPY[locale].blog, jp: '記事' },
+  ]
 }
 
 export function homeSectionsForLocale(locale: Locale) {
