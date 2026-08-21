@@ -705,7 +705,7 @@ img { display: block; max-width: 100%; }
 /* Opt-in contact form (ContactPage + ContactForm) */
 .contact-form-section__lead { max-width: 56ch; color: var(--ink-muted); }
 .contact-form-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1.5rem; align-items: start; margin-top: 3.5rem; }
-.contact-form-grid__form { grid-column: 1 / 8; }
+.contact-form-grid__form { grid-column: 1 / 8; scroll-margin-top: 96px; }
 .contact-form-grid__notes { grid-column: 9 / 13; }
 .contact-form-grid__notes-title { margin: 0 0 1rem; font-family: 'ADM Display', 'Archivo Variable', sans-serif; font-size: 1.55rem; font-weight: 400; letter-spacing: -0.01em; line-height: 1.05; text-transform: uppercase; }
 .contact-form-grid__notes.contact-notes ol { margin-top: 0; }

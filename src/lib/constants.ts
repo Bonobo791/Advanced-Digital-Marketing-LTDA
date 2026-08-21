@@ -124,6 +124,7 @@ export type ContactCopy = {
   notesLabel: string
   notesHeading: string
   notes: [string, string, string][]
+  formCta: string
   formLabel: string
   formHeading: string
   formLead: string
@@ -222,6 +223,7 @@ export const PAGE_COPY: Record<Locale, PageCopy> = {
         ['Verify', '確認', 'We email you a confirmation link. Click it — this proves the address is yours and confirms the opt-in.'],
         ['Reply', '返信', 'The verified request lands with the owner, who replies within one business day.'],
       ],
+      formCta: 'Start the contact form',
       formLabel: 'Contact form',
       formHeading: 'Send a message.',
       formLead: 'Leave your name and email below. We confirm your opt-in by email, then reply within one business day.',
@@ -310,6 +312,7 @@ export const PAGE_COPY: Record<Locale, PageCopy> = {
         ['Verificar', '確認', 'Enviamos um link de confirmação por e-mail. Clique nele — isso prova que o endereço é seu e confirma o opt-in.'],
         ['Responder', '返信', 'A solicitação verificada chega ao responsável, que responde em até um dia útil.'],
       ],
+      formCta: 'Abrir formulário de contato',
       formLabel: 'Formulário de contato',
       formHeading: 'Envie uma mensagem.',
       formLead: 'Deixe seu nome e e-mail abaixo. Confirmamos seu consentimento por e-mail e respondemos em até um dia útil.',
