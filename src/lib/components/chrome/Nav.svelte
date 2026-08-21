@@ -3,7 +3,7 @@
   import { browser } from '$app/environment'
   import { page } from '$app/state'
   import { EMAIL, JP, PORTUGUESE_EMAIL } from '$lib/constants'
-  import { CHROME_COPY, homeSectionsForLocale, localeForPath, LOCALE_ROUTES, navigationForLocale, normalizePath, SERVICES_INDEX_ROUTES } from '$lib/locale'
+  import { CHROME_COPY, localeForPath, LOCALE_ROUTES, navigationForLocale, normalizePath, SERVICES_INDEX_ROUTES } from '$lib/locale'
   import { serviceForPath, serviceNavigation } from '$lib/services'
   import LanguageSwitcher from './LanguageSwitcher.svelte'
 
@@ -14,8 +14,10 @@
   let locale = $derived(localeForPath(page.url.pathname))
   let copy = $derived(CHROME_COPY[locale])
   let localeEmail = $derived(locale === 'pt-BR' ? PORTUGUESE_EMAIL : EMAIL)
-  let isHome = $derived(pathname === normalizePath(LOCALE_ROUTES.home[locale]))
-  let links = $derived(isHome ? homeSectionsForLocale(locale).filter((l) => !l.to.includes('#services')) : navigationForLocale(locale))
+  // Keep one canonical page-level navigation on every route. Homepage section
+  // links belong in the page content; changing the header by route made the
+  // site chrome look like two different products and hid About from the home.
+  let links = $derived(navigationForLocale(locale))
   let serviceNav = $derived([
     {
       id: 'services-index',
@@ -26,6 +28,8 @@
     ...serviceNavigation(locale),
   ])
   let currentService = $derived(serviceForPath(pathname))
+
+  const currentPage = (to: string) => (pathname === normalizePath(to) ? 'page' : undefined)
 
   // The services-gateway entry has no ServiceId, so aria-current for it must
   // use the plain pathname comparison; service entries use `currentService`.
@@ -132,7 +136,7 @@
         </div>
       </div>
       {#each links as link (link.to)}
-        <a href={link.to} aria-current={!isHome && pathname === normalizePath(link.to) ? 'page' : undefined}>{link.label}</a>
+        <a href={link.to} aria-current={currentPage(link.to)}>{link.label}</a>
       {/each}
     </nav>
 
@@ -165,7 +169,7 @@
   <div id="mobile-city-menu" class="editorial-mobile-menu" role="dialog" aria-label={copy.navigationLabel} tabindex="-1" bind:this={menuRoot} onkeydown={onMenuKeydown}>
     <nav aria-label={copy.navigationLabel}>
       {#each links as link (link.to)}
-        <a href={link.to} onclick={() => (open = false)} aria-current={!isHome && pathname === normalizePath(link.to) ? 'page' : undefined}><span>{link.label}</span><small class="font-jp">{link.jp}</small></a>
+        <a href={link.to} onclick={() => (open = false)} aria-current={currentPage(link.to)}><span>{link.label}</span><small class="font-jp">{link.jp}</small></a>
       {/each}
       {#each serviceNav as s (s.to)}
         <a href={s.to} onclick={() => (open = false)} aria-current={currentNav(s)}><span>{s.label}</span><small class="font-jp">{s.jp}</small></a>

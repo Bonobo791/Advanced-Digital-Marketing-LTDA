@@ -17,6 +17,7 @@
       <p class="section-label motion-rise"><span class="font-jp">{JP.contact}</span> {content.label}</p>
       <h1 class="motion-subhero-heading"><span>{content.hero}</span><span>{content.heroAccent}</span></h1>
       <p class="motion-rise">{content.intro}</p>
+      <a class="button button--solid motion-rise" href="#contact-form">{content.formCta} <span aria-hidden="true">→</span></a>
     </div>
     <aside class="office-card">
       <p class="office-card__label"><span class="font-jp">{JP.office}</span> {content.office}</p>
@@ -35,7 +36,7 @@
     <p class="contact-form-section__lead motion-rise">{content.formLead}</p>
 
     <div class="contact-form-grid">
-      <div class="contact-form-grid__form motion-rise">
+      <div id="contact-form" class="contact-form-grid__form motion-rise">
         <ContactForm {locale} />
       </div>
       <aside class="contact-notes contact-form-grid__notes motion-wipe">

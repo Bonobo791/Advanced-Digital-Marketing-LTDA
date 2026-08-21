@@ -20,3 +20,4 @@ reasonix.toml
 # Local environment files with real credentials
 .env.local
 .reasonix
+docs
