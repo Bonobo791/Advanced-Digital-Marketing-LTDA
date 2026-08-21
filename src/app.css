@@ -402,6 +402,9 @@ img { display: block; max-width: 100%; }
   will-change: transform;
 }
 
+/* Inline-block words do not render trailing whitespace reliably. Keep the visual gap explicit. */
+.motion-heading__word:not(:last-child) { margin-inline-end: 0.28em; }
+
 .kanji-bg {
   position: absolute;
   z-index: 0;
