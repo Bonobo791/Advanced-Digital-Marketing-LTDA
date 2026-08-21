@@ -29,6 +29,8 @@
   ])
   let currentService = $derived(serviceForPath(pathname))
 
+  const currentPage = (to: string) => (pathname === normalizePath(to) ? 'page' : undefined)
+
   // The services-gateway entry has no ServiceId, so aria-current for it must
   // use the plain pathname comparison; service entries use `currentService`.
   const currentNav = (item: { id: string; to: string }) =>
@@ -134,7 +136,7 @@
         </div>
       </div>
       {#each links as link (link.to)}
-        <a href={link.to} aria-current={pathname === normalizePath(link.to) ? 'page' : undefined}>{link.label}</a>
+        <a href={link.to} aria-current={currentPage(link.to)}>{link.label}</a>
       {/each}
     </nav>
 
@@ -167,7 +169,7 @@
   <div id="mobile-city-menu" class="editorial-mobile-menu" role="dialog" aria-label={copy.navigationLabel} tabindex="-1" bind:this={menuRoot} onkeydown={onMenuKeydown}>
     <nav aria-label={copy.navigationLabel}>
       {#each links as link (link.to)}
-        <a href={link.to} onclick={() => (open = false)} aria-current={pathname === normalizePath(link.to) ? 'page' : undefined}><span>{link.label}</span><small class="font-jp">{link.jp}</small></a>
+        <a href={link.to} onclick={() => (open = false)} aria-current={currentPage(link.to)}><span>{link.label}</span><small class="font-jp">{link.jp}</small></a>
       {/each}
       {#each serviceNav as s (s.to)}
         <a href={s.to} onclick={() => (open = false)} aria-current={currentNav(s)}><span>{s.label}</span><small class="font-jp">{s.jp}</small></a>
