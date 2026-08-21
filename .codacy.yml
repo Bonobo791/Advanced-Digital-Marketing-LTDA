@@ -1,16 +1,34 @@
 ---
-# Codacy exclusions for generated output, local tooling, and design handoff files.
-# Keep production source, tests, deployment scripts, and workflows in the scan.
+# Codacy exclusions for documentation, generated output, local tooling, and
+# handoff files. Keep production source, tests, deployment scripts, and
+# workflows in the scan.
 exclude_paths:
-  - "new-assets/**"
-  - ".svelte-kit/**"
-  - "build/**"
-  - "dist/**"
+  # All Markdown documentation and repository handoff notes.
+  - "**.md"
+
+  # Effective directory exclusions mirrored from .gitignore.
+  - "node_modules/**"
   - "reports/**"
+  - "dist/**"
+  - ".svelte-kit/**"
   - ".netlify/**"
+  - "build/**"
+  - "new-assets/**"
   - ".playwright-cli/**"
   - ".impeccable/**"
   - ".codex/**"
-  - ".reasonix/**"
   - ".codacy/**"
-  - "node_modules/**"
+  - ".reasonix/**"
+  - "docs/**"
+
+  # Effective file exclusions mirrored from .gitignore.
+  - "**/.DS_Store"
+  - "**/vite.config.ts.timestamp-*"
+  - "**/reasonix.toml"
+  - "**/.env"
+  - "**/.env.local"
+  - "**/.env.*"
+
+# .gitignore explicitly keeps the checked-in example available.
+include_paths:
+  - ".env.example"
