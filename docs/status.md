@@ -1,6 +1,6 @@
 # Project status & remaining work
 
-> Last updated: 2026-08-19 (post-merge) · PR #2 merged · branch `dev`
+> Last updated: 2026-08-27 · PR #6 triage · branch `dev`
 
 This file is the handoff for finishing this repository and completing the
 Netlify → Coolify migration. It records what is done, what is left, and which
@@ -13,9 +13,12 @@ migration is **complete in code and docs**. What remains is: (1) the go-live
 steps in the Coolify / Bunny / GitHub consoles (the purge workflow currently
 fails only because `COOLIFY_API_URL` is not configured), (2) one
 GitHub-Copilot-agent check that fails for a tooling reason (not code), and
-(3) the SonarCloud **main** duplication gate (8.2% vs ≤3%, driven by the
-en/pt copy structures), which needs a threshold decision or a dedicated
-refactor.
+(3) the SonarCloud **main** duplication gate (7.9% vs ≤3%). The gate's cause —
+the parallel en/pt copy literals in `services.ts`/`constants.ts` — was removed
+in a dedicated refactor on 2026-08-26 (single bilingual tables via
+`src/lib/localized-copy.ts`; local CPD-calibrated simulation: 1121 → ~87
+duplicated lines). It stays red until the next SonarCloud analysis re-measures
+`main`.
 
 ---
 
@@ -28,7 +31,7 @@ refactor.
 | `npm run check` | 0 errors, 0 warnings |
 | `npm run test` | 385+ passed (31 files) |
 | SonarCloud quality gate (PR) | **PASSED** |
-| SonarCloud quality gate (main) | **FAILED** — 8.2% duplication on new code (≤3%) |
+| SonarCloud quality gate (main) | **FAILED** — 7.9% duplication on new code (≤3%); cause refactored away 2026-08-26, awaiting re-analysis |
 | CodeQL | **PASSED** |
 | `npm audit` | 0 vulnerabilities |
 | OSV lockfile scan (363 packages) | 0 vulnerabilities |
@@ -121,6 +124,18 @@ These stay "red" without any actionable code fix:
 - **Codacy** "not up to standards": 2× `xss no-mixed-html` on test inputs, 1×
   `detect-unhandled-async-errors` heuristic on the intentional fail-loud wait
   script, Lizard complexity/nloc mis-attribution, and AGENTS.md operating rules.
+  - Local CLI only: PMD hits are all inside `node_modules/` (dependency code,
+    never scanned by cloud Codacy); Lizard `file-nloc` on `services.ts` counts
+    the bilingual copy table as code length; `.agents/` skill tooling was
+    excluded from the local ESLint config (`.codacy/tools-configs/eslint.config.mjs`
+    is uncommitted — `.codacy/` is gitignored, so this config exists only on this
+    dev machine; the repo carries no shared ESLint flat config). That config now
+    also declares the Node/browser globals this codebase uses, so the former
+    `no-undef` flood in scripts/tests is fixed at the config level.
+- **SonarCloud** `docker:S8431` (×2, "pin the base image tag"): declined —
+  the Dockerfile pins the base image by immutable digest, which CodeAnt IAC
+  explicitly required; the two analyzers demand contradictory shapes and the
+  digest is the stricter guarantee.
 - **CodeAnt** SCA/IAC "failed": stale — the lockfile is clean (`npm audit` 0 +
   OSV 0) and the IAC surface is fully pinned. Re-scan the new head or check the
   CodeAnt dashboard for the specific advisory if it persists.

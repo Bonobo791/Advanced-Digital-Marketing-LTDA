@@ -32,7 +32,11 @@ function isPublicHostname(hostname: string): boolean {
   // dots away before the loopback/suffix checks — otherwise a loopback origin
   // (or a typo like "localhost.." / "staging..") would silently pass
   // validation and produce unusable verification links/callbacks.
-  const host = hostname.toLowerCase().replace(/\.+$/, '')
+  // Manual scan instead of a regex (SonarCloud: S8786).
+  const lowered = hostname.toLowerCase()
+  let end = lowered.length
+  while (end > 0 && lowered[end - 1] === '.') end--
+  const host = lowered.slice(0, end)
   return (
     host.length > 0 &&
     // A public origin must be a real FQDN: single-label values like

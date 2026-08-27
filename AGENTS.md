@@ -64,7 +64,7 @@ See `.env.example` and `docs/coolify-deployment.md` for the full list.
 
 ## Coding Style & Naming Conventions
 
-Use strict TypeScript and Svelte 5 runes where component state is needed. Match the existing style: two-space indentation, single quotes, no semicolons, trailing commas, and named exports for shared helpers. Use PascalCase for Svelte components, kebab-case for route directories, and descriptive camelCase for functions and variables. Keep locale-specific copy and route mappings centralized in `src/lib/constants.ts` and `src/lib/locale.ts`.
+Use strict TypeScript and Svelte 5 runes where component state is needed. Match the existing style: two-space indentation, single quotes, no semicolons, trailing commas, and named exports for shared helpers. Use PascalCase for Svelte components, kebab-case for route directories, and descriptive camelCase for functions and variables. Keep locale-specific copy and route mappings centralized in `src/lib/constants.ts` and `src/lib/locale.ts`. Bilingual copy tables are declared once per leaf with `L(en, pt)` / `C(shared)` from `src/lib/localized-copy.ts` and resolved per locale — never write parallel en/pt object literals (the SonarCloud duplication gate flags them).
 
 ## Testing Guidelines
 

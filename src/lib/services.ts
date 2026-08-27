@@ -1,6 +1,7 @@
 import type { Locale } from '$lib/locale'
 import { normalizePath } from './path.ts'
 import type { CatalogServiceId } from './catalog'
+import { C, L, resolveCopy, type CopySource } from './localized-copy'
 
 export const SERVICE_IDS = ['technical-seo', 'geo', 'web-development', 'paid-search', 'meta-ads', 'ai-automation'] as const
 export type ServiceId = (typeof SERVICE_IDS)[number]
@@ -119,1030 +120,830 @@ export const SERVICE_SUBSCRIPTIONS: Record<ServiceId, CatalogServiceId[]> = {
   'ai-automation': [],
 }
 
+// ─── Copy tables ────────────────────────────────────────────────────────────
+//
+// Copy is declared ONCE per leaf with L(en, pt) / C(shared) from
+// localized-copy.ts and resolved into the plain per-locale records below —
+// the two parallel locale literals this replaces are what the SonarCloud
+// duplication gate flagged (7.9% > 3%). Each option/step group is its own
+// named constant so no two service declarations repeat the same structure
+// inline. SERVICE_META / SERVICE_CONTENT keep their exact public shapes.
 
-export const SERVICE_META: Record<Locale, Record<ServiceId, { title: string; description: string }>> = {
-  'en-US': {
-    'technical-seo': {
-      title: 'Advanced Digital Marketing LTDA | Technical SEO',
-      description:
-        'Technical SEO by Advanced Digital Marketing: crawl architecture, Core Web Vitals, structured data and indexation control, fixed at the code level.',
-    },
-    geo: {
-      title: 'Advanced Digital Marketing LTDA | GEO',
-      description:
-        'GEO by Advanced Digital Marketing: entity mapping, answer-first content and citation tracking that get you quoted by ChatGPT, Perplexity and Google AI Overviews.',
-    },
-    'web-development': {
-      title: 'Advanced Digital Marketing LTDA | Web Development',
-      description:
-        'Web development by Advanced Digital Marketing: Next.js and Astro builds where performance budgets, semantic HTML and structured data are built in from the first commit.',
-    },
-    'paid-search': {
-      title: 'Advanced Digital Marketing LTDA | Paid Search',
-      description:
-        'Paid search by Advanced Digital Marketing: Google Ads managed against the same keyword map as your organic strategy. One plan, two channels, no wasted spend.',
-    },
-    'meta-ads': {
-      title: 'Advanced Digital Marketing LTDA | Meta Ads',
-      description:
-        'Meta Ads by Advanced Digital Marketing: Facebook and Instagram campaigns managed against the same keyword and conversion data as your organic strategy. One plan, every channel.',
-    },
-    'ai-automation': {
-      title: 'Advanced Digital Marketing LTDA | AI Automation',
-      description:
-        'AI automation by Advanced Digital Marketing: agents, integrations and internal tools that remove repetitive work from your operations — scoped and quoted per project.',
-    },
+type ServiceMeta = { title: string; description: string }
+
+const SERVICE_META_SOURCE: CopySource<Record<ServiceId, ServiceMeta>> = {
+  'technical-seo': {
+    title: L('Advanced Digital Marketing LTDA | Technical SEO', 'Advanced Digital Marketing LTDA | SEO técnico e local'),
+    description: L(
+      'Technical SEO by Advanced Digital Marketing: crawl architecture, Core Web Vitals, structured data and indexation control, fixed at the code level.',
+      'SEO técnico e local pela Advanced Digital Marketing: arquitetura de rastreamento, Core Web Vitals, dados estruturados e controle de indexação, corrigidos onde o problema realmente está: no código.',
+    ),
   },
-  'pt-BR': {
-    'technical-seo': {
-      title: 'Advanced Digital Marketing LTDA | SEO técnico e local',
-      description:
-        'SEO técnico e local pela Advanced Digital Marketing: arquitetura de rastreamento, Core Web Vitals, dados estruturados e controle de indexação, corrigidos onde o problema realmente está: no código.',
-    },
-    geo: {
-      title: 'Advanced Digital Marketing LTDA | GEO e visibilidade em IA',
-      description:
-        'GEO pela Advanced Digital Marketing: mapeamento de entidades, conteúdo answer-first e rastreamento de citações para você ser citado pelo nome no ChatGPT, Perplexity e AI Overviews do Google.',
-    },
-    'web-development': {
-      title: 'Advanced Digital Marketing LTDA | Sites e landing pages',
-      description:
-        'Desenvolvimento web pela Advanced Digital Marketing: builds em Next.js e Astro com orçamentos de performance, HTML semântico e dados estruturados embutidos desde o primeiro commit.',
-    },
-    'paid-search': {
-      title: 'Advanced Digital Marketing LTDA | Google Ads',
-      description:
-        'Google Ads pela Advanced Digital Marketing: gerenciado contra o mesmo mapa de palavras-chave da sua estratégia orgânica. Um plano, dois canais, sem gasto desperdiçado.',
-    },
-    'meta-ads': {
-      title: 'Advanced Digital Marketing LTDA | Meta Ads',
-      description:
-        'Meta Ads pela Advanced Digital Marketing: campanhas no Facebook e Instagram gerenciadas contra os mesmos dados de palavras-chave e conversão da sua estratégia orgânica. Um plano, todos os canais.',
-    },
-    'ai-automation': {
-      title: 'Advanced Digital Marketing LTDA | Automação com IA',
-      description:
-        'Automação com IA pela Advanced Digital Marketing: agentes, integrações e ferramentas internas que removem trabalho repetitivo das suas operações — escopados e orçados sob consulta.',
-    },
+  geo: {
+    title: L('Advanced Digital Marketing LTDA | GEO', 'Advanced Digital Marketing LTDA | GEO e visibilidade em IA'),
+    description: L(
+      'GEO by Advanced Digital Marketing: entity mapping, answer-first content and citation tracking that get you quoted by ChatGPT, Perplexity and Google AI Overviews.',
+      'GEO pela Advanced Digital Marketing: mapeamento de entidades, conteúdo answer-first e rastreamento de citações para você ser citado pelo nome no ChatGPT, Perplexity e AI Overviews do Google.',
+    ),
+  },
+  'web-development': {
+    title: L('Advanced Digital Marketing LTDA | Web Development', 'Advanced Digital Marketing LTDA | Sites e landing pages'),
+    description: L(
+      'Web development by Advanced Digital Marketing: Next.js and Astro builds where performance budgets, semantic HTML and structured data are built in from the first commit.',
+      'Desenvolvimento web pela Advanced Digital Marketing: builds em Next.js e Astro com orçamentos de performance, HTML semântico e dados estruturados embutidos desde o primeiro commit.',
+    ),
+  },
+  'paid-search': {
+    title: L('Advanced Digital Marketing LTDA | Paid Search', 'Advanced Digital Marketing LTDA | Google Ads'),
+    description: L(
+      'Paid search by Advanced Digital Marketing: Google Ads managed against the same keyword map as your organic strategy. One plan, two channels, no wasted spend.',
+      'Google Ads pela Advanced Digital Marketing: gerenciado contra o mesmo mapa de palavras-chave da sua estratégia orgânica. Um plano, dois canais, sem gasto desperdiçado.',
+    ),
+  },
+  'meta-ads': {
+    title: C('Advanced Digital Marketing LTDA | Meta Ads'),
+    description: L(
+      'Meta Ads by Advanced Digital Marketing: Facebook and Instagram campaigns managed against the same keyword and conversion data as your organic strategy. One plan, every channel.',
+      'Meta Ads pela Advanced Digital Marketing: campanhas no Facebook e Instagram gerenciadas contra os mesmos dados de palavras-chave e conversão da sua estratégia orgânica. Um plano, todos os canais.',
+    ),
+  },
+  'ai-automation': {
+    title: L('Advanced Digital Marketing LTDA | AI Automation', 'Advanced Digital Marketing LTDA | Automação com IA'),
+    description: L(
+      'AI automation by Advanced Digital Marketing: agents, integrations and internal tools that remove repetitive work from your operations — scoped and quoted per project.',
+      'Automação com IA pela Advanced Digital Marketing: agentes, integrações e ferramentas internas que removem trabalho repetitivo das suas operações — escopados e orçados sob consulta.',
+    ),
   },
 }
 
+export const SERVICE_META: Record<Locale, Record<ServiceId, ServiceMeta>> = {
+  'en-US': resolveCopy<Record<ServiceId, ServiceMeta>>(SERVICE_META_SOURCE, 'en-US'),
+  'pt-BR': resolveCopy<Record<ServiceId, ServiceMeta>>(SERVICE_META_SOURCE, 'pt-BR'),
+}
+
+/** Copy shared verbatim across the audit/sprint/retainer service pages. */
+const SHARED = {
+  optionsLabel: L('Options', 'Opções'),
+  optionsNote: L(
+    'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
+    'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
+  ),
+  optionsNoteStrong: L('Every option:', 'Toda opção:'),
+  processLabel: L('Process', 'Processo'),
+  processHeading: L('How it runs', 'Como o trabalho acontece'),
+  contactLabel: L('Contact', 'Contato'),
+  contactSub: L(
+    'One email starts it. We reply within one business day with next steps and a straight answer on whether we can help.',
+    'Um e-mail começa tudo. Respondemos em até um dia útil com os próximos passos e uma resposta direta sobre se podemos ajudar.',
+  ),
+  bookCall: L('Book a strategy call', 'Agendar uma conversa'),
+  seeOptions: L('See the options', 'Ver as opções'),
+  flagMostChosen: L('Most chosen', 'Mais escolhido'),
+  perTwoWeeks: L('One time · 2 weeks', 'Pagamento único · 2 semanas'),
+  perFourWeeks: L('One time · 4 weeks', 'Pagamento único · 4 semanas'),
+  perSixMonths: L('Per month · 6-month minimum', 'Por mês · mínimo de 6 meses'),
+  ctaBookSprint: L('Book the sprint', 'Agendar o sprint'),
+  ctaTalkRetainers: L('Talk retainers', 'Falar sobre mensalidade'),
+  itemRoadmap90: L('90-day roadmap, in writing', 'Roteiro de 90 dias, por escrito'),
+  itemWastedSpend: L('Wasted spend analysis', 'Análise de gasto desperdiçado'),
+  itemPrioritySupport: L('Priority support, same-day answers', 'Suporte prioritário, respostas no mesmo dia'),
+  itemWeeklyReports: L('Weekly spend and lead reporting', 'Relatórios semanais de gasto e leads'),
+  stepTitles: {
+    audit: L('Audit', 'Diagnóstico'),
+    plan: L('Architecture', 'Plano'),
+    build: L('Build', 'Implementação'),
+    measure: L('Measure', 'Medição'),
+  },
+} as const
+
+/** Audit → plan → build → measure: the four-step engagement every recurring
+ *  service page walks through. The skeleton (jp marks, titles) is identical
+ *  everywhere — only the narration differs per service. */
+function engagementSteps(
+  audit: CopySource<string>,
+  plan: CopySource<string>,
+  build: CopySource<string>,
+  measure: CopySource<string>,
+): CopySource<ServiceStep[]> {
+  return [
+    { jp: C('監査'), title: SHARED.stepTitles.audit, text: audit },
+    { jp: C('設計'), title: SHARED.stepTitles.plan, text: plan },
+    { jp: C('実装'), title: SHARED.stepTitles.build, text: build },
+    { jp: C('計測'), title: SHARED.stepTitles.measure, text: measure },
+  ]
+}
+
+/** The four engagement services offer the same 4-week, R$6,800 sprint: a
+ *  one-time engagement with no catalog entry. Services that HAVE a pricing
+ *  section add `pricingAnchor: null` at the call site so the sprint CTA stays
+ *  in the contact flow instead of scrolling to an unrelated checkout. */
+function sprintOption(
+  name: CopySource<string>,
+  desc: CopySource<string>,
+  items: CopySource<string>[],
+  subject: CopySource<string>,
+): CopySource<ServiceOption> {
+  return {
+    flag: SHARED.flagMostChosen,
+    jp: C('実装'),
+    name,
+    priceBRL: 6800,
+    per: SHARED.perFourWeeks,
+    desc,
+    items,
+    cta: SHARED.ctaBookSprint,
+    subject,
+  }
+}
+
+/** The four engagement services offer the same R$2,900/month retainer
+ *  (6-month minimum). Fixed-price retainers are not catalog products, so the
+ *  CTA stays in the contact flow with its subject. */
+function retainerOption(
+  name: CopySource<string>,
+  desc: CopySource<string>,
+  items: CopySource<string>[],
+  subject: CopySource<string>,
+): CopySource<ServiceOption> {
+  return {
+    jp: C('計測'),
+    name,
+    priceBRL: 2900,
+    per: SHARED.perSixMonths,
+    desc,
+    items,
+    cta: SHARED.ctaTalkRetainers,
+    subject,
+    pricingAnchor: null,
+  }
+}
+
+// ── technical-seo ───────────────────────────────────────────────────────────
+
+const TECHNICAL_SEO_OPTIONS: CopySource<ServiceOption[]> = [
+  {
+    jp: C('監査'),
+    name: L('The Audit', 'A Auditoria'),
+    priceBRL: null,
+    priceLabel: L('Free', 'Grátis'),
+    per: L('No strings attached', 'Sem compromisso'),
+    desc: L(
+      'A complete technical diagnosis with a prioritized fix list, so you know exactly what is blocking you and in what order to attack it.',
+      'Um diagnóstico técnico completo com uma lista priorizada de correções, para você saber exatamente o que está te bloqueando e em que ordem atacar.',
+    ),
+    items: [
+      L('Full crawl and log-file analysis', 'Rastreamento completo e análise de logs'),
+      L('Core Web Vitals report, page by page', 'Relatório de Core Web Vitals, página por página'),
+      L('Structured data and indexation review', 'Revisão de dados estruturados e indexação'),
+      L('Prioritized fix list with effort estimates', 'Lista priorizada com estimativas de esforço'),
+      SHARED.itemRoadmap90,
+    ],
+    cta: L('Start with the audit', 'Começar com a auditoria'),
+    subject: C('Audit request'),
+    pricingAnchor: null,
+  },
+  {
+    flag: SHARED.flagMostChosen,
+    jp: C('設計'),
+    name: L('Content Development', 'Desenvolvimento de Conteúdo'),
+    priceBRL: 3500,
+    per: L('Per month · 3-month minimum', 'Por mês · mínimo de 3 meses'),
+    desc: L(
+      'Pages, articles and service copy written to answer the questions your buyers actually ask, structured so crawlers and AI engines both get it.',
+      'Páginas, artigos e textos de serviço escritos para responder às perguntas que seus compradores realmente fazem, estruturados para crawlers e motores de IA entenderem.',
+    ),
+    items: [
+      L('Answer-first page briefs', 'Briefings de página answer-first'),
+      L('On-page content written and edited', 'Conteúdo escrito e editado'),
+      L('Internal linking built in', 'Linkagem interna embutida'),
+      L('Schema attached to every page', 'Schema em cada página'),
+      L('Monthly publishing cycle', 'Ciclo mensal de publicação'),
+    ],
+    cta: L('Start content development', 'Começar com conteúdo'),
+    subject: C('Content development request'),
+    // Clicking one option must seed the configurator with ONLY that
+    // service — the service default preselects both SEO options.
+    preselect: C('seo-content'),
+  },
+  {
+    jp: C('検索'),
+    name: C('Backlinks'),
+    priceBRL: 3000,
+    per: L('Per month · 3-month minimum', 'Por mês · mínimo de 3 meses'),
+    desc: L(
+      'Authority earned from sites that matter: outreach, digital PR and linkable assets, with the source and the rationale reported for every placement.',
+      'Autoridade conquistada de sites que importam: divulgação, relações públicas digitais e ativos linkáveis, com fonte e justificativa reportadas para cada colocação.',
+    ),
+    items: [
+      L('Linkable asset production', 'Produção de ativos linkáveis'),
+      L('Outreach and digital PR', 'Divulgação e relações públicas digitais'),
+      L('Placement with rationale for each', 'Colocação com justificativa para cada uma'),
+      L('Toxic link cleanup', 'Limpeza de links tóxicos'),
+      L('Monthly authority report', 'Relatório mensal de autoridade'),
+    ],
+    cta: L('Start link building', 'Começar com link building'),
+    subject: C('Backlinks request'),
+    preselect: C('backlinks'),
+  },
+]
+
+// Exported: the homepage process section reuses these exact steps (constants.ts).
+export const TECHNICAL_SEO_STEPS: CopySource<ServiceStep[]> = engagementSteps(
+  L(
+    'Two weeks inside your data. We map every query you should own and everything blocking it.',
+    'Entendemos sua oferta, cidades, concorrência e os bloqueios técnicos que impedem sua empresa de aparecer.',
+  ),
+  L(
+    'A 90-day plan with named owners, projected impact and the order of operations. You approve it before we touch anything.',
+    'Um plano priorizado com responsáveis, impacto esperado e a ordem de execução. Você aprova antes de mexermos em qualquer coisa.',
+  ),
+  L(
+    'We ship. Code, content and campaigns in weekly releases you can verify yourself, not in a monthly PDF.',
+    'Código, conteúdo, páginas e campanhas em ciclos semanais que você consegue acompanhar.',
+  ),
+  L(
+    'Rankings, AI citations and revenue, reported monthly in plain English with the next quarter already planned.',
+    'Visibilidade, contatos e oportunidades acompanhados com clareza, junto das próximas decisões.',
+  ),
+)
+
+// ── geo ─────────────────────────────────────────────────────────────────────
+
+const GEO_AUDIT: CopySource<ServiceOption> = {
+  jp: C('監査'),
+  name: L('The Citation Audit', 'Auditoria de Citações'),
+  priceBRL: 2400,
+  per: SHARED.perTwoWeeks,
+  desc: L(
+    'Where the answer engines already quote you, where they should, and exactly what is blocking it.',
+    'Onde os motores de resposta já te citam, onde deveriam e exatamente o que está bloqueando.',
+  ),
+  items: [
+    L('Entity and brand mention map', 'Mapa de entidades e menções à marca'),
+    L('Answer engine citation audit', 'Auditoria de citações nos motores de resposta'),
+    L('Competitor citation comparison', 'Comparação de citações com concorrentes'),
+    L('Prioritized content and entity plan', 'Plano priorizado de conteúdo e entidades'),
+    SHARED.itemRoadmap90,
+  ],
+  cta: L('Start with the citation audit', 'Começar com a auditoria de citações'),
+  subject: C('Citation audit request'),
+}
+
+const GEO_SPRINT: CopySource<ServiceOption> = sprintOption(
+  L('Citation Sprint', 'Sprint de Citações'),
+  L(
+    'The audit plus the build: entity pages, answer-first content and llms.txt, shipped and re-checked.',
+    'A auditoria mais a construção: páginas de entidade, conteúdo answer-first e llms.txt, entregues e re-verificados.',
+  ),
+  [
+    L('Everything in The Citation Audit', 'Tudo o que está na Auditoria de Citações'),
+    L('Entity pages and schema deployed', 'Páginas de entidade e schema implantados'),
+    L('Answer-first content written', 'Conteúdo answer-first escrito'),
+    L('llms.txt and machine-readable feeds', 'llms.txt e feeds legíveis por máquinas'),
+    L('Before/after citation re-check', 'Re-verificação de citações antes/depois'),
+  ],
+  C('Citation sprint request'),
+)
+
+// GEO has no subscription configurator (SERVICE_SUBSCRIPTIONS is empty), so the
+// service default '#subscribe' anchor would scroll to nothing — the builder
+// correctly keeps this retainer CTA in the contact flow.
+const GEO_RETAINER: CopySource<ServiceOption> = retainerOption(
+  L('Visibility Retainer', 'Mensal de Visibilidade'),
+  L(
+    'Continuous entity and content work so your citation share grows, and holds.',
+    'Trabalho contínuo de entidades e conteúdo para sua participação em citações crescer e se manter.',
+  ),
+  [
+    L('Monthly content and entity releases', 'Releases mensais de conteúdo e entidades'),
+    L('Citation share tracking', 'Acompanhamento da participação em citações'),
+    L('New question monitoring', 'Monitoramento de novas perguntas'),
+    L('Quarterly strategy review', 'Revisão estratégica trimestral'),
+    SHARED.itemPrioritySupport,
+  ],
+  C('Visibility retainer inquiry'),
+)
+
+const GEO_STEPS: CopySource<ServiceStep[]> = engagementSteps(
+  L(
+    'We map your entities, your existing citations and where the answer engines already mention you, then find where they should.',
+    'Mapeamos suas entidades, citações existentes e onde os motores de resposta já mencionam você, e onde deveriam.',
+  ),
+  L(
+    'An entity and content map: the questions buyers ask, who answers them today, and the page that should own each one.',
+    'Um mapa de entidades e conteúdo: as perguntas que os compradores fazem, quem responde hoje e a página que deve ser dona de cada resposta.',
+  ),
+  L(
+    'We write and structure the answers, deploy the schema and ship llms.txt so your content is legible to machines.',
+    'Escrevemos e estruturamos as respostas, implantamos o schema e publicamos o llms.txt para seu conteúdo ser legível por máquinas.',
+  ),
+  L(
+    'Citation share across ChatGPT, Perplexity and AI Overviews, reported monthly in plain English.',
+    'Participação em citações em ChatGPT, Perplexity e AI Overviews, reportada mensalmente em linguagem simples.',
+  ),
+)
+
+// ── web-development ─────────────────────────────────────────────────────────
+
+const WEB_AUDIT: CopySource<ServiceOption> = {
+  jp: C('監査'),
+  name: L('The Build Audit', 'Auditoria de Build'),
+  priceBRL: 2400,
+  per: SHARED.perTwoWeeks,
+  desc: L(
+    'A technical diagnosis of your current site or stack, with the fix list and rebuild options priced.',
+    'Um diagnóstico técnico do seu site ou stack atual, com a lista de correções e as opções de reconstrução precificadas.',
+  ),
+  items: [
+    L('Performance and vitals review', 'Revisão de performance e vitals'),
+    L('Indexation and schema audit', 'Auditoria de indexação e schema'),
+    L('Stack and CMS assessment', 'Avaliação de stack e CMS'),
+    L('Rebuild vs fix recommendation', 'Recomendação entre reconstruir ou corrigir'),
+    L('Budget with effort estimates', 'Orçamento com estimativas de esforço'),
+  ],
+  cta: L('Start with the build audit', 'Começar com a auditoria de build'),
+  subject: C('Build audit request'),
+  // One-time diagnostic — there is no pricing section for it in the
+  // website-build checkout below, so it must not inherit '#builds'.
+  pricingAnchor: null,
+}
+
+// One-time engagement — the #builds panel prices the website/ecommerce build
+// itself, not this sprint, so pricingAnchor: null keeps its CTA on the form.
+const WEB_SPRINT: CopySource<ServiceOption> = {
+  ...sprintOption(
+    L('Build Sprint', 'Sprint de Build'),
+    L(
+      'Design and build of a focused marketing site, engineered to rank from launch.',
+      'Design e construção de um site de marketing focado, projetado para ranquear desde o lançamento.',
+    ),
+    [
+      L('Everything in The Build Audit', 'Tudo o que está na Auditoria de Build'),
+      L('Design and front-end build', 'Design e construção de front-end'),
+      L('Performance budget enforced', 'Orçamento de performance cumprido'),
+      L('Semantic HTML and schema built in', 'HTML semântico e schema embutidos'),
+      L('Headless CMS setup', 'Configuração de CMS headless'),
+    ],
+    C('Build sprint request'),
+  ),
+  pricingAnchor: null,
+}
+
+// The R$2,900 build retainer has no catalog entry — the #subscribe
+// configurator only knows the R$300/mo hosting product, so sending this CTA
+// there would let the visitor buy hosting instead. The builder routes the
+// fixed-price retainer to the contact form with its subject.
+const WEB_RETAINER: CopySource<ServiceOption> = retainerOption(
+  L('Build Retainer', 'Mensal de Build'),
+  L(
+    'Continuous development after launch: releases, experiments and CRO iteration.',
+    'Desenvolvimento contínuo após o lançamento: releases, experimentos e iteração de conversão.',
+  ),
+  [
+    L('Monthly release cycle', 'Ciclo mensal de releases'),
+    L('CRO iteration and experiments', 'Iteração de conversão e experimentos'),
+    L('Vitals and uptime monitoring', 'Monitoramento de vitals e uptime'),
+    L('Content and landing page builds', 'Construção de conteúdo e landing pages'),
+    SHARED.itemPrioritySupport,
+  ],
+  C('Build retainer inquiry'),
+)
+
+const WEB_STEPS: CopySource<ServiceStep[]> = engagementSteps(
+  L(
+    'We review your stack, your Core Web Vitals and your indexation the way a search crawler would.',
+    'Revisamos seu stack, seus Core Web Vitals e sua indexação da forma como um crawler faria.',
+  ),
+  L(
+    'A build plan with performance budgets, semantic HTML and structured data locked in before a line is written.',
+    'Um plano de build com orçamentos de performance, HTML semântico e dados estruturados travados antes de escrever uma linha.',
+  ),
+  L(
+    'Design, code and CMS in weekly releases. You can verify the site ranking before it launches.',
+    'Design, código e CMS em releases semanais. Você consegue ver o site ranqueando antes do lançamento.',
+  ),
+  L(
+    'Vitals, indexation and rankings tracked from launch, reported monthly in plain English.',
+    'Vitals, indexação e rankings acompanhados desde o lançamento, reportados mensalmente em linguagem simples.',
+  ),
+)
+
+// ── paid-search ─────────────────────────────────────────────────────────────
+
+const ADS_AUDIT: CopySource<ServiceOption> = {
+  jp: C('監査'),
+  name: L('The Account Audit', 'Auditoria de Conta'),
+  priceBRL: 2400,
+  per: SHARED.perTwoWeeks,
+  desc: L(
+    'A full account diagnosis: structure, keywords, landing pages and wasted spend, with the fixes ranked.',
+    'Um diagnóstico completo da conta: estrutura, palavras-chave, landing pages e gasto desperdiçado, com as correções priorizadas.',
+  ),
+  items: [
+    L('Account structure review', 'Revisão da estrutura da conta'),
+    L('Keyword and match type map', 'Mapa de palavras-chave e tipos de correspondência'),
+    SHARED.itemWastedSpend,
+    L('Landing page assessment', 'Avaliação de landing pages'),
+    L('90-day plan, in writing', 'Plano de 90 dias, por escrito'),
+  ],
+  cta: L('Start with the account audit', 'Começar com a auditoria de conta'),
+  subject: C('Account audit request'),
+  pricingAnchor: null,
+}
+
+const ADS_SPRINT: CopySource<ServiceOption> = {
+  ...sprintOption(
+    L('Launch Sprint', 'Sprint de Lançamento'),
+    L(
+      'The restructure shipped: new account architecture, campaigns, landing pages and tracking.',
+      'A reestruturação entregue: nova arquitetura de conta, campanhas, landing pages e rastreamento.',
+    ),
+    [
+      L('Everything in The Account Audit', 'Tudo o que está na Auditoria de Conta'),
+      L('Account restructure and build-out', 'Reestruturação e construção da conta'),
+      L('Landing pages written and built', 'Landing pages escritas e construídas'),
+      L('Feed and conversion tracking', 'Feeds e rastreamento de conversões'),
+      L('Launch with weekly reporting', 'Lançamento com relatórios semanais'),
+    ],
+    C('Launch sprint request'),
+  ),
+  pricingAnchor: null,
+}
+
+// The R$2,900 fixed-price retainer is not the spend-based 'paid-search'
+// catalog product the #subscribe configurator prices (max(10% × spend,
+// R$ 500)); routing it there would quote a different product. The builder
+// keeps the fixed-price retainer CTA in the contact flow with its subject.
+const ADS_RETAINER: CopySource<ServiceOption> = retainerOption(
+  L('Paid Retainer', 'Mensal de Mídia'),
+  L(
+    'Managed spend with weekly optimization, reported against the organic numbers.',
+    'Gasto gerenciado com otimização semanal, reportado contra os números orgânicos.',
+  ),
+  [
+    L('Weekly optimization cycle', 'Ciclo semanal de otimização'),
+    SHARED.itemWeeklyReports,
+    L('Bid and budget management', 'Gestão de lances e orçamento'),
+    L('New keyword expansion', 'Expansão de novas palavras-chave'),
+    SHARED.itemPrioritySupport,
+  ],
+  C('Paid retainer inquiry'),
+)
+
+const ADS_STEPS: CopySource<ServiceStep[]> = engagementSteps(
+  L(
+    'We open the account, the keyword map and the conversion data, and find where the budget is leaking.',
+    'Abrimos a conta, o mapa de palavras-chave e os dados de conversão, e encontramos onde o orçamento está vazando.',
+  ),
+  L(
+    'One plan across paid and organic: the same keyword map, named owners and a 90-day flight order.',
+    'Um plano para pago e orgânico: o mesmo mapa de palavras-chave, responsáveis definidos e uma ordem de 90 dias.',
+  ),
+  L(
+    'Account restructure, landing pages and feeds shipped in weekly releases you can verify yourself.',
+    'Reestruturação de conta, landing pages e feeds entregues em releases semanais que você mesmo verifica.',
+  ),
+  L(
+    'Spend, position and cost per lead reported weekly, with the organic work compounding alongside.',
+    'Gasto, posição e custo por lead reportados semanalmente, com o trabalho orgânico compondo ao lado.',
+  ),
+)
+
+// ── meta-ads ────────────────────────────────────────────────────────────────
+
+const META_AUDIT: CopySource<ServiceOption> = {
+  jp: C('監査'),
+  name: L('The Meta Audit', 'Auditoria Meta'),
+  priceBRL: 2400,
+  per: SHARED.perTwoWeeks,
+  desc: L(
+    'A full account diagnosis: structure, audiences, creative, tracking and wasted spend, with the fixes ranked.',
+    'Um diagnóstico completo da conta: estrutura, públicos, criativos, rastreamento e gasto desperdiçado, com as correções priorizadas.',
+  ),
+  items: [
+    L('Account and pixel review', 'Revisão de conta e pixel'),
+    L('Audience and creative audit', 'Auditoria de públicos e criativos'),
+    L('Conversion tracking check', 'Verificação do rastreamento de conversões'),
+    SHARED.itemWastedSpend,
+    L('90-day plan, in writing', 'Plano de 90 dias, por escrito'),
+  ],
+  cta: L('Start with the Meta audit', 'Começar com a auditoria Meta'),
+  subject: C('Meta audit request'),
+  pricingAnchor: null,
+}
+
+const META_SPRINT: CopySource<ServiceOption> = {
+  ...sprintOption(
+    L('Meta Launch', 'Sprint Meta'),
+    L(
+      'The restructure shipped: new campaigns, audiences, creative and tracking, launched and reporting.',
+      'A reestruturação entregue: novas campanhas, públicos, criativos e rastreamento, lançados e reportando.',
+    ),
+    [
+      L('Everything in The Meta Audit', 'Tudo o que está na Auditoria Meta'),
+      L('Campaign restructure and build-out', 'Reestruturação e construção de campanhas'),
+      L('Audience and creative testing', 'Testes de públicos e criativos'),
+      L('Pixel and conversion tracking', 'Pixel e rastreamento de conversões'),
+      L('Launch with weekly reporting', 'Lançamento com relatórios semanais'),
+    ],
+    C('Meta launch request'),
+  ),
+  pricingAnchor: null,
+}
+
+// Fixed-price retainer: same rule as the Paid Retainer — the configurator
+// only prices the spend-based meta-ads product.
+const META_RETAINER: CopySource<ServiceOption> = retainerOption(
+  L('Meta Retainer', 'Mensal Meta'),
+  L(
+    'Managed spend with weekly optimization, reported against the organic numbers.',
+    'Gasto gerenciado com otimização semanal, reportado contra os números orgânicos.',
+  ),
+  [
+    L('Weekly optimization cycle', 'Ciclo semanal de otimização'),
+    SHARED.itemWeeklyReports,
+    L('Creative rotation and testing', 'Rotação e testes de criativos'),
+    L('Audience expansion', 'Expansão de públicos'),
+    SHARED.itemPrioritySupport,
+  ],
+  C('Meta retainer inquiry'),
+)
+
+const META_STEPS: CopySource<ServiceStep[]> = engagementSteps(
+  L(
+    'We open the account, the audience data and the conversion history, and find where the budget is leaking.',
+    'Abrimos a conta, os dados de público e o histórico de conversões, e encontramos onde o orçamento está vazando.',
+  ),
+  L(
+    'One plan across paid and organic: the same conversion map, named owners and a 90-day flight order.',
+    'Um plano para pago e orgânico: o mesmo mapa de conversões, responsáveis definidos e uma ordem de 90 dias.',
+  ),
+  L(
+    'Campaigns, creative and tracking shipped in weekly releases you can verify yourself.',
+    'Campanhas, criativos e rastreamento entregues em releases semanais que você mesmo verifica.',
+  ),
+  L(
+    'Spend, cost per lead and return reported weekly, with the organic work compounding alongside.',
+    'Gasto, custo por lead e retorno reportados semanalmente, com o trabalho orgânico compondo ao lado.',
+  ),
+)
+
+// ── ai-automation ───────────────────────────────────────────────────────────
+
+const AI_STEPS: CopySource<ServiceStep[]> = [
+  {
+    jp: C('聞'),
+    title: L('Discovery', 'Descoberta'),
+    text: L(
+      'A call to map the repetitive work, the tools involved and the measurable outcome you want.',
+      'Uma chamada para mapear o trabalho repetitivo, as ferramentas envolvidas e o resultado mensurável que você quer.',
+    ),
+  },
+  {
+    jp: C('見積'),
+    title: L('Proposal', 'Proposta'),
+    text: L(
+      'A fixed-price scope with the build plan, the timeline and what success looks like — before any commitment.',
+      'Um escopo com preço fechado: plano de construção, cronograma e o que é sucesso — antes de qualquer compromisso.',
+    ),
+  },
+  {
+    jp: C('実装'),
+    title: L('Build', 'Construção'),
+    text: L(
+      'We build in your stack, integrate with your tools and test with real data.',
+      'Construímos no seu stack, integramos com as suas ferramentas e testamos com dados reais.',
+    ),
+  },
+  {
+    jp: C('渡'),
+    title: L('Handover', 'Entrega'),
+    text: L(
+      'Docs, training and support after launch, so the automation runs without us in the room.',
+      'Documentação, treinamento e suporte após o lançamento, para a automação rodar sem a nossa presença.',
+    ),
+  },
+]
+
+// ── assembled service copy ──────────────────────────────────────────────────
+
+const TECHNICAL_SEO_ENTRY: CopySource<ServiceContent> = {
+  navLabel: L('Technical SEO', 'SEO técnico e local'),
+  navJp: C('技術'),
+  kicker: L('Service · Technical SEO', 'Serviço · SEO técnico e local'),
+  promise: L('Rankings start at the code level', 'A classificação começa no código'),
+  hero: [L('Technical', 'SEO técnico'), L('SEO.', 'e local.')],
+  sub: L(
+    'Crawl architecture, Core Web Vitals, structured data and indexation control, fixed where the problem actually lives: in the code.',
+    'Arquitetura de rastreamento, Core Web Vitals, dados estruturados e controle de indexação, corrigidos onde o problema realmente está: no código.',
+  ),
+  optionsLabel: SHARED.optionsLabel,
+  optionsHeading: L('Choose how we start.', 'Escolha como começar.'),
+  optionsLead: L(
+    'Three ways to engage, one standard of work. Every option ends with fixes you can verify yourself, not a PDF of recommendations.',
+    'Três formas de começar, um padrão de trabalho. Toda opção termina com correções que você mesmo consegue verificar, não um PDF de recomendações.',
+  ),
+  options: TECHNICAL_SEO_OPTIONS,
+  optionsNote: SHARED.optionsNote,
+  optionsNoteStrong: SHARED.optionsNoteStrong,
+  processLabel: SHARED.processLabel,
+  processHeading: SHARED.processHeading,
+  steps: TECHNICAL_SEO_STEPS,
+  auditCta: L('Start with an audit', 'Comece com um diagnóstico'),
+  contactLabel: SHARED.contactLabel,
+  contactHeading: L('Stop losing customers to the answer box.', 'Pare de perder clientes para quem aparece primeiro.'),
+  contactSub: SHARED.contactSub,
+  bookCall: SHARED.bookCall,
+  seeOptions: SHARED.seeOptions,
+  pricingAnchor: C('#subscribe'),
+}
+
+const GEO_ENTRY: CopySource<ServiceContent> = {
+  navLabel: C('GEO'),
+  navJp: C('生成'),
+  kicker: L('Service · GEO', 'Serviço · GEO'),
+  promise: L('Get cited by the answer engines', 'Seja citado pelos motores de resposta'),
+  hero: [L('Be the', 'Seja a'), L('answer.', 'resposta.')],
+  sub: L(
+    'Generative Engine Optimization. We structure your content, entities and authority signals so ChatGPT, Perplexity and Google AI Overviews quote you by name when your buyers ask.',
+    'Otimização para Motores Generativos (GEO). Estruturamos seu conteúdo, entidades e sinais de autoridade para ChatGPT, Perplexity e AI Overviews do Google citarem você pelo nome quando seus compradores perguntam.',
+  ),
+  optionsLabel: SHARED.optionsLabel,
+  optionsHeading: L('Get into the answer, not under it.', 'Entre na resposta, não fique embaixo dela.'),
+  optionsLead: L(
+    'Three ways to start. Every option ends with citations you can search for and verify yourself, not a report of recommendations.',
+    'Três formas de começar. Toda opção termina com citações que você mesmo consegue buscar e verificar, não um relatório de recomendações.',
+  ),
+  options: [GEO_AUDIT, GEO_SPRINT, GEO_RETAINER],
+  optionsNote: SHARED.optionsNote,
+  optionsNoteStrong: SHARED.optionsNoteStrong,
+  processLabel: SHARED.processLabel,
+  processHeading: SHARED.processHeading,
+  steps: GEO_STEPS,
+  auditCta: L('Start with the citation audit', 'Comece com a auditoria de citações'),
+  contactLabel: SHARED.contactLabel,
+  contactHeading: L('Be the name the answer engines quote.', 'Seja o nome que os motores de resposta citam.'),
+  contactSub: SHARED.contactSub,
+  bookCall: SHARED.bookCall,
+  seeOptions: SHARED.seeOptions,
+}
+
+const WEB_DEVELOPMENT_ENTRY: CopySource<ServiceContent> = {
+  navLabel: L('Web Development', 'Sites e landing pages'),
+  navJp: C('開発'),
+  kicker: L('Service · Web Development', 'Serviço · Sites e landing pages'),
+  promise: L('Sites built to rank from the first commit', 'Sites construídos para ranquear desde o primeiro commit'),
+  hero: [L('Built to', 'Construído'), L('rank.', 'para ranquear.')],
+  sub: L(
+    'Next.js and Astro builds where performance budgets, semantic HTML and structured data are requirements, not afterthoughts. Migrations planned around ranking risk — redirects, QA and monitoring built in.',
+    'Construções em Next.js e Astro onde orçamentos de performance, HTML semântico e dados estruturados são requisitos, não reflexões tardias. Migrações planejadas em torno do risco de ranking — redirecionamentos, QA e monitoramento incluídos.',
+  ),
+  optionsLabel: SHARED.optionsLabel,
+  optionsHeading: L('Build it right, rank from day one.', 'Construa certo, ranqueie desde o dia um.'),
+  optionsLead: L(
+    'Three ways to engage, one standard of work. Every build ships with performance budgets, semantic HTML and structured data included.',
+    'Três formas de engajar, um padrão de trabalho. Toda construção entrega orçamentos de performance, HTML semântico e dados estruturados incluídos.',
+  ),
+  options: [WEB_AUDIT, WEB_SPRINT, WEB_RETAINER],
+  optionsNote: SHARED.optionsNote,
+  optionsNoteStrong: SHARED.optionsNoteStrong,
+  processLabel: SHARED.processLabel,
+  processHeading: SHARED.processHeading,
+  steps: WEB_STEPS,
+  auditCta: L('Start with the build audit', 'Comece com a auditoria de build'),
+  contactLabel: SHARED.contactLabel,
+  contactHeading: L('Sites that rank from the first commit.', 'Sites que ranqueiam desde o primeiro commit.'),
+  contactSub: SHARED.contactSub,
+  bookCall: SHARED.bookCall,
+  seeOptions: SHARED.seeOptions,
+  pricingAnchor: C('#builds'),
+}
+
+const PAID_SEARCH_ENTRY: CopySource<ServiceContent> = {
+  navLabel: L('Paid Search', 'Google Ads'),
+  navJp: C('広告'),
+  kicker: L('Service · Paid Search', 'Serviço · Google Ads'),
+  promise: L('Buy the clicks you cannot win yet', 'Compre os cliques que você ainda não consegue ganhar'),
+  hero: [L('Own the', 'Seja dono'), L('clicks.', 'dos cliques.')],
+  sub: L(
+    'Google Ads managed against the same keyword map as your organic strategy. One plan, two channels, no wasted spend while the organic work compounds.',
+    'Google Ads gerenciado contra o mesmo mapa de palavras-chave da sua estratégia orgânica. Um plano, dois canais, sem gasto desperdiçado enquanto o trabalho orgânico compõe.',
+  ),
+  optionsLabel: SHARED.optionsLabel,
+  optionsHeading: L('Spend that compounds, not burns.', 'Gasto que compõe, não queima.'),
+  optionsLead: L(
+    'Three ways to start. Every option runs on the same keyword map as your organic strategy, so the channels reinforce each other.',
+    'Três formas de começar. Toda opção roda no mesmo mapa de palavras-chave da sua estratégia orgânica, para os canais se reforçarem.',
+  ),
+  options: [ADS_AUDIT, ADS_SPRINT, ADS_RETAINER],
+  optionsNote: SHARED.optionsNote,
+  optionsNoteStrong: SHARED.optionsNoteStrong,
+  processLabel: SHARED.processLabel,
+  processHeading: SHARED.processHeading,
+  steps: ADS_STEPS,
+  auditCta: L('Start with the account audit', 'Comece com a auditoria de conta'),
+  contactLabel: SHARED.contactLabel,
+  contactHeading: L('Turn spend into rankings you own.', 'Transforme gasto em rankings que são seus.'),
+  contactSub: SHARED.contactSub,
+  bookCall: SHARED.bookCall,
+  seeOptions: SHARED.seeOptions,
+  pricingAnchor: C('#subscribe'),
+}
+
+const META_ADS_ENTRY: CopySource<ServiceContent> = {
+  navLabel: C('Meta Ads'),
+  navJp: C('広告'),
+  kicker: L('Service · Meta Ads', 'Serviço · Meta Ads'),
+  promise: L('Buy the attention you cannot win yet', 'Compre a atenção que você ainda não consegue ganhar'),
+  hero: [L('Reach', 'Alcance'), L('that converts.', 'que converte.')],
+  sub: L(
+    'Facebook and Instagram campaigns managed against the same keyword and conversion data as your organic strategy. Audiences, creative and budget in one plan, no wasted spend.',
+    'Campanhas no Facebook e Instagram gerenciadas contra os mesmos dados de palavras-chave e conversão da sua estratégia orgânica. Públicos, criativos e orçamento em um plano, sem desperdício.',
+  ),
+  optionsLabel: SHARED.optionsLabel,
+  optionsHeading: L('Spend where the eyes are.', 'Gaste onde estão os olhos.'),
+  optionsLead: L(
+    'Three ways to start. Every option runs on the same conversion and audience data as the rest of your strategy, so the channels reinforce each other.',
+    'Três formas de começar. Toda opção roda nos mesmos dados de conversão e público do restante da sua estratégia, para os canais se reforçarem.',
+  ),
+  options: [META_AUDIT, META_SPRINT, META_RETAINER],
+  optionsNote: SHARED.optionsNote,
+  optionsNoteStrong: SHARED.optionsNoteStrong,
+  processLabel: SHARED.processLabel,
+  processHeading: SHARED.processHeading,
+  steps: META_STEPS,
+  auditCta: L('Start with the Meta audit', 'Comece com a auditoria Meta'),
+  contactLabel: SHARED.contactLabel,
+  contactHeading: L('Turn scroll into revenue.', 'Transforme o scroll em receita.'),
+  contactSub: SHARED.contactSub,
+  bookCall: SHARED.bookCall,
+  seeOptions: SHARED.seeOptions,
+  pricingAnchor: C('#subscribe'),
+}
+
+const AI_AUTOMATION_ENTRY: CopySource<ServiceContent> = {
+  navLabel: L('AI Automation', 'Automação com IA'),
+  navJp: C('自動'),
+  kicker: L('Service · AI Automation', 'Serviço · Automação com IA'),
+  promise: L('Make the busywork run itself', 'Deixe o trabalho repetitivo rodar sozinho'),
+  hero: [L('Automate the', 'Automatize o'), L('repetitive.', 'repetitivo.')],
+  sub: L(
+    'AI automation and workflow engineering: agents, integrations and internal tools that do the repetitive work, scoped and quoted per project.',
+    'Automação com IA e engenharia de fluxos: agentes, integrações e ferramentas internas que eliminam o trabalho repetitivo — escopados e orçados sob consulta.',
+  ),
+  optionsLabel: L('Scope', 'Escopo'),
+  optionsHeading: L('Quoted to your workflow.', 'Orçado para o seu fluxo.'),
+  optionsLead: L(
+    'Every automation project is scoped to your stack and your team, then quoted — no generic packages, no one-size-fits-all.',
+    'Todo projeto de automação é escopado para o seu stack e o seu time, e então orçado — sem pacotes genéricos, sem tamanho único.',
+  ),
+  options: [
+    {
+      jp: C('自動'),
+      name: L('Custom Automation', 'Automação Sob Medida'),
+      priceBRL: null,
+      priceLabel: L('Quote only', 'Sob consulta'),
+      per: L('Scoped per project', 'Escopado por projeto'),
+      desc: L(
+        'Agents, integrations and internal tools that remove repetitive work from your operations.',
+        'Agentes, integrações e ferramentas internas que removem trabalho repetitivo das suas operações.',
+      ),
+      items: [
+        L('Discovery call and workflow map', 'Chamada de descoberta e mapa de fluxos'),
+        L('Scoped proposal with a fixed price', 'Proposta escopada com preço fechado'),
+        L('Built in your stack, with your tools', 'Construído no seu stack, com as suas ferramentas'),
+        L('Handover with docs and training', 'Entrega com documentação e treinamento'),
+        L('Support after launch', 'Suporte após o lançamento'),
+      ],
+      cta: L('Request a quote', 'Solicitar orçamento'),
+      subject: C('AI automation quote request'),
+    },
+  ],
+  optionsNote: L('a straight answer if we are not the right fit.', 'uma resposta direta se não formos a escolha certa.'),
+  optionsNoteStrong: L('Every quote:', 'Todo orçamento:'),
+  processLabel: SHARED.processLabel,
+  processHeading: SHARED.processHeading,
+  steps: AI_STEPS,
+  auditCta: L('Request a quote', 'Solicitar orçamento'),
+  contactLabel: SHARED.contactLabel,
+  contactHeading: L('What should run itself?', 'O que deveria rodar sozinho?'),
+  contactSub: SHARED.contactSub,
+  bookCall: SHARED.bookCall,
+  seeOptions: L('See how it works', 'Veja como funciona'),
+}
+
+const SERVICE_CONTENT_SOURCE: CopySource<Record<ServiceId, ServiceContent>> = {
+  'technical-seo': TECHNICAL_SEO_ENTRY,
+  geo: GEO_ENTRY,
+  'web-development': WEB_DEVELOPMENT_ENTRY,
+  'paid-search': PAID_SEARCH_ENTRY,
+  'meta-ads': META_ADS_ENTRY,
+  'ai-automation': AI_AUTOMATION_ENTRY,
+}
+
 export const SERVICE_CONTENT: Record<Locale, Record<ServiceId, ServiceContent>> = {
-  'en-US': {
-    'technical-seo': {
-      navLabel: 'Technical SEO',
-      navJp: '技術',
-      kicker: 'Service · Technical SEO',
-      promise: 'Rankings start at the code level',
-      hero: ['Technical', 'SEO.'],
-      sub: 'Crawl architecture, Core Web Vitals, structured data and indexation control, fixed where the problem actually lives: in the code.',
-      optionsLabel: 'Options',
-      optionsHeading: 'Choose how we start.',
-      optionsLead:
-        'Three ways to engage, one standard of work. Every option ends with fixes you can verify yourself, not a PDF of recommendations.',
-      options: [
-        {
-          jp: '監査',
-          name: 'The Audit',
-          priceBRL: null,
-          priceLabel: 'Free',
-          per: 'No strings attached',
-          desc: 'A complete technical diagnosis with a prioritized fix list, so you know exactly what is blocking you and in what order to attack it.',
-          items: [
-            'Full crawl and log-file analysis',
-            'Core Web Vitals report, page by page',
-            'Structured data and indexation review',
-            'Prioritized fix list with effort estimates',
-            '90-day roadmap, in writing',
-          ],
-          cta: 'Start with the audit',
-          subject: 'Audit request',
-          pricingAnchor: null,
-        },
-
-        {
-          flag: 'Most chosen',
-          jp: '設計',
-          name: 'Content Development',
-          priceBRL: 3500,
-          per: 'Per month · 3-month minimum',
-          desc: 'Pages, articles and service copy written to answer the questions your buyers actually ask, structured so crawlers and AI engines both get it.',
-          items: [
-            'Answer-first page briefs',
-            'On-page content written and edited',
-            'Internal linking built in',
-            'Schema attached to every page',
-            'Monthly publishing cycle',
-          ],
-          cta: 'Start content development',
-          subject: 'Content development request',
-          // Clicking one option must seed the configurator with ONLY that
-          // service — the service default preselects both SEO options.
-          preselect: 'seo-content',
-        },
-        {
-          jp: '検索',
-          name: 'Backlinks',
-          priceBRL: 3000,
-          per: 'Per month · 3-month minimum',
-          desc: 'Authority earned from sites that matter: outreach, digital PR and linkable assets, with the source and the rationale reported for every placement.',
-          items: [
-            'Linkable asset production',
-            'Outreach and digital PR',
-            'Placement with rationale for each',
-            'Toxic link cleanup',
-            'Monthly authority report',
-          ],
-          cta: 'Start link building',
-          subject: 'Backlinks request',
-          preselect: 'backlinks',
-        },
-      ],
-      optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
-      optionsNoteStrong: 'Every option:',
-      processLabel: 'Process',
-      processHeading: 'How it runs',
-      steps: [
-        { jp: '監査', title: 'Audit', text: 'Two weeks inside your data. We map every query you should own and everything blocking it.' },
-        { jp: '設計', title: 'Architecture', text: 'A 90-day plan with named owners, projected impact and the order of operations. You approve it before we touch anything.' },
-        { jp: '実装', title: 'Build', text: 'We ship. Code, content and campaigns in weekly releases you can verify yourself, not in a monthly PDF.' },
-        { jp: '計測', title: 'Measure', text: 'Rankings, AI citations and revenue, reported monthly in plain English with the next quarter already planned.' },
-      ],
-      auditCta: 'Start with an audit',
-      contactLabel: 'Contact',
-      contactHeading: 'Stop losing customers to the answer box.',
-      contactSub: 'One email starts it. We reply within one business day with next steps and a straight answer on whether we can help.',
-      bookCall: 'Book a strategy call',
-      seeOptions: 'See the options',
-      pricingAnchor: '#subscribe',
-    },
-    geo: {
-      navLabel: 'GEO',
-      navJp: '生成',
-      kicker: 'Service · GEO',
-      promise: 'Get cited by the answer engines',
-      hero: ['Be the', 'answer.'],
-      sub: 'Generative Engine Optimization. We structure your content, entities and authority signals so ChatGPT, Perplexity and Google AI Overviews quote you by name when your buyers ask.',
-      optionsLabel: 'Options',
-      optionsHeading: 'Get into the answer, not under it.',
-      optionsLead:
-        'Three ways to start. Every option ends with citations you can search for and verify yourself, not a report of recommendations.',
-      options: [
-        {
-          jp: '監査',
-          name: 'The Citation Audit',
-          priceBRL: 2400,
-          per: 'One time · 2 weeks',
-          desc: 'Where the answer engines already quote you, where they should, and exactly what is blocking it.',
-          items: [
-            'Entity and brand mention map',
-            'Answer engine citation audit',
-            'Competitor citation comparison',
-            'Prioritized content and entity plan',
-            '90-day roadmap, in writing',
-          ],
-          cta: 'Start with the citation audit',
-          subject: 'Citation audit request',
-        },
-        {
-          flag: 'Most chosen',
-          jp: '実装',
-          name: 'Citation Sprint',
-          priceBRL: 6800,
-          per: 'One time · 4 weeks',
-          desc: 'The audit plus the build: entity pages, answer-first content and llms.txt, shipped and re-checked.',
-          items: [
-            'Everything in The Citation Audit',
-            'Entity pages and schema deployed',
-            'Answer-first content written',
-            'llms.txt and machine-readable feeds',
-            'Before/after citation re-check',
-          ],
-          cta: 'Book the sprint',
-          subject: 'Citation sprint request',
-        },
-        {
-          jp: '計測',
-          name: 'Visibility Retainer',
-          priceBRL: 2900,
-          per: 'Per month · 6-month minimum',
-          desc: 'Continuous entity and content work so your citation share grows, and holds.',
-          items: [
-            'Monthly content and entity releases',
-            'Citation share tracking',
-            'New question monitoring',
-            'Quarterly strategy review',
-            'Priority support, same-day answers',
-          ],
-          cta: 'Talk retainers',
-          subject: 'Visibility retainer inquiry',
-          // GEO has no subscription configurator (SERVICE_SUBSCRIPTIONS is
-          // empty), so the service default '#subscribe' anchor would scroll to
-          // nothing — keep the retainer CTA in the contact flow.
-          pricingAnchor: null,
-        },
-      ],
-      optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
-      optionsNoteStrong: 'Every option:',
-      processLabel: 'Process',
-      processHeading: 'How it runs',
-      steps: [
-        { jp: '監査', title: 'Audit', text: 'We map your entities, your existing citations and where the answer engines already mention you, then find where they should.' },
-        { jp: '設計', title: 'Architecture', text: 'An entity and content map: the questions buyers ask, who answers them today, and the page that should own each one.' },
-        { jp: '実装', title: 'Build', text: 'We write and structure the answers, deploy the schema and ship llms.txt so your content is legible to machines.' },
-        { jp: '計測', title: 'Measure', text: 'Citation share across ChatGPT, Perplexity and AI Overviews, reported monthly in plain English.' },
-      ],
-      auditCta: 'Start with the citation audit',
-      contactLabel: 'Contact',
-      contactHeading: 'Be the name the answer engines quote.',
-      contactSub: 'One email starts it. We reply within one business day with next steps and a straight answer on whether we can help.',
-      bookCall: 'Book a strategy call',
-      seeOptions: 'See the options',
-    },
-    'web-development': {
-      navLabel: 'Web Development',
-      navJp: '開発',
-      kicker: 'Service · Web Development',
-      promise: 'Sites built to rank from the first commit',
-      hero: ['Built to', 'rank.'],
-      sub: 'Next.js and Astro builds where performance budgets, semantic HTML and structured data are requirements, not afterthoughts. Migrations planned around ranking risk — redirects, QA and monitoring built in.',
-      optionsLabel: 'Options',
-      optionsHeading: 'Build it right, rank from day one.',
-      optionsLead:
-        'Three ways to engage, one standard of work. Every build ships with performance budgets, semantic HTML and structured data included.',
-      options: [
-        {
-          jp: '監査',
-          name: 'The Build Audit',
-          priceBRL: 2400,
-          per: 'One time · 2 weeks',
-          desc: 'A technical diagnosis of your current site or stack, with the fix list and rebuild options priced.',
-          items: [
-            'Performance and vitals review',
-            'Indexation and schema audit',
-            'Stack and CMS assessment',
-            'Rebuild vs fix recommendation',
-            'Budget with effort estimates',
-          ],
-          cta: 'Start with the build audit',
-          subject: 'Build audit request',
-          // One-time diagnostic — there is no pricing section for it in the
-          // website-build checkout below, so it must not inherit '#builds'.
-          pricingAnchor: null,
-        },
-        {
-          flag: 'Most chosen',
-          jp: '実装',
-          name: 'Build Sprint',
-          priceBRL: 6800,
-          per: 'One time · 4 weeks',
-          desc: 'Design and build of a focused marketing site, engineered to rank from launch.',
-          items: [
-            'Everything in The Build Audit',
-            'Design and front-end build',
-            'Performance budget enforced',
-            'Semantic HTML and schema built in',
-            'Headless CMS setup',
-          ],
-          cta: 'Book the sprint',
-          subject: 'Build sprint request',
-          // One-time engagement — the #builds panel prices the website/
-          // ecommerce build itself, not this sprint, so it goes to the form.
-          pricingAnchor: null,
-        },
-        {
-          jp: '計測',
-          name: 'Build Retainer',
-          priceBRL: 2900,
-          per: 'Per month · 6-month minimum',
-          desc: 'Continuous development after launch: releases, experiments and CRO iteration.',
-          items: [
-            'Monthly release cycle',
-            'CRO iteration and experiments',
-            'Vitals and uptime monitoring',
-            'Content and landing page builds',
-            'Priority support, same-day answers',
-          ],
-          cta: 'Talk retainers',
-          subject: 'Build retainer inquiry',
-          // The R$2,900 build retainer has no catalog entry — the #subscribe
-          // configurator only knows the R$300/mo hosting product, so sending
-          // this CTA there would let the visitor buy hosting instead. Route
-          // the fixed-price retainer to the contact form with its subject.
-          pricingAnchor: null,
-        },
-      ],
-      optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
-      optionsNoteStrong: 'Every option:',
-      processLabel: 'Process',
-      processHeading: 'How it runs',
-      steps: [
-        { jp: '監査', title: 'Audit', text: 'We review your stack, your Core Web Vitals and your indexation the way a search crawler would.' },
-        { jp: '設計', title: 'Architecture', text: 'A build plan with performance budgets, semantic HTML and structured data locked in before a line is written.' },
-        { jp: '実装', title: 'Build', text: 'Design, code and CMS in weekly releases. You can verify the site ranking before it launches.' },
-        { jp: '計測', title: 'Measure', text: 'Vitals, indexation and rankings tracked from launch, reported monthly in plain English.' },
-      ],
-      auditCta: 'Start with the build audit',
-      contactLabel: 'Contact',
-      contactHeading: 'Sites that rank from the first commit.',
-      contactSub: 'One email starts it. We reply within one business day with next steps and a straight answer on whether we can help.',
-      bookCall: 'Book a strategy call',
-      seeOptions: 'See the options',
-      pricingAnchor: '#builds',
-    },
-    'paid-search': {
-      navLabel: 'Paid Search',
-      navJp: '広告',
-      kicker: 'Service · Paid Search',
-      promise: 'Buy the clicks you cannot win yet',
-      hero: ['Own the', 'clicks.'],
-      sub: 'Google Ads managed against the same keyword map as your organic strategy. One plan, two channels, no wasted spend while the organic work compounds.',
-      optionsLabel: 'Options',
-      optionsHeading: 'Spend that compounds, not burns.',
-      optionsLead:
-        'Three ways to start. Every option runs on the same keyword map as your organic strategy, so the channels reinforce each other.',
-      options: [
-        {
-          jp: '監査',
-          name: 'The Account Audit',
-          priceBRL: 2400,
-          per: 'One time · 2 weeks',
-          desc: 'A full account diagnosis: structure, keywords, landing pages and wasted spend, with the fixes ranked.',
-          items: [
-            'Account structure review',
-            'Keyword and match type map',
-            'Wasted spend analysis',
-            'Landing page assessment',
-            '90-day plan, in writing',
-          ],
-          cta: 'Start with the account audit',
-          subject: 'Account audit request',
-          pricingAnchor: null,
-        },
-        {
-          flag: 'Most chosen',
-          jp: '実装',
-          name: 'Launch Sprint',
-          priceBRL: 6800,
-          per: 'One time · 4 weeks',
-          desc: 'The restructure shipped: new account architecture, campaigns, landing pages and tracking.',
-          items: [
-            'Everything in The Account Audit',
-            'Account restructure and build-out',
-            'Landing pages written and built',
-            'Feed and conversion tracking',
-            'Launch with weekly reporting',
-          ],
-          cta: 'Book the sprint',
-          subject: 'Launch sprint request',
-          pricingAnchor: null,
-        },
-        {
-          jp: '計測',
-          name: 'Paid Retainer',
-          priceBRL: 2900,
-          per: 'Per month · 6-month minimum',
-          desc: 'Managed spend with weekly optimization, reported against the organic numbers.',
-          items: [
-            'Weekly optimization cycle',
-            'Weekly spend and lead reporting',
-            'Bid and budget management',
-            'New keyword expansion',
-            'Priority support, same-day answers',
-          ],
-          cta: 'Talk retainers',
-          subject: 'Paid retainer inquiry',
-          // The R$2,900 fixed-price retainer is not the spend-based
-          // 'paid-search' catalog product the #subscribe configurator prices
-          // (max(10% × spend, R$ 500)); routing it there would quote a
-          // different product. Keep the fixed-price retainer CTA in the
-          // contact flow with its subject.
-          pricingAnchor: null,
-        },
-      ],
-      optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
-      optionsNoteStrong: 'Every option:',
-      processLabel: 'Process',
-      processHeading: 'How it runs',
-      steps: [
-        { jp: '監査', title: 'Audit', text: 'We open the account, the keyword map and the conversion data, and find where the budget is leaking.' },
-        { jp: '設計', title: 'Architecture', text: 'One plan across paid and organic: the same keyword map, named owners and a 90-day flight order.' },
-        { jp: '実装', title: 'Build', text: 'Account restructure, landing pages and feeds shipped in weekly releases you can verify yourself.' },
-        { jp: '計測', title: 'Measure', text: 'Spend, position and cost per lead reported weekly, with the organic work compounding alongside.' },
-      ],
-      auditCta: 'Start with the account audit',
-      contactLabel: 'Contact',
-      contactHeading: 'Turn spend into rankings you own.',
-      contactSub: 'One email starts it. We reply within one business day with next steps and a straight answer on whether we can help.',
-      bookCall: 'Book a strategy call',
-      seeOptions: 'See the options',
-      pricingAnchor: '#subscribe',
-    },
-    'meta-ads': {
-      navLabel: 'Meta Ads',
-      navJp: '広告',
-      kicker: 'Service · Meta Ads',
-      promise: 'Buy the attention you cannot win yet',
-      hero: ['Reach', 'that converts.'],
-      sub: 'Facebook and Instagram campaigns managed against the same keyword and conversion data as your organic strategy. Audiences, creative and budget in one plan, no wasted spend.',
-      optionsLabel: 'Options',
-      optionsHeading: 'Spend where the eyes are.',
-      optionsLead:
-        'Three ways to start. Every option runs on the same conversion and audience data as the rest of your strategy, so the channels reinforce each other.',
-      options: [
-        {
-          jp: '監査',
-          name: 'The Meta Audit',
-          priceBRL: 2400,
-          per: 'One time · 2 weeks',
-          desc: 'A full account diagnosis: structure, audiences, creative, tracking and wasted spend, with the fixes ranked.',
-          items: [
-            'Account and pixel review',
-            'Audience and creative audit',
-            'Conversion tracking check',
-            'Wasted spend analysis',
-            '90-day plan, in writing',
-          ],
-          cta: 'Start with the Meta audit',
-          subject: 'Meta audit request',
-          pricingAnchor: null,
-        },
-        {
-          flag: 'Most chosen',
-          jp: '実装',
-          name: 'Meta Launch',
-          priceBRL: 6800,
-          per: 'One time · 4 weeks',
-          desc: 'The restructure shipped: new campaigns, audiences, creative and tracking, launched and reporting.',
-          items: [
-            'Everything in The Meta Audit',
-            'Campaign restructure and build-out',
-            'Audience and creative testing',
-            'Pixel and conversion tracking',
-            'Launch with weekly reporting',
-          ],
-          cta: 'Book the sprint',
-          subject: 'Meta launch request',
-          pricingAnchor: null,
-        },
-        {
-          jp: '計測',
-          name: 'Meta Retainer',
-          priceBRL: 2900,
-          per: 'Per month · 6-month minimum',
-          desc: 'Managed spend with weekly optimization, reported against the organic numbers.',
-          items: [
-            'Weekly optimization cycle',
-            'Weekly spend and lead reporting',
-            'Creative rotation and testing',
-            'Audience expansion',
-            'Priority support, same-day answers',
-          ],
-          cta: 'Talk retainers',
-          subject: 'Meta retainer inquiry',
-          // Fixed-price retainer: same rule as the Paid Retainer — the
-          // configurator only prices the spend-based meta-ads product.
-          pricingAnchor: null,
-        },
-      ],
-      optionsNote: 'senior engineers only, weekly written updates, and a straight answer if we are not the right fit.',
-      optionsNoteStrong: 'Every option:',
-      processLabel: 'Process',
-      processHeading: 'How it runs',
-      steps: [
-        { jp: '監査', title: 'Audit', text: 'We open the account, the audience data and the conversion history, and find where the budget is leaking.' },
-        { jp: '設計', title: 'Architecture', text: 'One plan across paid and organic: the same conversion map, named owners and a 90-day flight order.' },
-        { jp: '実装', title: 'Build', text: 'Campaigns, creative and tracking shipped in weekly releases you can verify yourself.' },
-        { jp: '計測', title: 'Measure', text: 'Spend, cost per lead and return reported weekly, with the organic work compounding alongside.' },
-      ],
-      auditCta: 'Start with the Meta audit',
-      contactLabel: 'Contact',
-      contactHeading: 'Turn scroll into revenue.',
-      contactSub: 'One email starts it. We reply within one business day with next steps and a straight answer on whether we can help.',
-      bookCall: 'Book a strategy call',
-      seeOptions: 'See the options',
-      pricingAnchor: '#subscribe',
-    },
-    'ai-automation': {
-      navLabel: 'AI Automation',
-      navJp: '自動',
-      kicker: 'Service · AI Automation',
-      promise: 'Make the busywork run itself',
-      hero: ['Automate the', 'repetitive.'],
-      sub: 'AI automation and workflow engineering: agents, integrations and internal tools that do the repetitive work, scoped and quoted per project.',
-      optionsLabel: 'Scope',
-      optionsHeading: 'Quoted to your workflow.',
-      optionsLead: 'Every automation project is scoped to your stack and your team, then quoted — no generic packages, no one-size-fits-all.',
-      options: [
-        {
-          jp: '自動',
-          name: 'Custom Automation',
-          priceBRL: null,
-          priceLabel: 'Quote only',
-          per: 'Scoped per project',
-          desc: 'Agents, integrations and internal tools that remove repetitive work from your operations.',
-          items: [
-            'Discovery call and workflow map',
-            'Scoped proposal with a fixed price',
-            'Built in your stack, with your tools',
-            'Handover with docs and training',
-            'Support after launch',
-          ],
-          cta: 'Request a quote',
-          subject: 'AI automation quote request',
-        },
-      ],
-      optionsNote: 'a straight answer if we are not the right fit.',
-      optionsNoteStrong: 'Every quote:',
-      processLabel: 'Process',
-      processHeading: 'How it runs',
-      steps: [
-        { jp: '聞', title: 'Discovery', text: 'A call to map the repetitive work, the tools involved and the measurable outcome you want.' },
-        { jp: '見積', title: 'Proposal', text: 'A fixed-price scope with the build plan, the timeline and what success looks like — before any commitment.' },
-        { jp: '実装', title: 'Build', text: 'We build in your stack, integrate with your tools and test with real data.' },
-        { jp: '渡', title: 'Handover', text: 'Docs, training and support after launch, so the automation runs without us in the room.' },
-      ],
-      auditCta: 'Request a quote',
-      contactLabel: 'Contact',
-      contactHeading: 'What should run itself?',
-      contactSub: 'One email starts it. We reply within one business day with next steps and a straight answer on whether we can help.',
-      bookCall: 'Book a strategy call',
-      seeOptions: 'See how it works',
-    },
-  },
-  'pt-BR': {
-    'technical-seo': {
-      navLabel: 'SEO técnico e local',
-      navJp: '技術',
-      kicker: 'Serviço · SEO técnico e local',
-      promise: 'A classificação começa no código',
-      hero: ['SEO técnico', 'e local.'],
-      sub: 'Arquitetura de rastreamento, Core Web Vitals, dados estruturados e controle de indexação, corrigidos onde o problema realmente está: no código.',
-      optionsLabel: 'Opções',
-      optionsHeading: 'Escolha como começar.',
-      optionsLead:
-        'Três formas de começar, um padrão de trabalho. Toda opção termina com correções que você mesmo consegue verificar, não um PDF de recomendações.',
-      options: [
-        {
-          jp: '監査',
-          name: 'A Auditoria',
-          priceBRL: null,
-          priceLabel: 'Grátis',
-          per: 'Sem compromisso',
-          desc: 'Um diagnóstico técnico completo com uma lista priorizada de correções, para você saber exatamente o que está te bloqueando e em que ordem atacar.',
-          items: [
-            'Rastreamento completo e análise de logs',
-            'Relatório de Core Web Vitals, página por página',
-            'Revisão de dados estruturados e indexação',
-            'Lista priorizada com estimativas de esforço',
-            'Roteiro de 90 dias, por escrito',
-          ],
-          cta: 'Começar com a auditoria',
-          subject: 'Audit request',
-          pricingAnchor: null,
-        },
-
-        {
-          flag: 'Mais escolhido',
-          jp: '設計',
-          name: 'Desenvolvimento de Conteúdo',
-          priceBRL: 3500,
-          per: 'Por mês · mínimo de 3 meses',
-          desc: 'Páginas, artigos e textos de serviço escritos para responder às perguntas que seus compradores realmente fazem, estruturados para crawlers e motores de IA entenderem.',
-          items: [
-            'Briefings de página answer-first',
-            'Conteúdo escrito e editado',
-            'Linkagem interna embutida',
-            'Schema em cada página',
-            'Ciclo mensal de publicação',
-          ],
-          cta: 'Começar com conteúdo',
-          subject: 'Content development request',
-          preselect: 'seo-content',
-        },
-        {
-          jp: '検索',
-          name: 'Backlinks',
-          priceBRL: 3000,
-          per: 'Por mês · mínimo de 3 meses',
-          desc: 'Autoridade conquistada de sites que importam: divulgação, relações públicas digitais e ativos linkáveis, com fonte e justificativa reportadas para cada colocação.',
-          items: [
-            'Produção de ativos linkáveis',
-            'Divulgação e relações públicas digitais',
-            'Colocação com justificativa para cada uma',
-            'Limpeza de links tóxicos',
-            'Relatório mensal de autoridade',
-          ],
-          cta: 'Começar com link building',
-          subject: 'Backlinks request',
-          preselect: 'backlinks',
-        },
-      ],
-      optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
-      optionsNoteStrong: 'Toda opção:',
-      processLabel: 'Processo',
-      processHeading: 'Como o trabalho acontece',
-      steps: [
-        { jp: '監査', title: 'Diagnóstico', text: 'Entendemos sua oferta, cidades, concorrência e os bloqueios técnicos que impedem sua empresa de aparecer.' },
-        { jp: '設計', title: 'Plano', text: 'Um plano priorizado com responsáveis, impacto esperado e a ordem de execução. Você aprova antes de mexermos em qualquer coisa.' },
-        { jp: '実装', title: 'Implementação', text: 'Código, conteúdo, páginas e campanhas em ciclos semanais que você consegue acompanhar.' },
-        { jp: '計測', title: 'Medição', text: 'Visibilidade, contatos e oportunidades acompanhados com clareza, junto das próximas decisões.' },
-      ],
-      auditCta: 'Comece com um diagnóstico',
-      contactLabel: 'Contato',
-      contactHeading: 'Pare de perder clientes para quem aparece primeiro.',
-      contactSub: 'Um e-mail começa tudo. Respondemos em até um dia útil com os próximos passos e uma resposta direta sobre se podemos ajudar.',
-      bookCall: 'Agendar uma conversa',
-      seeOptions: 'Ver as opções',
-      pricingAnchor: '#subscribe',
-    },
-    geo: {
-      navLabel: 'GEO',
-      navJp: '生成',
-      kicker: 'Serviço · GEO',
-      promise: 'Seja citado pelos motores de resposta',
-      hero: ['Seja a', 'resposta.'],
-      sub: 'Otimização para Motores Generativos (GEO). Estruturamos seu conteúdo, entidades e sinais de autoridade para ChatGPT, Perplexity e AI Overviews do Google citarem você pelo nome quando seus compradores perguntam.',
-      optionsLabel: 'Opções',
-      optionsHeading: 'Entre na resposta, não fique embaixo dela.',
-      optionsLead:
-        'Três formas de começar. Toda opção termina com citações que você mesmo consegue buscar e verificar, não um relatório de recomendações.',
-      options: [
-        {
-          jp: '監査',
-          name: 'Auditoria de Citações',
-          priceBRL: 2400,
-          per: 'Pagamento único · 2 semanas',
-          desc: 'Onde os motores de resposta já te citam, onde deveriam e exatamente o que está bloqueando.',
-          items: [
-            'Mapa de entidades e menções à marca',
-            'Auditoria de citações nos motores de resposta',
-            'Comparação de citações com concorrentes',
-            'Plano priorizado de conteúdo e entidades',
-            'Roteiro de 90 dias, por escrito',
-          ],
-          cta: 'Começar com a auditoria de citações',
-          subject: 'Citation audit request',
-        },
-        {
-          flag: 'Mais escolhido',
-          jp: '実装',
-          name: 'Sprint de Citações',
-          priceBRL: 6800,
-          per: 'Pagamento único · 4 semanas',
-          desc: 'A auditoria mais a construção: páginas de entidade, conteúdo answer-first e llms.txt, entregues e re-verificados.',
-          items: [
-            'Tudo o que está na Auditoria de Citações',
-            'Páginas de entidade e schema implantados',
-            'Conteúdo answer-first escrito',
-            'llms.txt e feeds legíveis por máquinas',
-            'Re-verificação de citações antes/depois',
-          ],
-          cta: 'Agendar o sprint',
-          subject: 'Citation sprint request',
-        },
-        {
-          jp: '計測',
-          name: 'Mensal de Visibilidade',
-          priceBRL: 2900,
-          per: 'Por mês · mínimo de 6 meses',
-          desc: 'Trabalho contínuo de entidades e conteúdo para sua participação em citações crescer e se manter.',
-          items: [
-            'Releases mensais de conteúdo e entidades',
-            'Acompanhamento da participação em citações',
-            'Monitoramento de novas perguntas',
-            'Revisão estratégica trimestral',
-            'Suporte prioritário, respostas no mesmo dia',
-          ],
-          cta: 'Falar sobre mensalidade',
-          subject: 'Visibility retainer inquiry',
-          // GEO não tem configurador de assinaturas — CTA vai para o contato.
-          pricingAnchor: null,
-        },
-      ],
-      optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
-      optionsNoteStrong: 'Toda opção:',
-      processLabel: 'Processo',
-      processHeading: 'Como o trabalho acontece',
-      steps: [
-        { jp: '監査', title: 'Diagnóstico', text: 'Mapeamos suas entidades, citações existentes e onde os motores de resposta já mencionam você, e onde deveriam.' },
-        { jp: '設計', title: 'Plano', text: 'Um mapa de entidades e conteúdo: as perguntas que os compradores fazem, quem responde hoje e a página que deve ser dona de cada resposta.' },
-        { jp: '実装', title: 'Implementação', text: 'Escrevemos e estruturamos as respostas, implantamos o schema e publicamos o llms.txt para seu conteúdo ser legível por máquinas.' },
-        { jp: '計測', title: 'Medição', text: 'Participação em citações em ChatGPT, Perplexity e AI Overviews, reportada mensalmente em linguagem simples.' },
-      ],
-      auditCta: 'Comece com a auditoria de citações',
-      contactLabel: 'Contato',
-      contactHeading: 'Seja o nome que os motores de resposta citam.',
-      contactSub: 'Um e-mail começa tudo. Respondemos em até um dia útil com os próximos passos e uma resposta direta sobre se podemos ajudar.',
-      bookCall: 'Agendar uma conversa',
-      seeOptions: 'Ver as opções',
-    },
-    'web-development': {
-      navLabel: 'Sites e landing pages',
-      navJp: '開発',
-      kicker: 'Serviço · Sites e landing pages',
-      promise: 'Sites construídos para ranquear desde o primeiro commit',
-      hero: ['Construído', 'para ranquear.'],
-      sub: 'Construções em Next.js e Astro onde orçamentos de performance, HTML semântico e dados estruturados são requisitos, não reflexões tardias. Migrações planejadas em torno do risco de ranking — redirecionamentos, QA e monitoramento incluídos.',
-      optionsLabel: 'Opções',
-      optionsHeading: 'Construa certo, ranqueie desde o dia um.',
-      optionsLead:
-        'Três formas de engajar, um padrão de trabalho. Toda construção entrega orçamentos de performance, HTML semântico e dados estruturados incluídos.',
-      options: [
-        {
-          jp: '監査',
-          name: 'Auditoria de Build',
-          priceBRL: 2400,
-          per: 'Pagamento único · 2 semanas',
-          desc: 'Um diagnóstico técnico do seu site ou stack atual, com a lista de correções e as opções de reconstrução precificadas.',
-          items: [
-            'Revisão de performance e vitals',
-            'Auditoria de indexação e schema',
-            'Avaliação de stack e CMS',
-            'Recomendação entre reconstruir ou corrigir',
-            'Orçamento com estimativas de esforço',
-          ],
-          cta: 'Começar com a auditoria de build',
-          subject: 'Build audit request',
-          // Diagnóstico de pagamento único — o painel #builds precifica o
-          // site/e-commerce, não esta auditoria; vai para o formulário.
-          pricingAnchor: null,
-        },
-        {
-          flag: 'Mais escolhido',
-          jp: '実装',
-          name: 'Sprint de Build',
-          priceBRL: 6800,
-          per: 'Pagamento único · 4 semanas',
-          desc: 'Design e construção de um site de marketing focado, projetado para ranquear desde o lançamento.',
-          items: [
-            'Tudo o que está na Auditoria de Build',
-            'Design e construção de front-end',
-            'Orçamento de performance cumprido',
-            'HTML semântico e schema embutidos',
-            'Configuração de CMS headless',
-          ],
-          cta: 'Agendar o sprint',
-          subject: 'Build sprint request',
-          // Engajamento de pagamento único — não herda '#builds' (o painel
-          // precifica o site/e-commerce, não este sprint).
-          pricingAnchor: null,
-        },
-        {
-          jp: '計測',
-          name: 'Mensal de Build',
-          priceBRL: 2900,
-          per: 'Por mês · mínimo de 6 meses',
-          desc: 'Desenvolvimento contínuo após o lançamento: releases, experimentos e iteração de conversão.',
-          items: [
-            'Ciclo mensal de releases',
-            'Iteração de conversão e experimentos',
-            'Monitoramento de vitals e uptime',
-            'Construção de conteúdo e landing pages',
-            'Suporte prioritário, respostas no mesmo dia',
-          ],
-          cta: 'Falar sobre mensalidade',
-          subject: 'Build retainer inquiry',
-          // Mensalidade fixa de R$ 2.900 sem entrada no catálogo (o
-          // configurador #subscribe só conhece a hospedagem de R$ 300/mês) —
-          // o CTA vai para o formulário de contato com o assunto.
-          pricingAnchor: null,
-        },
-      ],
-      optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
-      optionsNoteStrong: 'Toda opção:',
-      processLabel: 'Processo',
-      processHeading: 'Como o trabalho acontece',
-      steps: [
-        { jp: '監査', title: 'Diagnóstico', text: 'Revisamos seu stack, seus Core Web Vitals e sua indexação da forma como um crawler faria.' },
-        { jp: '設計', title: 'Plano', text: 'Um plano de build com orçamentos de performance, HTML semântico e dados estruturados travados antes de escrever uma linha.' },
-        { jp: '実装', title: 'Implementação', text: 'Design, código e CMS em releases semanais. Você consegue ver o site ranqueando antes do lançamento.' },
-        { jp: '計測', title: 'Medição', text: 'Vitals, indexação e rankings acompanhados desde o lançamento, reportados mensalmente em linguagem simples.' },
-      ],
-      auditCta: 'Comece com a auditoria de build',
-      contactLabel: 'Contato',
-      contactHeading: 'Sites que ranqueiam desde o primeiro commit.',
-      contactSub: 'Um e-mail começa tudo. Respondemos em até um dia útil com os próximos passos e uma resposta direta sobre se podemos ajudar.',
-      bookCall: 'Agendar uma conversa',
-      seeOptions: 'Ver as opções',
-      pricingAnchor: '#builds',
-    },
-    'paid-search': {
-      navLabel: 'Google Ads',
-      navJp: '広告',
-      kicker: 'Serviço · Google Ads',
-      promise: 'Compre os cliques que você ainda não consegue ganhar',
-      hero: ['Seja dono', 'dos cliques.'],
-      sub: 'Google Ads gerenciado contra o mesmo mapa de palavras-chave da sua estratégia orgânica. Um plano, dois canais, sem gasto desperdiçado enquanto o trabalho orgânico compõe.',
-      optionsLabel: 'Opções',
-      optionsHeading: 'Gasto que compõe, não queima.',
-      optionsLead:
-        'Três formas de começar. Toda opção roda no mesmo mapa de palavras-chave da sua estratégia orgânica, para os canais se reforçarem.',
-      options: [
-        {
-          jp: '監査',
-          name: 'Auditoria de Conta',
-          priceBRL: 2400,
-          per: 'Pagamento único · 2 semanas',
-          desc: 'Um diagnóstico completo da conta: estrutura, palavras-chave, landing pages e gasto desperdiçado, com as correções priorizadas.',
-          items: [
-            'Revisão da estrutura da conta',
-            'Mapa de palavras-chave e tipos de correspondência',
-            'Análise de gasto desperdiçado',
-            'Avaliação de landing pages',
-            'Plano de 90 dias, por escrito',
-          ],
-          cta: 'Começar com a auditoria de conta',
-          subject: 'Account audit request',
-          pricingAnchor: null,
-        },
-        {
-          flag: 'Mais escolhido',
-          jp: '実装',
-          name: 'Sprint de Lançamento',
-          priceBRL: 6800,
-          per: 'Pagamento único · 4 semanas',
-          desc: 'A reestruturação entregue: nova arquitetura de conta, campanhas, landing pages e rastreamento.',
-          items: [
-            'Tudo o que está na Auditoria de Conta',
-            'Reestruturação e construção da conta',
-            'Landing pages escritas e construídas',
-            'Feeds e rastreamento de conversões',
-            'Lançamento com relatórios semanais',
-          ],
-          cta: 'Agendar o sprint',
-          subject: 'Launch sprint request',
-          pricingAnchor: null,
-        },
-        {
-          jp: '計測',
-          name: 'Mensal de Mídia',
-          priceBRL: 2900,
-          per: 'Por mês · mínimo de 6 meses',
-          desc: 'Gasto gerenciado com otimização semanal, reportado contra os números orgânicos.',
-          items: [
-            'Ciclo semanal de otimização',
-            'Relatórios semanais de gasto e leads',
-            'Gestão de lances e orçamento',
-            'Expansão de novas palavras-chave',
-            'Suporte prioritário, respostas no mesmo dia',
-          ],
-          cta: 'Falar sobre mensalidade',
-          subject: 'Paid retainer inquiry',
-          // Mensalidade fixa (R$ 2.900) ≠ produto por investimento do
-          // configurador #subscribe — o CTA vai para o formulário de contato.
-          pricingAnchor: null,
-        },
-      ],
-      optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
-      optionsNoteStrong: 'Toda opção:',
-      processLabel: 'Processo',
-      processHeading: 'Como o trabalho acontece',
-      steps: [
-        { jp: '監査', title: 'Diagnóstico', text: 'Abrimos a conta, o mapa de palavras-chave e os dados de conversão, e encontramos onde o orçamento está vazando.' },
-        { jp: '設計', title: 'Plano', text: 'Um plano para pago e orgânico: o mesmo mapa de palavras-chave, responsáveis definidos e uma ordem de 90 dias.' },
-        { jp: '実装', title: 'Implementação', text: 'Reestruturação de conta, landing pages e feeds entregues em releases semanais que você mesmo verifica.' },
-        { jp: '計測', title: 'Medição', text: 'Gasto, posição e custo por lead reportados semanalmente, com o trabalho orgânico compondo ao lado.' },
-      ],
-      auditCta: 'Comece com a auditoria de conta',
-      contactLabel: 'Contato',
-      contactHeading: 'Transforme gasto em rankings que são seus.',
-      contactSub: 'Um e-mail começa tudo. Respondemos em até um dia útil com os próximos passos e uma resposta direta sobre se podemos ajudar.',
-      bookCall: 'Agendar uma conversa',
-      seeOptions: 'Ver as opções',
-      pricingAnchor: '#subscribe',
-    },
-    'meta-ads': {
-      navLabel: 'Meta Ads',
-      navJp: '広告',
-      kicker: 'Serviço · Meta Ads',
-      promise: 'Compre a atenção que você ainda não consegue ganhar',
-      hero: ['Alcance', 'que converte.'],
-      sub: 'Campanhas no Facebook e Instagram gerenciadas contra os mesmos dados de palavras-chave e conversão da sua estratégia orgânica. Públicos, criativos e orçamento em um plano, sem desperdício.',
-      optionsLabel: 'Opções',
-      optionsHeading: 'Gaste onde estão os olhos.',
-      optionsLead:
-        'Três formas de começar. Toda opção roda nos mesmos dados de conversão e público do restante da sua estratégia, para os canais se reforçarem.',
-      options: [
-        {
-          jp: '監査',
-          name: 'Auditoria Meta',
-          priceBRL: 2400,
-          per: 'Pagamento único · 2 semanas',
-          desc: 'Um diagnóstico completo da conta: estrutura, públicos, criativos, rastreamento e gasto desperdiçado, com as correções priorizadas.',
-          items: [
-            'Revisão de conta e pixel',
-            'Auditoria de públicos e criativos',
-            'Verificação do rastreamento de conversões',
-            'Análise de gasto desperdiçado',
-            'Plano de 90 dias, por escrito',
-          ],
-          cta: 'Começar com a auditoria Meta',
-          subject: 'Meta audit request',
-          pricingAnchor: null,
-        },
-        {
-          flag: 'Mais escolhido',
-          jp: '実装',
-          name: 'Sprint Meta',
-          priceBRL: 6800,
-          per: 'Pagamento único · 4 semanas',
-          desc: 'A reestruturação entregue: novas campanhas, públicos, criativos e rastreamento, lançados e reportando.',
-          items: [
-            'Tudo o que está na Auditoria Meta',
-            'Reestruturação e construção de campanhas',
-            'Testes de públicos e criativos',
-            'Pixel e rastreamento de conversões',
-            'Lançamento com relatórios semanais',
-          ],
-          cta: 'Agendar o sprint',
-          subject: 'Meta launch request',
-          pricingAnchor: null,
-        },
-        {
-          jp: '計測',
-          name: 'Mensal Meta',
-          priceBRL: 2900,
-          per: 'Por mês · mínimo de 6 meses',
-          desc: 'Gasto gerenciado com otimização semanal, reportado contra os números orgânicos.',
-          items: [
-            'Ciclo semanal de otimização',
-            'Relatórios semanais de gasto e leads',
-            'Rotação e testes de criativos',
-            'Expansão de públicos',
-            'Suporte prioritário, respostas no mesmo dia',
-          ],
-          cta: 'Falar sobre mensalidade',
-          subject: 'Meta retainer inquiry',
-          // Mensalidade fixa: mesma regra do retainer de mídia paga.
-          pricingAnchor: null,
-        },
-      ],
-      optionsNote: 'apenas engenheiros seniores, atualizações semanais por escrito e uma resposta direta se não formos a escolha certa.',
-      optionsNoteStrong: 'Toda opção:',
-      processLabel: 'Processo',
-      processHeading: 'Como o trabalho acontece',
-      steps: [
-        { jp: '監査', title: 'Diagnóstico', text: 'Abrimos a conta, os dados de público e o histórico de conversões, e encontramos onde o orçamento está vazando.' },
-        { jp: '設計', title: 'Plano', text: 'Um plano para pago e orgânico: o mesmo mapa de conversões, responsáveis definidos e uma ordem de 90 dias.' },
-        { jp: '実装', title: 'Implementação', text: 'Campanhas, criativos e rastreamento entregues em releases semanais que você mesmo verifica.' },
-        { jp: '計測', title: 'Medição', text: 'Gasto, custo por lead e retorno reportados semanalmente, com o trabalho orgânico compondo ao lado.' },
-      ],
-      auditCta: 'Comece com a auditoria Meta',
-      contactLabel: 'Contato',
-      contactHeading: 'Transforme o scroll em receita.',
-      contactSub: 'Um e-mail começa tudo. Respondemos em até um dia útil com os próximos passos e uma resposta direta sobre se podemos ajudar.',
-      bookCall: 'Agendar uma conversa',
-      seeOptions: 'Ver as opções',
-      pricingAnchor: '#subscribe',
-    },
-    'ai-automation': {
-      navLabel: 'Automação com IA',
-      navJp: '自動',
-      kicker: 'Serviço · Automação com IA',
-      promise: 'Deixe o trabalho repetitivo rodar sozinho',
-      hero: ['Automatize o', 'repetitivo.'],
-      sub: 'Automação com IA e engenharia de fluxos: agentes, integrações e ferramentas internas que eliminam o trabalho repetitivo — escopados e orçados sob consulta.',
-      optionsLabel: 'Escopo',
-      optionsHeading: 'Orçado para o seu fluxo.',
-      optionsLead: 'Todo projeto de automação é escopado para o seu stack e o seu time, e então orçado — sem pacotes genéricos, sem tamanho único.',
-      options: [
-        {
-          jp: '自動',
-          name: 'Automação Sob Medida',
-          priceBRL: null,
-          priceLabel: 'Sob consulta',
-          per: 'Escopado por projeto',
-          desc: 'Agentes, integrações e ferramentas internas que removem trabalho repetitivo das suas operações.',
-          items: [
-            'Chamada de descoberta e mapa de fluxos',
-            'Proposta escopada com preço fechado',
-            'Construído no seu stack, com as suas ferramentas',
-            'Entrega com documentação e treinamento',
-            'Suporte após o lançamento',
-          ],
-          cta: 'Solicitar orçamento',
-          subject: 'AI automation quote request',
-        },
-      ],
-      optionsNote: 'uma resposta direta se não formos a escolha certa.',
-      optionsNoteStrong: 'Todo orçamento:',
-      processLabel: 'Processo',
-      processHeading: 'Como o trabalho acontece',
-      steps: [
-        { jp: '聞', title: 'Descoberta', text: 'Uma chamada para mapear o trabalho repetitivo, as ferramentas envolvidas e o resultado mensurável que você quer.' },
-        { jp: '見積', title: 'Proposta', text: 'Um escopo com preço fechado: plano de construção, cronograma e o que é sucesso — antes de qualquer compromisso.' },
-        { jp: '実装', title: 'Construção', text: 'Construímos no seu stack, integramos com as suas ferramentas e testamos com dados reais.' },
-        { jp: '渡', title: 'Entrega', text: 'Documentação, treinamento e suporte após o lançamento, para a automação rodar sem a nossa presença.' },
-      ],
-      auditCta: 'Solicitar orçamento',
-      contactLabel: 'Contato',
-      contactHeading: 'O que deveria rodar sozinho?',
-      contactSub: 'Um e-mail começa tudo. Respondemos em até um dia útil com os próximos passos e uma resposta direta sobre se podemos ajudar.',
-      bookCall: 'Agendar uma conversa',
-      seeOptions: 'Veja como funciona',
-    },
-  },
+  'en-US': resolveCopy<Record<ServiceId, ServiceContent>>(SERVICE_CONTENT_SOURCE, 'en-US'),
+  'pt-BR': resolveCopy<Record<ServiceId, ServiceContent>>(SERVICE_CONTENT_SOURCE, 'pt-BR'),
 }
 
 export function serviceForPath(pathname: string): ServiceId | undefined {
