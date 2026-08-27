@@ -24,8 +24,8 @@ function splitFrontmatter(markdown: string): { fields: Record<string, string>; b
   if (!match) throw new Error('Blog article is missing its frontmatter')
   const fields: Record<string, string> = {}
   for (const line of match[1].split('\n')) {
-    const kv = /^([a-z_]+):\s*(.+?)\s*$/.exec(line)
-    if (kv) fields[kv[1]] = kv[2].replace(/^"(.*)"$/, '$1')
+    const kv = /^([a-z_]+):\s*(.+)$/.exec(line)
+    if (kv) fields[kv[1]] = kv[2].trim().replace(/^"(.*)"$/, '$1')
   }
   return { fields, body: markdown.slice(match[0].length) }
 }
@@ -55,7 +55,7 @@ function publicArticleMarkdown(markdown: string): string {
   let body = markdown.slice(0, appendixStart).trimEnd()
   // Strip the thematic break that separated the article from the appendix so
   // the public page does not end with an empty divider.
-  if (body.endsWith('---')) body = body.slice(0, body.length - 3).trimEnd()
+  if (body.endsWith('---')) body = body.slice(0, -3).trimEnd()
   return `${body}\n`
 }
 
