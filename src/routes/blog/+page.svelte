@@ -3,7 +3,6 @@
   import type { PageServerData } from './$types'
 
   let { data }: { data: PageServerData } = $props()
-  let article = $derived(data.articles[0])
 
   // Blog articles are English-only: keep <html lang> in sync after client-side
   // navigation from a pt-BR page (mirrors LocalizedHead's effect).
@@ -29,15 +28,17 @@
     </header>
 
     <div class="blog-index-list">
-      <a class="blog-card" href={`/blog/${article.slug}/`}>
-        <div class="blog-card__meta">
-          <span>Guide</span>
-          <time datetime={article.published}>{article.published}</time>
-        </div>
-        <h2>{article.title}</h2>
-        <p>{article.description}</p>
-        <span class="blog-card__link">Read the guide <span aria-hidden="true">→</span></span>
-      </a>
+      {#each data.articles as article (article.slug)}
+        <a class="blog-card" href={`/blog/${article.slug}/`}>
+          <div class="blog-card__meta">
+            <span>Guide</span>
+            <time datetime={article.published}>{article.published}</time>
+          </div>
+          <h2>{article.title}</h2>
+          <p>{article.description}</p>
+          <span class="blog-card__link">Read the guide <span aria-hidden="true">→</span></span>
+        </a>
+      {/each}
     </div>
   </div>
 </section>
