@@ -54,6 +54,7 @@
   --ink: #121212;
   --paper: #f2efe9;
   --verm: #e83828;
+  --verm-deep: #b82416;
   --ink-muted: rgba(18, 18, 18, 0.62);
   --paper-muted: rgba(242, 239, 233, 0.55);
   --paper-faint: rgba(242, 239, 233, 0.16);
@@ -1321,7 +1322,7 @@ img { display: block; max-width: 100%; }
 .blog-article__body strong { font-weight: 700; }
 .blog-article__body a { color: var(--verm-deep); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
 .blog-article__body ul,
-.blog-article__body ol { max-width: 70ch; margin: 1.25rem 0 1.75rem; padding-left: 1.4rem; }
+.blog-article__body ol { max-width: 70ch; margin: 1.25rem 0 1.75rem; padding-left: 1.4rem; list-style: revert; }
 .blog-article__body li { margin: 0.45rem 0; padding-left: 0.35rem; }
 .blog-article__body blockquote { max-width: 64ch; margin: 2.5rem 0; padding: 1rem 0 1rem 1.5rem; border-left: 2px solid var(--verm); color: var(--ink-muted); font-size: 1.12em; }
 .blog-article__body blockquote p { margin-bottom: 0; }

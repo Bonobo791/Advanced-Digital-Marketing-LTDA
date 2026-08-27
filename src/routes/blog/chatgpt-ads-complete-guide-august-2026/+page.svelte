@@ -1,7 +1,15 @@
 <script lang="ts">
-  import { CHATGPT_ADS_ARTICLE } from '$lib/blog'
+  import { browser } from '$app/environment'
+  import type { PageServerData } from './$types'
 
-  const article = CHATGPT_ADS_ARTICLE
+  let { data }: { data: PageServerData } = $props()
+  let article = $derived(data.article)
+
+  // Blog articles are English-only: keep <html lang> in sync after client-side
+  // navigation from a pt-BR page (mirrors LocalizedHead's effect).
+  $effect(() => {
+    if (browser) document.documentElement.lang = 'en-US'
+  })
 </script>
 
 <svelte:head>

@@ -1,6 +1,6 @@
 # Project status & remaining work
 
-> Last updated: 2026-08-19 (post-merge) · PR #2 merged · branch `dev`
+> Last updated: 2026-08-27 · PR #6 triage · branch `dev`
 
 This file is the handoff for finishing this repository and completing the
 Netlify → Coolify migration. It records what is done, what is left, and which
@@ -127,9 +127,11 @@ These stay "red" without any actionable code fix:
   - Local CLI only: PMD hits are all inside `node_modules/` (dependency code,
     never scanned by cloud Codacy); Lizard `file-nloc` on `services.ts` counts
     the bilingual copy table as code length; `.agents/` skill tooling was
-    excluded from the local ESLint config (`.codacy/tools-configs/eslint.config.mjs`,
-    which now also declares the Node/browser globals this codebase uses, so the
-    former `no-undef` flood in scripts/tests is fixed at the config level).
+    excluded from the local ESLint config (`.codacy/tools-configs/eslint.config.mjs`
+    is uncommitted — `.codacy/` is gitignored, so this config exists only on this
+    dev machine; the repo carries no shared ESLint flat config). That config now
+    also declares the Node/browser globals this codebase uses, so the former
+    `no-undef` flood in scripts/tests is fixed at the config level.
 - **SonarCloud** `docker:S8431` (×2, "pin the base image tag"): declined —
   the Dockerfile pins the base image by immutable digest, which CodeAnt IAC
   explicitly required; the two analyzers demand contradictory shapes and the

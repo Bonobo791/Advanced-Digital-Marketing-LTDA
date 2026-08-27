@@ -1,7 +1,15 @@
 <script lang="ts">
-  import { BLOG_ARTICLES } from '$lib/blog'
+  import { browser } from '$app/environment'
+  import type { PageServerData } from './$types'
 
-  const article = BLOG_ARTICLES[0]
+  let { data }: { data: PageServerData } = $props()
+  let article = $derived(data.articles[0])
+
+  // Blog articles are English-only: keep <html lang> in sync after client-side
+  // navigation from a pt-BR page (mirrors LocalizedHead's effect).
+  $effect(() => {
+    if (browser) document.documentElement.lang = 'en-US'
+  })
 </script>
 
 <svelte:head>

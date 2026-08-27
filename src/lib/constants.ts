@@ -162,6 +162,66 @@ export type PageCopy = {
 // below — two parallel locale literals are what the SonarCloud duplication
 // gate flagged (7.9% > 3%).
 
+const SEO_SERVICES_CARD: CopySource<HomeService> = {
+  jp: C('技術'),
+  title: L('Technical SEO', 'SEO técnico e local'),
+  line: L('The foundation everything else sits on.', 'Faça sua empresa aparecer nas buscas certas.'),
+  detail: L(
+    'Crawl architecture, Core Web Vitals, structured data and indexation control. We find what is holding your site back and fix it at the code level, where the problem actually lives.',
+    'Google Perfil da Empresa, páginas de serviço e cidade, dados estruturados, Core Web Vitals, indexação e intenção local.',
+  ),
+  tags: [L('Site audit', 'Perfil da Empresa'), L('Schema markup', 'Páginas locais'), L('Speed engineering', 'Dados estruturados'), L('Log analysis', 'Indexação')],
+  product: C('seo'),
+}
+
+const GEO_SERVICES_CARD: CopySource<HomeService> = {
+  jp: C('生成'),
+  title: L('GEO', 'GEO / visibilidade em respostas de IA'),
+  line: L('Get cited by the answer engines.', 'Seja lembrado quando alguém perguntar.'),
+  detail: L(
+    'Generative Engine Optimization. We structure your content, entities and authority signals so ChatGPT, Perplexity and Google AI Overviews quote you by name when your buyers ask.',
+    'Conteúdo, entidades, autoridade e FAQs estruturadas para ChatGPT, Perplexity e AI Overviews do Google — visibilidade em respostas de IA, não só nos resultados tradicionais.',
+  ),
+  tags: [L('Entity mapping', 'Entidades'), L('Answer-first content', 'Conteúdo para respostas'), L('Citation tracking', 'FAQs estruturadas'), L('llms.txt', 'Citações')],
+  product: C('seo'),
+}
+
+const WEB_DEVELOPMENT_SERVICES_CARD: CopySource<HomeService> = {
+  jp: C('開発'),
+  title: L('Web Development', 'Sites e landing pages'),
+  line: L('Sites built to rank from the first commit.', 'Caminhos claros para WhatsApp e orçamento.'),
+  detail: L(
+    'Next.js and Astro builds where performance budgets, semantic HTML and structured data are requirements, not afterthoughts. Migrations planned around ranking risk — redirects, QA and monitoring built in.',
+    'Páginas rápidas, mobile-first e com mensagem clara, construídas para transformar busca em conversa e pedido de orçamento.',
+  ),
+  tags: [L('Design and build', 'Mobile-first'), L('Headless CMS', 'Landing pages'), L('Safe migrations', 'Performance'), L('CRO iteration', 'Conversão')],
+  product: C('website-development'),
+}
+
+const PAID_SEARCH_SERVICES_CARD: CopySource<HomeService> = {
+  jp: C('広告'),
+  title: L('Paid Search', 'Google Ads'),
+  line: L('Buy the clicks you cannot win yet.', 'Acelere a demanda que ainda não é orgânica.'),
+  detail: L(
+    'Google Ads managed against the same keyword map as your organic strategy. One plan, two channels, no wasted spend while the organic work compounds.',
+    'Google Ads alinhados à busca orgânica, à intenção local, às conversões e ao custo por oportunidade.',
+  ),
+  tags: [L('Account restructure', 'Google Ads'), L('Landing pages', 'Intenção local'), L('Feed optimization', 'Conversões'), L('Weekly reporting', 'Custo por oportunidade')],
+  product: C('google-ads-management'),
+}
+
+const META_ADS_SERVICES_CARD: CopySource<HomeService> = {
+  jp: C('広告'),
+  title: C('Meta Ads'),
+  line: L('Buy attention while the organic work compounds.', 'Compre atenção enquanto o orgânico compõe.'),
+  detail: L(
+    'Facebook and Instagram campaigns run against the same keyword and conversion data as your organic strategy. One plan, every channel, no wasted spend.',
+    'Campanhas no Facebook e Instagram alinhadas aos mesmos dados de palavras-chave e conversão da sua estratégia orgânica. Um plano, todos os canais, sem desperdício.',
+  ),
+  tags: [L('Audience targeting', 'Segmentação de públicos'), L('Creative testing', 'Testes de criativos'), L('Pixel and tracking', 'Pixel e rastreamento'), L('Weekly reporting', 'Relatórios semanais')],
+  product: C('meta-ads-management'),
+}
+
 const PAGE_COPY_SOURCE: CopySource<PageCopy> = {
   home: {
     kicker: L('We design the answer.', 'SEO local · GEO · Sites que convertem'),
@@ -180,63 +240,7 @@ const PAGE_COPY_SOURCE: CopySource<PageCopy> = {
     servicesLabel: L('Services', 'Serviços'),
     servicesHeading: L('What we do', 'O que fazemos'),
     serviceCta: L('Start with this service', 'Começar com este serviço'),
-    services: [
-      {
-        jp: C('技術'),
-        title: L('Technical SEO', 'SEO técnico e local'),
-        line: L('The foundation everything else sits on.', 'Faça sua empresa aparecer nas buscas certas.'),
-        detail: L(
-          'Crawl architecture, Core Web Vitals, structured data and indexation control. We find what is holding your site back and fix it at the code level, where the problem actually lives.',
-          'Google Perfil da Empresa, páginas de serviço e cidade, dados estruturados, Core Web Vitals, indexação e intenção local.',
-        ),
-        tags: [L('Site audit', 'Perfil da Empresa'), L('Schema markup', 'Páginas locais'), L('Speed engineering', 'Dados estruturados'), L('Log analysis', 'Indexação')],
-        product: C('seo'),
-      },
-      {
-        jp: C('生成'),
-        title: L('GEO', 'GEO / visibilidade em respostas de IA'),
-        line: L('Get cited by the answer engines.', 'Seja lembrado quando alguém perguntar.'),
-        detail: L(
-          'Generative Engine Optimization. We structure your content, entities and authority signals so ChatGPT, Perplexity and Google AI Overviews quote you by name when your buyers ask.',
-          'Conteúdo, entidades, autoridade e FAQs estruturadas para ChatGPT, Perplexity e AI Overviews do Google — visibilidade em respostas de IA, não só nos resultados tradicionais.',
-        ),
-        tags: [L('Entity mapping', 'Entidades'), L('Answer-first content', 'Conteúdo para respostas'), L('Citation tracking', 'FAQs estruturadas'), L('llms.txt', 'Citações')],
-        product: C('seo'),
-      },
-      {
-        jp: C('開発'),
-        title: L('Web Development', 'Sites e landing pages'),
-        line: L('Sites built to rank from the first commit.', 'Caminhos claros para WhatsApp e orçamento.'),
-        detail: L(
-          'Next.js and Astro builds where performance budgets, semantic HTML and structured data are requirements, not afterthoughts. Migrations planned around ranking risk — redirects, QA and monitoring built in.',
-          'Páginas rápidas, mobile-first e com mensagem clara, construídas para transformar busca em conversa e pedido de orçamento.',
-        ),
-        tags: [L('Design and build', 'Mobile-first'), L('Headless CMS', 'Landing pages'), L('Safe migrations', 'Performance'), L('CRO iteration', 'Conversão')],
-        product: C('website-development'),
-      },
-      {
-        jp: C('広告'),
-        title: L('Paid Search', 'Google Ads'),
-        line: L('Buy the clicks you cannot win yet.', 'Acelere a demanda que ainda não é orgânica.'),
-        detail: L(
-          'Google Ads managed against the same keyword map as your organic strategy. One plan, two channels, no wasted spend while the organic work compounds.',
-          'Google Ads alinhados à busca orgânica, à intenção local, às conversões e ao custo por oportunidade.',
-        ),
-        tags: [L('Account restructure', 'Google Ads'), L('Landing pages', 'Intenção local'), L('Feed optimization', 'Conversões'), L('Weekly reporting', 'Custo por oportunidade')],
-        product: C('google-ads-management'),
-      },
-      {
-        jp: C('広告'),
-        title: C('Meta Ads'),
-        line: L('Buy attention while the organic work compounds.', 'Compre atenção enquanto o orgânico compõe.'),
-        detail: L(
-          'Facebook and Instagram campaigns run against the same keyword and conversion data as your organic strategy. One plan, every channel, no wasted spend.',
-          'Campanhas no Facebook e Instagram alinhadas aos mesmos dados de palavras-chave e conversão da sua estratégia orgânica. Um plano, todos os canais, sem desperdício.',
-        ),
-        tags: [L('Audience targeting', 'Segmentação de públicos'), L('Creative testing', 'Testes de criativos'), L('Pixel and tracking', 'Pixel e rastreamento'), L('Weekly reporting', 'Relatórios semanais')],
-        product: C('meta-ads-management'),
-      },
-    ],
+    services: [SEO_SERVICES_CARD, GEO_SERVICES_CARD, WEB_DEVELOPMENT_SERVICES_CARD, PAID_SEARCH_SERVICES_CARD, META_ADS_SERVICES_CARD],
     processLabel: L('Process', 'Processo'),
     processHeading: L('How it runs', 'Como o trabalho acontece'),
     // The homepage walks through the same 4-step engagement as the service

@@ -1,5 +1,5 @@
 ---
-title: "ChatGPT Ads: The Complete Guide to OpenAI's Advertising Platform (August 2026)"
+title: "ChatGPT Ads: The Complete Guide to OpenAI's Advertising Platform (August 21, 2026)"
 meta_title: "ChatGPT Ads Guide 2026: Pricing, Formats, Targeting & New Features"
 meta_description: "Complete guide to ChatGPT Ads as of August 21, 2026 — pricing ($25–$60 CPM, $3–$5 CPC), ad formats, oCPC bidding, measurement pixel, markets, policies, and setup steps."
 primary_entity: "ChatGPT Ads (OpenAI advertising platform)"
@@ -18,7 +18,7 @@ updated: "2026-08-21"
 
 **ChatGPT Ads is OpenAI's native advertising program that displays sponsored content below ChatGPT's AI-generated responses, matched to the conversational context of the user's current chat rather than to typed keywords.**
 
-ChatGPT Ads launched as a closed pilot in the United States on February 9, 2026, with a reported $200,000–$250,000 minimum commitment and premium CPMs near $60, sold through agency holding companies Dentsu, Omnicom, Publicis, and WPP. OpenAI opened the self-serve Ads Manager to all US businesses on May 5, 2026, eliminating the minimum spend requirement entirely.<sup class="blog-citation"><a href="https://explainx.ai/blog/openai-advertise-in-chatgpt-ads-launch-july-2026" target="_blank" rel="noopener noreferrer" aria-label="Source 3: ExplainX — &quot;ChatGPT Ads Launch — OpenAI Ads Manager 2026&quot; (July 22, 2026)." title="ExplainX — &quot;ChatGPT Ads Launch — OpenAI Ads Manager 2026&quot; (July 22, 2026).">[3]</a></sup>
+ChatGPT Ads launched as a closed pilot in the United States on February 9, 2026, with a reported $200,000–$250,000 minimum commitment and premium CPMs near $60, sold through agency holding companies Dentsu, Omnicom, Publicis, and WPP. OpenAI opened the self-serve Ads Manager beta to US businesses on May 5, 2026, replacing the six-figure pilot commitment with a $25/day per-campaign minimum.<sup class="blog-citation"><a href="https://explainx.ai/blog/openai-advertise-in-chatgpt-ads-launch-july-2026" target="_blank" rel="noopener noreferrer" aria-label="Source 3: ExplainX — &quot;ChatGPT Ads Launch — OpenAI Ads Manager 2026&quot; (July 22, 2026)." title="ExplainX — &quot;ChatGPT Ads Launch — OpenAI Ads Manager 2026&quot; (July 22, 2026).">[3]</a></sup>
 
 Three structural facts define the platform:
 
@@ -42,7 +42,7 @@ OpenAI's ad business moved from public denial to a projected $2.5 billion revenu
 | March 2026 | Criteo joins as the first ad-tech partner. |
 | March 26, 2026 | Pilot crosses a **$100M annualized revenue run rate in roughly six weeks** (CNBC); ads expand to Canada, Australia, and New Zealand.<sup class="blog-citation"><a href="https://ppc.land/chatgpt-ads-gains-view-through-conversions-with-a-fixed-1-day-window/" target="_blank" rel="noopener noreferrer" aria-label="Source 6: PPC Land — &quot;ChatGPT Ads gains view-through conversions with a fixed 1-day window&quot; (August 20, 2026)." title="PPC Land — &quot;ChatGPT Ads gains view-through conversions with a fixed 1-day window&quot; (August 20, 2026).">[6]</a></sup> |
 | April 2026 | CPC bidding introduced ($3–$5 recommended max bid); Ads Manager Beta self-serve onboarding opens; observed CPMs fall to $25–$45; ad-placement policy refined so medical, legal, and financial *advice* contexts are no longer blocked by default. |
-| **May 5, 2026** | **Self-serve Ads Manager opens to all US advertisers at ads.openai.com — no minimum spend.** OAIQ Measurement Pixel and Conversions API launch the same day. |
+| **May 5, 2026** | **Self-serve Ads Manager beta opens to US businesses at ads.openai.com — $25/day per-campaign minimum replaces the six-figure pilot commitment.** OAIQ Measurement Pixel and Conversions API launch the same day. |
 | May 12, 2026 | Product feed ads added for e-commerce advertisers. |
 | May 14, 2026 | Custom audiences launch (first-party list uploads; later constrained to a 25,000 matched-user floor). |
 | May 21, 2026 | New e-commerce ad format with price and review data; in-ad CTA buttons (Shop now, Book now, Sign up, Learn more) in early test. |
@@ -102,7 +102,7 @@ The trade-off, per practitioners: conversational context is richer than a keywor
 
 ## How Much Do ChatGPT Ads Cost in August 2026?
 
-**ChatGPT Ads cost approximately $25–$60 CPM or $3–$5 CPC as of August 2026, with no minimum spend — down sharply from the February launch price of $60 CPM with a $200,000+ commitment.**
+**ChatGPT Ads cost approximately $25–$60 CPM or $3–$5 CPC as of August 2026, with a $25/day per-campaign minimum in the US — down sharply from the February launch price of $60 CPM with a $200,000+ commitment.**
 
 ### Pricing model options
 
@@ -110,7 +110,7 @@ Three buying models now exist:
 
 1. **CPM (Reach objective)** — pay per 1,000 impressions; built for awareness and category entry.
 2. **CPC (Clicks objective)** — pay per click; OpenAI recommends a starting max bid of $3–$5. Bids under $3 frequently fail to deliver impressions.<sup class="blog-citation"><a href="https://topgrowthmarketing.com/how-much-do-chatgpt-ads-cost/" target="_blank" rel="noopener noreferrer" aria-label="Source 15: Top Growth Marketing — &quot;How Much do ChatGPT Ads Cost&quot; (August 9, 2026)." title="Top Growth Marketing — &quot;How Much do ChatGPT Ads Cost&quot; (August 9, 2026).">[15]</a></sup>
-3. **CPA / conversion-optimized** — cost-per-action bidding began May 28, 2026 for select advertisers; conversion-optimized campaigns rolled out June 5; **oCPC for product feed campaigns entered beta in August 2026** (pay per click, delivery optimized toward a conversion event).
+3. **oCPC (Conversions objective)** — delivery is optimized toward a tracked conversion event while billing stays per valid click. Conversion-optimized bidding began May 28, 2026 for select advertisers, rolled out more broadly on June 5, and **entered beta for product feed campaigns in August 2026**; the CPA bid guides delivery, but billing is never per conversion.
 
 ### Benchmark rates by vertical
 
@@ -172,7 +172,7 @@ Nine updates landed this month:
 3. **Triple Whale integration**, including Sonar Optimize, which feeds stronger conversion signals back to OpenAI's bid models.
 4. **Hightouch Conversions API support** — another server-side route for first-party conversion events.
 5. **Pixel validation diagnostics.** Tools → Conversions now shows why an event was dropped — the affected field, error type, and recommended fix (most common: incorrect SHA-256 hash format, stale `timestamp_ms`, event-shape mismatch).
-6. **Automatic Advanced Matching (AAM) defaulted on August 17, 2026.** AAM uses hashed customer information from website forms to recover otherwise-unattributed conversions. It is the default for all new pixels and was auto-enabled for existing pixels on August 17 unless the advertiser opted out (Tools → Conversions → Data Source → Edit pixel). Advertisers in consent-regulated jurisdictions should have reviewed this before the deadline.
+6. **Automatic Advanced Matching (AAM) defaulted on August 17, 2026.** AAM uses hashed customer information from website forms to recover otherwise-unattributed conversions. It is the default for all new pixels and was auto-enabled for existing pixels on August 17; advertisers can disable it at any time (Tools → Conversions → Data Source → Edit pixel). Advertisers in consent-regulated jurisdictions should review the setting before their next campaign.
 7. **View-through conversion reporting (documented August 18–19, 2026).** Conversions within a **fixed, non-configurable one-day window** after an eligible impression are reported as "View-through conversions (1 day)" / VTA (1d), at campaign, ad-group, and ad level. Click-through conversions carry a 30-day option. Where both qualify, **the click takes precedence**. The metric is excluded from the main Conversions total, CPA, bidding, billing, and optimization — a deliberately conservative design after months of scrutiny over post-view credit at premium CPMs.<sup class="blog-citation"><a href="https://ppc.land/chatgpt-ads-gains-view-through-conversions-with-a-fixed-1-day-window/" target="_blank" rel="noopener noreferrer" aria-label="Source 6: PPC Land — &quot;ChatGPT Ads gains view-through conversions with a fixed 1-day window&quot; (August 20, 2026)." title="PPC Land — &quot;ChatGPT Ads gains view-through conversions with a fixed 1-day window&quot; (August 20, 2026).">[6]</a></sup>
 8. **Modelled conversions enter the documentation.** Where modelled measurement is available, OpenAI may use aggregated patterns from observed conversions to estimate attribution for events that couldn't otherwise be attributed — the same route Google and Meta took, published without methodology or confidence intervals.
 9. **Brazil and Mexico launch (week of August 18, 2026).** Advertisers running broad geo coverage should audit country targeting — new markets can be picked up automatically and absorb budget.
@@ -202,7 +202,7 @@ Earlier July additions worth knowing: an Ads API for bulk changes, AppsFlyer and
 
 ### Five setup steps that are non-negotiable
 
-1. **Install the OAIQ pixel and Conversions API before spending a dollar.** Pixel-only setups lose conversions to browser restrictions; the August AAM default improves match rates but requires a consent review.
+1. **Install the OAIQ pixel, the Conversions API, or both before spending a dollar.** Either method works on its own; using both with a shared `event_id` deduplicates events and survives browser restrictions. The August AAM default improves match rates but requires a consent review.
 2. **Use dynamic URL macros or full UTM strings** on every destination URL so GA4 segments ChatGPT traffic independently.
 3. **Choose attribution windows deliberately.** Conversational research cycles run long; 7-day click default fits most e-commerce/SaaS, and the 1-day view-through number is directional, not billable evidence.
 4. **Baseline branded search and direct traffic before launch.** Post-purchase surveys ("how did you hear about us?") capture the halo that aggregate reporting misses — research cited by practitioners found AI-platform referral traffic converting at 14.2% vs 2.8% for Google traffic.<sup class="blog-citation"><a href="https://topgrowthmarketing.com/how-to-measure-chatgpt-ads/" target="_blank" rel="noopener noreferrer" aria-label="Source 16: Top Growth Marketing — &quot;How to Measure ChatGPT Ads (And What You Can&#x27;t — Yet)&quot; (updated August 2026)." title="Top Growth Marketing — &quot;How to Measure ChatGPT Ads (And What You Can&#x27;t — Yet)&quot; (updated August 2026).">[16]</a></sup>
@@ -269,12 +269,12 @@ Five structural constraints persist as of August 21, 2026:
 
 ## How Do You Set Up a ChatGPT Ads Campaign? (Step-by-Step)
 
-**You can launch a ChatGPT Ads campaign in one session: create an account at ads.openai.com, add billing, install the pixel, build a Clicks-objective campaign at a $3–$5 max bid, and start at $100–$300/day for a two-week instrumented test.**
+**You can prepare a ChatGPT Ads campaign in one session, but delivery waits on account approval: create an account at ads.openai.com, pass OpenAI's manual review (a rolling queue that can take several days), complete billing and the Account name/Logo fields, install the pixel, build a Clicks-objective campaign at a $3–$5 max bid, and start at $100–$300/day for a two-week instrumented test.**
 
-1. **Create the account.** Go to ads.openai.com. Eligibility is determined by the business location and activity category you declare — ineligible countries or excluded categories block approval. Agencies need one account per client.<sup class="blog-citation"><a href="https://ceaksan.com/en/chatgpt-ads-access-eligibility" target="_blank" rel="noopener noreferrer" aria-label="Source 20: Ceaksan — &quot;Who Can Access ChatGPT Ads: Geographic Eligibility and Category Restrictions&quot; (June 5, 2026)." title="Ceaksan — &quot;Who Can Access ChatGPT Ads: Geographic Eligibility and Category Restrictions&quot; (June 5, 2026).">[20]</a></sup>
+1. **Create the account.** Go to ads.openai.com. Eligibility is determined by the business location and activity category you declare — ineligible countries or excluded categories block approval. New applications enter OpenAI's manual rolling review, which can take several days; campaigns cannot deliver until platform access is granted. Agencies need one account per client.<sup class="blog-citation"><a href="https://ceaksan.com/en/chatgpt-ads-access-eligibility" target="_blank" rel="noopener noreferrer" aria-label="Source 20: Ceaksan — &quot;Who Can Access ChatGPT Ads: Geographic Eligibility and Category Restrictions&quot; (June 5, 2026)." title="Ceaksan — &quot;Who Can Access ChatGPT Ads: Geographic Eligibility and Category Restrictions&quot; (June 5, 2026).">[20]</a></sup>
 2. **Set up billing.** Add a billing profile (business address, invoice email) and a credit card; invite teammates via Settings → Users → Invite.
-3. **Install measurement first.** Deploy the OAIQ pixel on registration, demo, and purchase pages; configure the Conversions API server-side. Both are prerequisites for conversion objectives.
-4. **Build the campaign.** Choose an objective — Reach (CPM), Clicks (CPC, recommended start), or Conversions (oCPC/CPA where eligible). Set daily or lifetime budgets; daily budgets now pace automatically on a weekly average. Budgets under $50/day generate too little volume for usable data; $100–$300/day over two weeks is a practical test.
+3. **Install measurement first.** Deploy the OAIQ pixel on registration, demo, and purchase pages, and/or configure the Conversions API server-side — at least one is required for conversion objectives, and both together (with a matching `event_id`) improve resilience.
+4. **Build the campaign.** Choose an objective — Reach (CPM), Clicks (CPC, recommended start), or Conversions (oCPC, where eligible). Set daily or lifetime budgets; daily budgets now pace automatically on a weekly average. Budgets under $50/day generate too little volume for usable data; $100–$300/day over two weeks is a practical test.
 5. **Write context hints and creative.** Describe the conversations where your product belongs. Watch for suggested ad drafts — Ads Manager can prefill image, title, and description from your website metadata.
 6. **Tag URLs with macros.** Append `{campaign_id}`, `{ad_group_id}`, `{ad_id}` so GA4 reporting joins cleanly.<sup class="blog-citation"><a href="https://spilnoagency.com.ua/en/instructions-us/chatgpt-ads-new-features-setup-guide" target="_blank" rel="noopener noreferrer" aria-label="Source 13: Spilno Agency — &quot;ChatGPT Ads New Features 2026: Setup Guide&quot; (August 6, 2026)." title="Spilno Agency — &quot;ChatGPT Ads New Features 2026: Setup Guide&quot; (August 6, 2026).">[13]</a></sup>
 7. **Launch, then optimize for cost-per-outcome — not CTR.** Given the ~1% flat CTR pattern, creative testing matters less than conversion instrumentation and landing-page match to research intent.
@@ -302,7 +302,7 @@ OpenAI began testing ads in ChatGPT on February 9, 2026, in the United States, f
 Only Free-tier and Go-plan ($8/month) users who are logged in and over 18. Plus, Pro, Business, Enterprise, and Education subscribers see no ads.
 
 **How much do ChatGPT ads cost in 2026?**
-Typically $25–$60 CPM or $3–$5 CPC with no minimum spend; launch pricing in February 2026 was $60 CPM with a $200,000–$250,000 commitment.
+Typically $25–$60 CPM or $3–$5 CPC with a $25/day per-campaign minimum in the US; launch pricing in February 2026 was $60 CPM with a $200,000–$250,000 commitment.
 
 **Do ads influence ChatGPT's answers?**
 No. OpenAI states ads run on separate systems, are clearly labeled "Sponsored," and cannot shape or rank responses; advertisers never see user conversations.
@@ -314,13 +314,13 @@ Nine markets as of August 21, 2026: US, Canada, UK, Australia, New Zealand, Japa
 Optimized cost-per-click: delivery is optimized toward a conversion event while billing stays per click. It entered beta for product feed campaigns in August 2026, with campaign cloning and bulk creation.
 
 **What changed on August 17, 2026?**
-Automatic Advanced Matching (AAM) was enabled by default for all existing web pixels, using hashed form data to recover conversions. Opt-out was available before that date via Tools → Conversions → Data Source → Edit pixel.
+Automatic Advanced Matching (AAM) was enabled by default for all existing web pixels, using hashed form data to recover conversions. Opt-out remains available at any time via Tools → Conversions → Data Source → Edit pixel.
 
 **Does ChatGPT Ads have view-through attribution?**
 Yes — documented August 18–19, 2026: a fixed 1-day view-through window reported as VTA (1d), kept separate from the main Conversions total and excluded from CPA, bidding, and billing. Clicks take precedence over views.
 
 **Can small businesses advertise on ChatGPT?**
-Yes — self-serve with no minimum spend is open in all nine launch markets. Budgets under ~$50/day produce too little data; plan $100–$300/day for a meaningful two-week test.
+Yes — self-serve is open in all nine launch markets, with a $25/day per-campaign minimum in the US. Budgets under ~$50/day produce too little data; plan $100–$300/day for a meaningful two-week test.
 
 **What ad categories are banned on ChatGPT?**
 Adult/dating, gambling, alcohol, tobacco, drugs, cryptocurrency, credit repair/debt settlement, and all political ads. Finance, health, and legal are restricted to manually approved advertisers.

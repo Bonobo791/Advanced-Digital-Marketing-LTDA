@@ -63,7 +63,6 @@ export const CHROME_COPY: Record<Locale, {
   footerBase: string
   footerTagline: string
   languageLabel: string
-  blog: string
 }> = {
   'en-US': {
     navigation: { home: 'Home', about: 'About', contact: 'Contact' },
@@ -79,7 +78,6 @@ export const CHROME_COPY: Record<Locale, {
     footerBase: 'CNPJ 68.425.709/0001-72 · São Paulo, Brazil',
     footerTagline: 'SEO / GEO engineering',
     languageLabel: 'Language',
-    blog: 'Blog',
   },
   'pt-BR': {
     navigation: { home: 'Início', about: 'Sobre', contact: 'Contato' },
@@ -95,7 +93,6 @@ export const CHROME_COPY: Record<Locale, {
     footerBase: 'CNPJ 68.425.709/0001-72 · São Paulo, Brasil',
     footerTagline: 'Engenharia de SEO / GEO',
     languageLabel: 'Idioma',
-    blog: 'Blog',
   },
 }
 
@@ -160,6 +157,8 @@ export function localizedPath(pathname: string, locale: Locale) {
   if (page) return LOCALE_ROUTES[page][locale]
   const servicesLocale = servicesIndexForPath(pathname)
   if (servicesLocale) return SERVICES_INDEX_ROUTES[locale]
+  const blogPath = blogPathForPath(pathname)
+  if (blogPath) return blogPath
   const service = serviceForPath(pathname)
   return service ? SERVICE_ROUTES[service][locale] : undefined
 }
@@ -168,6 +167,19 @@ export function absoluteUrl(pathname: string) {
   return new URL(pathname, SITE_ORIGIN).toString()
 }
 
+/**
+ * Blog routes are English-only and locale-independent: the language switcher
+ * preserves the current blog path for either locale instead of falling back
+ * to a localized homepage.
+ */
+export function blogPathForPath(pathname: string): string | undefined {
+  const normalized = normalizePath(pathname)
+  return normalized === '/blog' || normalized.startsWith('/blog/') ? `${normalized}/` : undefined
+}
+
+/** The blog nav entry is identical in both locales — declare it once. */
+const BLOG_NAV_ITEM = { to: '/blog/', label: 'Blog', jp: '記事' } as const
+
 export function navigationForLocale(locale: Locale) {
   return [
     ...PAGE_IDS.map((page) => ({
@@ -175,7 +187,7 @@ export function navigationForLocale(locale: Locale) {
       label: CHROME_COPY[locale].navigation[page],
       jp: PAGE_JP[page],
     })),
-    { to: '/blog/', label: CHROME_COPY[locale].blog, jp: '記事' },
+    { ...BLOG_NAV_ITEM },
   ]
 }
 
