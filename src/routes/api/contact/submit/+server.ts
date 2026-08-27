@@ -83,11 +83,16 @@ async function parseContactBody(request: Request): Promise<ParseOutcome> {
     } catch {
       return { response: json({ error: 'invalid_json' }, { status: 400 }) }
     }
+    // Hoist the FormData reads: FormDataEntryValue can be a File, and
+    // String(file) would render '[object Object]' — only real strings pass.
+    const nameField = form.get('name')
+    const emailField = form.get('email')
+    const localeField = form.get('locale')
     const payload: Record<string, unknown> = {
-      name: typeof form.get('name') === 'string' ? String(form.get('name')) : '',
-      email: typeof form.get('email') === 'string' ? String(form.get('email')) : '',
+      name: typeof nameField === 'string' ? nameField : '',
+      email: typeof emailField === 'string' ? emailField : '',
       consent: form.get('consent') !== null,
-      locale: typeof form.get('locale') === 'string' ? String(form.get('locale')) : '',
+      locale: typeof localeField === 'string' ? localeField : '',
     }
     const subject = form.get('subject')
     if (typeof subject === 'string' && subject.trim()) payload.subject = subject

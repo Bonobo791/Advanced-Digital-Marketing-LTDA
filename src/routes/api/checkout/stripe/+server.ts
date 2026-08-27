@@ -5,7 +5,7 @@ import { PricingError } from '$lib/server/pricing'
 import { StripeError, computeUsdMonthlyQuote, createCheckoutSession } from '$lib/server/stripe'
 import { isValidEmail, stripeCheckoutUrls } from '$lib/server/checkout'
 import { parseJsonBody, resolveClientAddress, rateLimitOrError, upstreamErrorResponse } from '$lib/server/api-route'
-import { isWebsiteBuildKind, isWebsiteBuildType, websiteBuildPriceUSD, websiteBuildTitle } from '$lib/website-builds'
+import { isWebsiteBuildKind, isWebsiteBuildType, websiteBuildExternalReference, websiteBuildPriceUSD, websiteBuildTitle } from '$lib/website-builds'
 
 // en-US (USD) checkout via Stripe Checkout. BRL flows stay on Mercado Pago
 // (/api/checkout/subscription, /api/checkout/build); this endpoint serves the
@@ -72,7 +72,7 @@ function buildLineItems(flow: Extract<ValidPayload, { flow: 'build' }>) {
     throw new PricingError('invalid_build', 'Invalid build selection')
   }
   return {
-    externalReference: `website-build:${String(type)}:${String(kind)}`,
+    externalReference: websiteBuildExternalReference(type, kind),
     items: [
       {
         name: websiteBuildTitle(flow.locale, type, kind),

@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import { processWebhookEvent } from '$lib/server/mercadoPago-webhook'
+import { webhookRejectionStatus } from '$lib/server/webhook-status'
 
 // Mercado Pago webhook receiver (see docs/mercado-pago-subscriptions.md).
 // Signature-verified before any work; unverified requests get 401 and are
@@ -19,14 +20,10 @@ export const POST: RequestHandler = async ({ request }) => {
   })
 
   if (!outcome.handled) {
-    // Loud on the server log, terse to the caller. MP retries non-2xx: a
-    // misconfigured secret (503) and a transient processing failure (500,
-    // event unmarked) should be retried; a bad signature / stale timestamp is
-    // rejected outright (401) — retrying would never succeed.
+    // Loud on the server log, terse to the caller. Mercado Pago retries
+    // non-2xx; outright rejections get 401 (see webhook-status.ts).
     console.error(`[mercadoPago-webhook] rejected webhook: ${outcome.code}`)
-    const status =
-      outcome.code === 'missing_secret' ? 503 : outcome.code === 'processing_failed' ? 500 : 401
-    return json({ error: outcome.code }, { status })
+    return json({ error: outcome.code }, { status: webhookRejectionStatus(outcome.code, 401) })
   }
 
   return json({ ok: true })
