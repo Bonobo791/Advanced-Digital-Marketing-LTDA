@@ -226,48 +226,53 @@ const META_ADS_SERVICES_CARD: CopySource<HomeService> = {
   product: C('meta-ads-management'),
 }
 
-const PORTUGUESE_HOMEPAGE_STEPS: CopySource<HomeStep[]> = [
-  {
-    jp: C('01'),
-    title: L('Diagnosis', 'Diagnóstico'),
-    text: L(
+type HomepageStepCopy = readonly [CopySource<string>, CopySource<string>]
+
+function numberedHomepageSteps(...steps: HomepageStepCopy[]): CopySource<HomeStep[]> {
+  return steps.map(([title, text], index) => ({
+    jp: C(String(index + 1).padStart(2, '0')),
+    title,
+    text,
+  }))
+}
+
+const PORTUGUESE_HOMEPAGE_STEPS = numberedHomepageSteps(
+  [
+    L('Diagnosis', 'Diagnóstico'),
+    L(
       'We understand your business, goals, sales process and current results.',
       'Começamos com uma primeira reunião presencial para nos conhecermos e entendermos seu negócio, objetivos, processo comercial e resultados atuais, antes do diagnóstico.',
     ),
-  },
-  {
-    jp: C('02'),
-    title: L('Plan', 'Plano'),
-    text: L(
+  ],
+  [
+    L('Plan', 'Plano'),
+    L(
       'You receive clearly defined strategy, scope, investment, timelines and performance indicators.',
       'Você recebe estratégia, escopo, investimento, prazos e indicadores de desempenho claramente definidos.',
     ),
-  },
-  {
-    jp: C('03'),
-    title: L('Secure contract', 'Contrato seguro'),
-    text: L(
+  ],
+  [
+    L('Secure contract', 'Contrato seguro'),
+    L(
       'We formalize everything via GOV.BR, with two witnesses, separate notarial recognition and an issued invoice.',
       'Formalizamos tudo via GOV.BR, com duas testemunhas, reconhecimento notarial separado e emissão de Nota Fiscal.',
     ),
-  },
-  {
-    jp: C('04'),
-    title: L('Implementation', 'Implementação'),
-    text: L(
+  ],
+  [
+    L('Implementation', 'Implementação'),
+    L(
       'We configure measurement, campaigns and automations in accounts owned by your company.',
       'Configuramos mensuração, campanhas e automações em contas pertencentes à sua empresa.',
     ),
-  },
-  {
-    jp: C('05'),
-    title: L('Optimization and growth', 'Otimização e crescimento'),
-    text: L(
+  ],
+  [
+    L('Optimization and growth', 'Otimização e crescimento'),
+    L(
       'We track results, correct what does not work and increase investment only when the data justifies it.',
       'Acompanhamos os resultados, corrigimos o que não funciona e ampliamos o investimento somente quando os dados justificam.',
     ),
-  },
-]
+  ],
+)
 
 const PAGE_COPY_SOURCE: CopySource<PageCopy> = {
   home: {
