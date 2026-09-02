@@ -80,7 +80,11 @@ export type HomeCopy = {
   processLabel: string
   processHeading: string
   steps: HomeStep[]
-  audit: string
+  portugueseSteps: HomeStep[]
+  processCta: string
+  processClosing: string
+  trustCta: string
+  trustClosing: string
   whyLabel: string
   whyHeading: string
   whyLead: string
@@ -222,14 +226,57 @@ const META_ADS_SERVICES_CARD: CopySource<HomeService> = {
   product: C('meta-ads-management'),
 }
 
+const PORTUGUESE_HOMEPAGE_STEPS: CopySource<HomeStep[]> = [
+  {
+    jp: C('01'),
+    title: L('Diagnosis', 'Diagnóstico'),
+    text: L(
+      'We understand your business, goals, sales process and current results.',
+      'Começamos com uma primeira reunião presencial para nos conhecermos e entendermos seu negócio, objetivos, processo comercial e resultados atuais, antes do diagnóstico.',
+    ),
+  },
+  {
+    jp: C('02'),
+    title: L('Plan', 'Plano'),
+    text: L(
+      'You receive clearly defined strategy, scope, investment, timelines and performance indicators.',
+      'Você recebe estratégia, escopo, investimento, prazos e indicadores de desempenho claramente definidos.',
+    ),
+  },
+  {
+    jp: C('03'),
+    title: L('Secure contract', 'Contrato seguro'),
+    text: L(
+      'We formalize everything via GOV.BR, with two witnesses, separate notarial recognition and an issued invoice.',
+      'Formalizamos tudo via GOV.BR, com duas testemunhas, reconhecimento notarial separado e emissão de Nota Fiscal.',
+    ),
+  },
+  {
+    jp: C('04'),
+    title: L('Implementation', 'Implementação'),
+    text: L(
+      'We configure measurement, campaigns and automations in accounts owned by your company.',
+      'Configuramos mensuração, campanhas e automações em contas pertencentes à sua empresa.',
+    ),
+  },
+  {
+    jp: C('05'),
+    title: L('Optimization and growth', 'Otimização e crescimento'),
+    text: L(
+      'We track results, correct what does not work and increase investment only when the data justifies it.',
+      'Acompanhamos os resultados, corrigimos o que não funciona e ampliamos o investimento somente quando os dados justificam.',
+    ),
+  },
+]
+
 const PAGE_COPY_SOURCE: CopySource<PageCopy> = {
   home: {
     kicker: L('We design the answer.', 'SEO local · GEO · Sites que convertem'),
     searchChanging: L('Search is changing', 'A busca está mudando'),
-    hero: [L('We make sure', 'Sua empresa precisa ser'), L('you get', 'encontrada onde a decisão'), L('found.', 'acontece.')],
+    hero: [L('We make sure', 'Segurança para contratar.'), L('you get', 'Performance para'), L('found.', 'crescer.')],
     heroSub: L(
       'A São Paulo engineering studio putting US small businesses on top of Google and inside AI answers.',
-      'Ajudamos empresas locais brasileiras a aparecer nas buscas certas, receber mais contatos e transformar tráfego em oportunidades — com engenharia, não relatórios genéricos.',
+      'Você mantém o controle do negócio. Nós transformamos estratégia, tecnologia e dados em oportunidades comerciais mensuráveis.',
     ),
     book: L('Book a strategy call', 'Falar pelo WhatsApp'),
     email: L('Book a strategy call', 'Agendar uma conversa por e-mail'),
@@ -242,54 +289,62 @@ const PAGE_COPY_SOURCE: CopySource<PageCopy> = {
     serviceCta: L('Start with this service', 'Começar com este serviço'),
     services: [SEO_SERVICES_CARD, GEO_SERVICES_CARD, WEB_DEVELOPMENT_SERVICES_CARD, PAID_SEARCH_SERVICES_CARD, META_ADS_SERVICES_CARD],
     processLabel: L('Process', 'Processo'),
-    processHeading: L('How it runs', 'Como o trabalho acontece'),
-    // The homepage walks through the same 4-step engagement as the service
-    // pages — reuse the single declaration instead of repeating the copy.
+    processHeading: L('How it runs', 'Do primeiro contato ao crescimento'),
+    // The English homepage reuses the service engagement flow; the Portuguese
+    // homepage uses the trust-first five-step process from the approved copy.
     steps: TECHNICAL_SEO_STEPS,
-    audit: L('Start with an audit', 'Comece com um diagnóstico'),
-    whyLabel: L('Why us', 'Por que nós'),
-    whyHeading: L('Built by engineers, priced by São Paulo.', 'Engenharia de busca para empresas brasileiras.'),
-    whyLead: L('Most agencies sell you a retainer and staff it with whoever is free.', 'Você não precisa de mais um relatório genérico.'),
-    whyLeadStrong: L('We are an owner-operated engineering studio by design.', 'Somos um estúdio de engenharia operado pelo próprio fundador.'),
+    portugueseSteps: PORTUGUESE_HOMEPAGE_STEPS,
+    processCta: L('Start with an audit', 'Conversar com um especialista'),
+    processClosing: L('', 'Você mantém o controle. Nós cuidamos da performance.'),
+    trustCta: L('Start with an audit', 'Identificar oportunidades de crescimento'),
+    trustClosing: L('', 'Sem caixa-preta. Sem métricas vazias. Sem dependência da agência.'),
+    whyLabel: L('Why us', 'Benefícios'),
+    whyHeading: L('Built by engineers, priced by São Paulo.', 'Benefícios'),
+    whyLead: L(
+      'Most agencies sell you a retainer and staff it with whoever is free.',
+      '',
+    ),
+    whyLeadStrong: L('We are an owner-operated engineering studio by design.', ''),
     whyLeadAfter: L(
       ' The audit, the code, the content system and the ad account are all run by the people you actually talk to.',
-      ' Da auditoria à implementação, busca, site e mídia são conduzidos pelas pessoas com quem você realmente fala.',
+      '',
     ),
     cityAlt: L('São Paulo skyline rendered in ink and vermilion', 'Horizonte de São Paulo em tinta e vermelhão'),
     reasons: [
       {
         mark: C('壱'),
-        title: L('Senior only', 'Equipe sênior, sem repasses'),
+        title: L('Senior only', 'Saiba o que gera vendas'),
         text: L(
           'The person who audits your site is the person who writes the code. No handoffs, no account manager translating between you and the work.',
-          'Quem audita seu site é quem escreve o código. Você fala direto com quem executa o trabalho.',
+          'Acompanhe quais campanhas produzem contatos, oportunidades e clientes.',
         ),
       },
       {
         mark: C('弐'),
-        title: L('AI search first', 'Conhecimento do mercado brasileiro com engenharia de verdade'),
+        title: L('AI search first', 'Elimine desperdícios'),
         text: L(
           'Most agencies bolt GEO onto an SEO retainer. We build for answer engines from day one, because that is where your buyers are going.',
-          'Busca local, dados estruturados e implementação técnica para transformar intenção em contatos.',
+          'Identificamos o que não funciona e direcionamos o orçamento para as melhores oportunidades.',
         ),
       },
       {
         mark: C('参'),
-        title: L('US market, Brazil cost', 'Busca, site e mídia trabalhando para o mesmo contato'),
+        title: L('US market, Brazil cost', 'Cresça com evidências'),
         text: L(
           'A team that works your hours and knows the US market, at São Paulo rates. Better work, lower burn, no timezone gymnastics.',
-          'Google, site, WhatsApp e anúncios partem do mesmo mapa de intenção e conversão.',
+          'Aumentamos o investimento somente quando os dados demonstram potencial de retorno.',
         ),
       },
       {
         mark: C('終'),
-        title: L('Everything in writing', 'Os ativos continuam sendo seus'),
+        title: L('Everything in writing', 'Mantenha o controle'),
         text: L(
           'Scope, timelines, projected impact and the assumptions behind them. If we cannot put a number on it, we say so.',
-          'Código, conteúdo, contas e dados permanecem seus. Tudo fica documentado e sob seu controle.',
+          'Contas, dados e ativos permanecem com sua empresa durante toda a parceria.',
         ),
       },
     ],
+
     peopleLabel: L('People', 'Pessoas'),
     peopleHeading: L('Who you work with', 'Com quem você trabalha'),
     portraitAlt: L('Andrew Weilbacher, founder of Advanced Digital Marketing', 'Andrew Weilbacher, fundador da Advanced Digital Marketing'),
