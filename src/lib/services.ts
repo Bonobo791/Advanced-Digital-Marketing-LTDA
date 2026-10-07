@@ -1,6 +1,6 @@
 import type { Locale } from '$lib/locale'
 import { normalizePath } from './path.ts'
-import { getService, isServiceId, isSubscribable, type CatalogServiceId } from './catalog'
+import { isServiceId, type CatalogServiceId } from './catalog'
 import { C, L, resolveCopy, type CopySource } from './localized-copy'
 
 export const SERVICE_IDS = ['technical-seo', 'geo', 'web-development', 'paid-search', 'meta-ads', 'ai-automation'] as const
@@ -120,12 +120,10 @@ export const SERVICE_SUBSCRIPTIONS: Record<ServiceId, CatalogServiceId[]> = {
   'ai-automation': [],
 }
 
-/** Keep a clicked recurring offer isolated from the service's default package. */
+/** Override the default package only with a recurring offer from this page. */
 export function resolveServicePreselect(service: ServiceId, raw: string | null): CatalogServiceId[] {
-  const candidate = raw && isServiceId(raw) ? getService(raw) : undefined
-  return raw && candidate && isSubscribable(candidate)
-    ? [raw as CatalogServiceId]
-    : SERVICE_SUBSCRIPTIONS[service]
+  const offers = SERVICE_SUBSCRIPTIONS[service]
+  return raw && isServiceId(raw) && offers.includes(raw) ? [raw] : offers
 }
 
 // ─── Copy tables ────────────────────────────────────────────────────────────

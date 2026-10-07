@@ -13,9 +13,5 @@ for (const [key, value] of Object.entries(env)) {
 }
 
 export default defineConfig({
-  server: {
-    host: '0.0.0.0',
-    allowedHosts: ['terminal.local'],
-  },
   plugins: [sveltekit()],
 })

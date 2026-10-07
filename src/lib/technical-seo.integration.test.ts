@@ -15,24 +15,20 @@ function documentFor(query = '') {
   })
 }
 
-function text(html: string) {
-  return html.replace(/<[^>]*>/g, '').replace(/<!--.*?-->/gs, '').replace(/\s+/g, ' ').trim()
-}
-
 function selectedServices(body: string) {
   return [...body.matchAll(/<label class="sub-check">(.*?)<\/label>/gs)]
     .filter(([, label]) => /<input[^>]*\schecked(?:[\s>]|=)/.test(label))
-    .map(([, label]) => text(label.match(/<b>(.*?)<\/b>/s)?.[1] ?? ''))
+    .map(([, label]) => label.match(/<b>([^<]+)<\/b>/)?.[1])
 }
 
 function monthlyTotal(body: string) {
-  return text(body.match(/<div class="sub-total"[^>]*>(.*?)<\/div>/s)?.[1] ?? '')
+  return body.match(/<div class="sub-total"[^>]*>\s*<span>Monthly total<\/span>\s*<b>(\$[\d,.]+)<small>\/mo<\/small><\/b>/)?.[1]
 }
 
 describe('English technical SEO page', () => {
   it('serves the approved headline, core sections, inline sources, and synthetic label in the initial HTML', () => {
     const { body } = documentFor()
-    expect(text(body.match(/<h1[^>]*>(.*?)<\/h1>/s)?.[1] ?? '')).toBe('Technical SEO services with fixes you can verify')
+    expect(body).toMatch(/<h1[^>]*>Technical SEO services with fixes you can verify<\/h1>/)
     for (const heading of ['Summary', 'Key Takeaways', 'When technical SEO help is useful', 'What a scoped engagement can cover', 'Prioritized deliverables and reporting', 'Access, scope, and fees', 'Frequently asked questions', 'About the author']) {
       expect(body).toContain(heading)
     }
@@ -51,7 +47,7 @@ describe('English technical SEO page', () => {
 
   it('keeps the audit, current monthly prices, and checkout destinations', () => {
     const { body } = documentFor()
-    expect(text(body)).toContain('The Audit')
+    expect(body).toContain('The Audit')
     expect(body).toContain('Free')
     expect(body).toContain('$700')
     expect(body).toContain('$600')
@@ -61,19 +57,25 @@ describe('English technical SEO page', () => {
     expect(body).toContain('Subscribe with Stripe')
   })
 
+  it('keeps contact CTAs on the current host', () => {
+    const { body } = documentFor()
+    expect(body).toContain('href="/contact/">Talk with ADM about your SEO task</a>')
+    expect(body).toContain('href="/contact/">Discuss your page, the issue you are seeing, and who controls implementation with ADM</a>')
+  })
+
   it.each([
     { id: 'seo-content', name: 'SEO Content', total: '$400.00' },
     { id: 'backlinks', name: 'Backlinks', total: '$600.00' },
   ])('selects only the requested recurring option $id', ({ id, name, total }) => {
     const { body } = documentFor(`?preselect=${id}#subscribe`)
     expect(selectedServices(body)).toEqual([name])
-    expect(monthlyTotal(body)).toBe(`Monthly total ${total}/mo`)
+    expect(monthlyTotal(body)).toBe(total)
   })
 
   it('uses the existing default package for an invalid preselect', () => {
     const { body } = documentFor('?preselect=invalid')
     expect(selectedServices(body)).toEqual(['SEO Content', 'Backlinks'])
-    expect(monthlyTotal(body)).toBe('Monthly total $1,000.00/mo')
+    expect(monthlyTotal(body)).toBe('$1,000.00')
   })
 
   it.each(['geo', 'web-development', 'paid-search', 'meta-ads', 'ai-automation'])('keeps %s on its existing service layout', (slug) => {

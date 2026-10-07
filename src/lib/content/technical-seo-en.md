@@ -2,7 +2,7 @@
 
 Find out what is preventing important pages from being crawled, rendered, indexed, or understood. Then agree who will make each change and how the result will be checked.
 
-<a href="https://advanceddigitalmarketingltda.com/contact/">Talk with ADM about your SEO task</a>
+<a href="/contact/">Talk with ADM about your SEO task</a>
 
 ## Summary
 
@@ -144,4 +144,4 @@ That depends on the agreed scope and responsibilities. If an agency is asking on
 
 Andrew Philip Weilbacher is the founder and lead engineer of Advanced Digital Marketing LTDA. <a href="https://advanceddigitalmarketingltda.com/" target="_blank" rel="noopener">ADM's company profile</a> describes his role across audit, architecture, implementation, and reporting.
 
-<a href="https://advanceddigitalmarketingltda.com/contact/">Discuss your page, the issue you are seeing, and who controls implementation with ADM</a>.
+<a href="/contact/">Discuss your page, the issue you are seeing, and who controls implementation with ADM</a>.

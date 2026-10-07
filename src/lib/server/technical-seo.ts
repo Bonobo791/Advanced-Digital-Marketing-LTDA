@@ -5,7 +5,7 @@ import markdown from '../content/technical-seo-en.md?raw'
 import type { CopySection, TechnicalSeoContent } from '$lib/technical-seo'
 
 function sections(source: string, depth: 2 | 3): { intro: string; items: (CopySection & { source: string })[] } {
-  const parts = source.split(new RegExp('^' + '#'.repeat(depth) + ' (.+)\\n', 'm'))
+  const parts = source.split(depth === 2 ? /^## ([^\r\n]+)\r?\n/m : /^### ([^\r\n]+)\r?\n/m)
   const items: (CopySection & { source: string })[] = []
   for (let index = 1; index < parts.length; index += 2) {
     items.push({ heading: parts[index], html: marked.parse(parts[index + 1], { async: false }), source: parts[index + 1] })
@@ -13,7 +13,7 @@ function sections(source: string, depth: 2 | 3): { intro: string; items: (CopySe
   return { intro: parts[0], items }
 }
 
-const heading = /^# (.+)\n/.exec(markdown)
+const heading = /^# ([^\r\n]+)\r?\n/.exec(markdown)
 if (!heading) throw new Error('Technical SEO copy is missing its page heading')
 const copy = sections(markdown.slice(heading[0].length), 2)
 

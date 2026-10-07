@@ -10,9 +10,29 @@
  * data field.
  */
 import { describe, expect, it } from 'vitest'
-import { resolveOptionCtaHref, SERVICE_CONTENT } from './services'
+import { resolveOptionCtaHref, resolveServicePreselect, SERVICE_CONTENT } from './services'
 
 const CONTACT_ROUTE = '/contact/'
+
+describe('service subscription preselection', () => {
+  it.each([
+    { service: 'paid-search' as const, requested: 'meta-ads', expected: ['paid-search'] },
+    { service: 'technical-seo' as const, requested: 'meta-ads', expected: ['seo-content', 'backlinks'] },
+    { service: 'web-development' as const, requested: 'seo-content', expected: ['hosting'] },
+  ])('rejects $requested on the $service page', ({ service, requested, expected }) => {
+    expect(resolveServicePreselect(service, requested)).toEqual(expected)
+  })
+
+  it.each([
+    { service: 'technical-seo' as const, requested: 'seo-content' },
+    { service: 'technical-seo' as const, requested: 'backlinks' },
+    { service: 'paid-search' as const, requested: 'paid-search' },
+    { service: 'meta-ads' as const, requested: 'meta-ads' },
+    { service: 'web-development' as const, requested: 'hosting' },
+  ])('accepts the $requested offer on the $service page', ({ service, requested }) => {
+    expect(resolveServicePreselect(service, requested)).toEqual([requested])
+  })
+})
 
 describe('service option CTA anchors', () => {
   it('routes every one-time or free option to the contact form (never a pricing section)', () => {
