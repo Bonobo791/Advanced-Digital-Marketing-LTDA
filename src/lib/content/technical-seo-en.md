@@ -4,20 +4,6 @@ Find out what is preventing important pages from being crawled, rendered, indexe
 
 <a href="/contact/">Talk with ADM about your SEO task</a>
 
-## Summary
-
-ADM helps businesses and agency teams diagnose technical SEO problems, plan content around the pages they own, and define checks for agreed changes. The work may stop at diagnosis, include implementation, or pair with your developer. The proposal should state which path applies, what access is needed, who approves changes, and what falls outside scope.
-
-Technical checks can show what a site returns and what a search platform reports. They cannot guarantee that a page will be crawled, indexed, ranked, cited, or produce a sale.
-
-## Key Takeaways
-
-- Start with the page or template that affects a real customer task, not a tool score by itself.
-- Separate diagnosis from implementation. A report is not proof that a fix shipped.
-- Name the person who can change the CMS, code, or configuration and the person who can approve the result.
-- Set a test for each important change, using the right evidence for the issue.
-- Confirm scope, access, fees, currency, billing terms, and exclusions in writing before work starts.
-
 ## When technical SEO help is useful
 
 Technical work is worth investigating when important pages behave differently from what a visitor or search platform needs. Examples include:
@@ -140,8 +126,6 @@ Planning assigns each buyer task to a useful page owner, then connects the brief
 
 That depends on the agreed scope and responsibilities. If an agency is asking on behalf of a client, explain who owns the site, who approves the work, and whether the request is diagnosis, implementation support, or a handoff.
 
-## About the author
-
-Andrew Philip Weilbacher is the founder and lead engineer of Advanced Digital Marketing LTDA. <a href="https://advanceddigitalmarketingltda.com/" target="_blank" rel="noopener">ADM's company profile</a> describes his role across audit, architecture, implementation, and reporting.
+## Contact ADM
 
 <a href="/contact/">Discuss your page, the issue you are seeing, and who controls implementation with ADM</a>.

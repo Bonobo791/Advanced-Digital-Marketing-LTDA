@@ -37,8 +37,6 @@ function publicCopy(name: string): CopySection {
 export const TECHNICAL_SEO_CONTENT: TechnicalSeoContent = {
   title: heading[1],
   intro: marked.parse(copy.intro, { async: false }),
-  summary: publicCopy('Summary'),
-  takeaways: publicCopy('Key Takeaways'),
   symptoms: publicCopy('When technical SEO help is useful'),
   scopeHeading: scope.heading,
   scope: scopeItems.map(({ heading, html }) => ({ heading, html })),
@@ -47,5 +45,5 @@ export const TECHNICAL_SEO_CONTENT: TechnicalSeoContent = {
   access: publicCopy('Access, scope, and fees'),
   faqHeading: faqs.heading,
   faqs: faqItems.map(({ heading, html }) => ({ heading, html })),
-  author: publicCopy('About the author'),
+  contact: publicCopy('Contact ADM'),
 }
