@@ -1,6 +1,6 @@
 import type { Locale } from '$lib/locale'
 import { normalizePath } from './path.ts'
-import type { CatalogServiceId } from './catalog'
+import { isServiceId, type CatalogServiceId } from './catalog'
 import { C, L, resolveCopy, type CopySource } from './localized-copy'
 
 export const SERVICE_IDS = ['technical-seo', 'geo', 'web-development', 'paid-search', 'meta-ads', 'ai-automation'] as const
@@ -120,6 +120,12 @@ export const SERVICE_SUBSCRIPTIONS: Record<ServiceId, CatalogServiceId[]> = {
   'ai-automation': [],
 }
 
+/** Override the default package only with a recurring offer from this page. */
+export function resolveServicePreselect(service: ServiceId, raw: string | null): CatalogServiceId[] {
+  const offers = SERVICE_SUBSCRIPTIONS[service]
+  return raw && isServiceId(raw) && offers.includes(raw) ? [raw] : offers
+}
+
 // ─── Copy tables ────────────────────────────────────────────────────────────
 //
 // Copy is declared ONCE per leaf with L(en, pt) / C(shared) from
@@ -133,9 +139,9 @@ type ServiceMeta = { title: string; description: string }
 
 const SERVICE_META_SOURCE: CopySource<Record<ServiceId, ServiceMeta>> = {
   'technical-seo': {
-    title: L('Advanced Digital Marketing LTDA | Technical SEO', 'Advanced Digital Marketing LTDA | SEO técnico e local'),
+    title: L('Technical SEO Services | Implementation and QA | ADM', 'Advanced Digital Marketing LTDA | SEO técnico e local'),
     description: L(
-      'Technical SEO by Advanced Digital Marketing: crawl architecture, Core Web Vitals, structured data and indexation control, fixed at the code level.',
+      'Identify crawl, rendering, indexing, template, and content-planning issues. Get a scoped path from diagnosis to implementation and validation.',
       'SEO técnico e local pela Advanced Digital Marketing: arquitetura de rastreamento, Core Web Vitals, dados estruturados e controle de indexação, corrigidos onde o problema realmente está: no código.',
     ),
   },
