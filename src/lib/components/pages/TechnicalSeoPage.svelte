@@ -45,20 +45,6 @@
     </div>
   </nav>
 
-  <section class="seo-section seo-overview" aria-labelledby="summary-title">
-    <div class="seo-wrap seo-overview__grid">
-      <div>
-        <p class="seo-eyebrow">The work, at a glance</p>
-        <h2 id="summary-title">{content.summary.heading}</h2>
-        <div class="seo-copy">{@html content.summary.html}</div>
-      </div>
-      <aside class="seo-takeaways" aria-labelledby="takeaways-title">
-        <h2 id="takeaways-title">{content.takeaways.heading}</h2>
-        <div class="seo-copy">{@html content.takeaways.html}</div>
-      </aside>
-    </div>
-  </section>
-
   <section class="seo-section seo-symptoms" aria-labelledby="symptoms-title">
     <div class="seo-wrap">
       <p class="seo-eyebrow">Start with a real problem</p>
@@ -133,13 +119,10 @@
     </div>
   </section>
 
-  <section class="seo-section seo-author" id="contact" aria-labelledby="author-title">
-    <div class="seo-wrap seo-author__grid">
-      <div>
-        <p class="seo-eyebrow">Andrew Philip Weilbacher / ADM</p>
-        <h2 id="author-title">{content.author.heading}</h2>
-      </div>
-      <div class="seo-copy">{@html content.author.html}</div>
+  <section class="seo-section seo-contact" id="contact" aria-labelledby="contact-title">
+    <div class="seo-wrap seo-split">
+      <h2 id="contact-title">{content.contact.heading}</h2>
+      <div class="seo-copy">{@html content.contact.html}</div>
     </div>
   </section>
 </div>
@@ -171,8 +154,8 @@
   .seo-copy :global(code) { overflow-wrap: anywhere; font-family: ui-monospace, monospace; font-size: .85em; }
   .seo-hero__intro { margin-top: 30px; color: #d8d4cd; max-width: 57ch; font-size: 18px; line-height: 1.65; }
   .seo-hero__intro :global(p:last-child) { margin-top: 30px; }
-  .seo-hero__intro :global(p:last-child a), .seo-author .seo-copy :global(p:last-child a) { display: inline-flex; justify-content: center; align-items: center; min-height: 48px; padding: 14px 20px; background: var(--verm-deep); color: var(--paper); font-family: 'ADM Semi', sans-serif; font-size: 14px; line-height: 1.5; text-decoration: none; transition: background 180ms; }
-  .seo-hero__intro :global(p:last-child a:hover), .seo-author .seo-copy :global(p:last-child a:hover) { background: #921d15; }
+  .seo-hero__intro :global(p:last-child a), .seo-contact .seo-copy :global(p:last-child a) { display: inline-flex; justify-content: center; align-items: center; min-height: 48px; padding: 14px 20px; background: var(--verm-deep); color: var(--paper); font-family: 'ADM Semi', sans-serif; font-size: 14px; line-height: 1.5; text-decoration: none; transition: background 180ms; }
+  .seo-hero__intro :global(p:last-child a:hover), .seo-contact .seo-copy :global(p:last-child a:hover) { background: #921d15; }
   .seo-secondary { display: inline-flex; gap: 20px; align-items: center; min-height: 44px; margin-top: 10px; color: var(--paper); font-size: 14px; text-decoration: underline; text-underline-offset: 4px; }
   .seo-secondary span { color: #ff8272; font-size: 22px; }
   .seo-workflow { border-top: 1px solid var(--paper-faint); padding-top: 24px; }
@@ -187,13 +170,6 @@
   .seo-jumps span { margin-right: auto; font-family: 'ADM Semi', sans-serif; color: #5c5953; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
   .seo-jumps a { display: inline-flex; align-items: center; min-height: 44px; font-size: 13px; border-bottom: 1px solid transparent; }
   .seo-jumps a:hover { color: var(--verm-deep); border-color: currentColor; }
-  .seo-overview__grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: clamp(32px, 6vw, 80px); }
-  .seo-takeaways { padding: 32px; border: 1px solid var(--ink-faint); background: #e8e4dc; }
-  .seo-takeaways h2 { font-size: 23px; margin-bottom: 20px; }
-  .seo-takeaways .seo-copy { font-size: 14px; line-height: 1.65; }
-  .seo-takeaways .seo-copy :global(ul) { margin-block: 0; }
-  .seo-takeaways .seo-copy :global(li:first-child) { margin-top: 0; }
-  .seo-takeaways .seo-copy :global(li:last-child) { margin-bottom: 0; }
   .seo-symptoms { border-block: 1px solid var(--ink-faint); background: #e8e4dc; }
   .seo-symptoms .seo-copy :global(ul) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 0; list-style: none; margin-block: 30px; }
   .seo-symptoms .seo-copy :global(li) { margin: 0; padding: 24px; background: var(--paper); border-left: 2px solid var(--verm-deep); font-size: 15px; }
@@ -230,15 +206,12 @@
   summary span { flex-shrink: 0; color: var(--verm-deep); font-family: ui-monospace, monospace; font-size: 24px; line-height: 1; transition: transform 180ms; }
   details[open] summary span { transform: rotate(45deg); }
   details .seo-copy { padding-bottom: 24px; font-size: 15px; }
-  .seo-author__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: clamp(32px, 6vw, 88px); }
-  .seo-author .seo-copy :global(p:last-child) { margin-top: 28px; }
   @media (max-width: 1000px) {
     .seo-hero__grid { grid-template-columns: minmax(0, 1fr); }
     h1 { max-width: 22ch; font-size: clamp(38px, 7vw, 68px); }
     .seo-workflow ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
     .seo-workflow li { gap: 12px; }
     .seo-workflow b { font-size: 16px; }
-    .seo-overview__grid { grid-template-columns: minmax(0, 1fr); }
   }
   @media (max-width: 700px) {
     .seo-page section.seo-hero { padding-top: 136px; padding-bottom: 48px; }
@@ -249,14 +222,13 @@
     .seo-workflow b { font-size: 17px; }
     .seo-jumps .seo-wrap { column-gap: 22px; }
     .seo-jumps span { width: 100%; padding-top: 10px; }
-    .seo-takeaways { padding: 24px; }
-    .seo-symptoms .seo-copy :global(ul), .seo-scope__row, .seo-split, .seo-author__grid { grid-template-columns: minmax(0, 1fr); }
+    .seo-symptoms .seo-copy :global(ul), .seo-scope__row, .seo-split { grid-template-columns: minmax(0, 1fr); }
     .seo-scope__row { gap: 24px; padding-block: 30px; }
     .seo-scope__heading { gap: 16px; }
     .seo-scope { margin-top: 32px; }
     .seo-example .seo-copy :global(pre) { padding: 18px; font-size: 12px; }
     .seo-example .seo-copy :global(pre code) { font-size: 12px; }
-    .seo-split h2, .seo-author__grid h2 { margin-bottom: 0; }
+    .seo-split h2 { margin-bottom: 0; }
     .seo-page :global(#options), .seo-page :global(#subscribe) { padding-block: 56px; }
     .seo-page :global(#subscribe) { padding-top: 0; }
   }

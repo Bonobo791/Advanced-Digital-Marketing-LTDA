@@ -3,8 +3,6 @@ export type CopySection = { heading: string; html: string }
 export type TechnicalSeoContent = {
   title: string
   intro: string
-  summary: CopySection
-  takeaways: CopySection
   symptoms: CopySection
   scopeHeading: string
   scope: CopySection[]
@@ -13,5 +11,5 @@ export type TechnicalSeoContent = {
   access: CopySection
   faqHeading: string
   faqs: CopySection[]
-  author: CopySection
+  contact: CopySection
 }

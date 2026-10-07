@@ -39,13 +39,13 @@ describe('technical SEO Markdown parsing', () => {
     },
     {
       name: 'missing required section',
-      source: markdown.replace('## Summary', '## Unrecognized section'),
-      error: "Technical SEO copy needs exactly one 'Summary' section",
+      source: markdown.replace('## When technical SEO help is useful', '## Unrecognized section'),
+      error: "Technical SEO copy needs exactly one 'When technical SEO help is useful' section",
     },
     {
       name: 'duplicate required section',
-      source: `${markdown}\n## Summary\n\nDuplicate section.\n`,
-      error: "Technical SEO copy needs exactly one 'Summary' section",
+      source: `${markdown}\n## When technical SEO help is useful\n\nDuplicate section.\n`,
+      error: "Technical SEO copy needs exactly one 'When technical SEO help is useful' section",
     },
     {
       name: 'incomplete scope',

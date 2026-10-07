@@ -29,8 +29,11 @@ describe('English technical SEO page', () => {
   it('serves the approved headline, core sections, inline sources, and synthetic label in the initial HTML', () => {
     const { body } = documentFor()
     expect(body).toMatch(/<h1[^>]*>Technical SEO services with fixes you can verify<\/h1>/)
-    for (const heading of ['Summary', 'Key Takeaways', 'When technical SEO help is useful', 'What a scoped engagement can cover', 'Prioritized deliverables and reporting', 'Access, scope, and fees', 'Frequently asked questions', 'About the author']) {
+    for (const heading of ['When technical SEO help is useful', 'What a scoped engagement can cover', 'Prioritized deliverables and reporting', 'Access, scope, and fees', 'Frequently asked questions', 'Contact ADM']) {
       expect(body).toContain(heading)
+    }
+    for (const removed of ['Summary', 'Key Takeaways', 'About the author', 'Andrew Philip Weilbacher', 'The work, at a glance']) {
+      expect(body).not.toContain(removed)
     }
     expect(body).toContain('This is a synthetic demonstration.')
     expect(body).toContain('href="https://developers.google.com/search/docs/crawling-indexing/canonicalization"')
