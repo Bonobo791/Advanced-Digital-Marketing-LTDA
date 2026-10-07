@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { beforeNavigate } from '$app/navigation'
   import '../app.css'
   import Curtain from '$lib/components/chrome/Curtain.svelte'
   import MotionProvider from '$lib/components/chrome/MotionProvider.svelte'
@@ -8,9 +9,13 @@
   import Rail from '$lib/components/chrome/Rail.svelte'
   import Footer from '$lib/components/chrome/Footer.svelte'
   import { captureAttribution } from '$lib/attribution'
+  import { initializeAnalytics, protectAnalyticsNavigation } from '$lib/client/analytics'
   import type { Snippet } from 'svelte'
 
   let { children }: { children: Snippet } = $props()
+
+  beforeNavigate(protectAnalyticsNavigation)
+  initializeAnalytics()
 
   // First-touch marketing attribution (UTM / gclid / fbclid / landing page).
   // `motion-ready` is only added once Svelte has hydrated and this onMount

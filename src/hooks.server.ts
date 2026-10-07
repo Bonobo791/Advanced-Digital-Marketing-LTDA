@@ -1,7 +1,9 @@
 import type { Handle } from '@sveltejs/kit'
 import { applyLocaleEdge, geoCountryFromHeaders } from '$lib/locale-edge'
+import { isSensitiveAnalyticsUrl } from '$lib/analytics-privacy'
 
 export const handle: Handle = async ({ event, resolve }) => {
+  const sensitive = isSensitiveAnalyticsUrl(event.url)
   // Locale routing (port of the former Netlify edge function): redirect the
   // root to /pt-br/ when the language cookie says pt-BR, and set/clear the
   // geo_br suggestion flag from the CDN-forwarded country header.
@@ -12,6 +14,7 @@ export const handle: Handle = async ({ event, resolve }) => {
       headers: {
         Location: new URL(decision.location, event.url).toString(),
         'Cache-Control': 'private, no-store',
+        ...(sensitive ? { 'Referrer-Policy': 'no-referrer' } : {}),
       },
     })
   }
@@ -28,6 +31,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   const response = await resolve(event, {
     transformPageChunk: ({ html }) => html.replace('<html lang="en">', `<html lang="${language}">`),
   })
+  if (sensitive) response.headers.set('Referrer-Policy', 'no-referrer')
   // The root HTML depends on the language cookie (307 vs 200 above): if Bunny
   // cached it, a visitor with language=pt-BR could be served the English root
   // without ever reaching this hook. The root must never be shared-cacheable.
