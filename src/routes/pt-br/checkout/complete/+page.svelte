@@ -5,7 +5,7 @@
   import { setupReveals } from '$lib/client/reveal'
   import { firePurchase } from '$lib/client/analytics'
   import { getSessionItem, setSessionItem } from '$lib/client/session-storage'
-  import { absoluteUrl, LOCALE_ROUTES } from '$lib/locale'
+  import { LOCALE_ROUTES } from '$lib/locale'
 
   const motion = getContext<SiteMotion>(SITE_MOTION)
 
@@ -121,7 +121,6 @@
     name="description"
     content="Acompanhe o status do seu pagamento após o checkout com o Mercado Pago."
   />
-  <link rel="canonical" href={absoluteUrl('/pt-br/checkout/complete/')} />
   <meta name="robots" content="noindex" />
 </svelte:head>
 

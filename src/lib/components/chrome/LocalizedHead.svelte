@@ -41,7 +41,6 @@
 <svelte:head>
   <title>{metadata.title}</title>
   <meta name="description" content={metadata.description} />
-  <link rel="canonical" href={absoluteUrl(routes[locale])} />
   <link rel="alternate" hreflang="en-US" href={absoluteUrl(routes['en-US'])} />
   <link rel="alternate" hreflang="pt-BR" href={absoluteUrl(routes['pt-BR'])} />
   <link rel="alternate" hreflang="x-default" href={absoluteUrl(routes['en-US'])} />
