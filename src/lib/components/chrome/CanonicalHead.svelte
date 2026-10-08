@@ -6,7 +6,7 @@
 </script>
 
 <svelte:head>
-  {#if status >= 200 && status < 400}
+  {#if url && status >= 200 && status < 400}
     <link rel="canonical" href={url} />
     <meta property="og:url" content={url} />
   {/if}
