@@ -2,7 +2,13 @@
   import { canonicalUrl } from '$lib/canonical-url'
 
   let { pathname, status }: { pathname: string; status: number } = $props()
-  let url = $derived(canonicalUrl(pathname))
+  let url = $derived.by(() => {
+    try {
+      return canonicalUrl(pathname)
+    } catch {
+      return null
+    }
+  })
 </script>
 
 <svelte:head>
