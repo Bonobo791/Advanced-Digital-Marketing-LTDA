@@ -1,6 +1,6 @@
 import type { Handle } from '@sveltejs/kit'
 import { applyLocaleEdge, geoCountryFromHeaders } from '$lib/locale-edge'
-import { isSensitiveAnalyticsUrl } from '$lib/analytics-privacy'
+import { isSensitiveAnalyticsUrl, sensitiveDocumentReferrerPolicy } from '$lib/analytics-privacy'
 
 export const handle: Handle = async ({ event, resolve }) => {
   const sensitive = isSensitiveAnalyticsUrl(event.url)
@@ -31,7 +31,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   const response = await resolve(event, {
     transformPageChunk: ({ html }) => html.replace('<html lang="en">', `<html lang="${language}">`),
   })
-  if (sensitive) response.headers.set('Referrer-Policy', 'no-referrer')
+  if (sensitive) response.headers.set('Referrer-Policy', sensitiveDocumentReferrerPolicy(event.url))
   // The root HTML depends on the language cookie (307 vs 200 above): if Bunny
   // cached it, a visitor with language=pt-BR could be served the English root
   // without ever reaching this hook. The root must never be shared-cacheable.
