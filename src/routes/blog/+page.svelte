@@ -14,7 +14,6 @@
 <svelte:head>
   <title>Blog | Advanced Digital Marketing LTDA</title>
   <meta name="description" content="Practical guides on search, AI visibility, paid media, and web engineering from Advanced Digital Marketing LTDA." />
-  <link rel="canonical" href="https://advanceddigitalmarketingltda.com/blog/" />
 </svelte:head>
 
 <section class="blog-gateway">

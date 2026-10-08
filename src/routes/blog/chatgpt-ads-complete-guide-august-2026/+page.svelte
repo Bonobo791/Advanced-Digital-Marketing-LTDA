@@ -15,7 +15,6 @@
 <svelte:head>
   <title>{article.metaTitle} | Advanced Digital Marketing LTDA</title>
   <meta name="description" content={article.description} />
-  <link rel="canonical" href={`https://advanceddigitalmarketingltda.com/blog/${article.slug}/`} />
   <meta property="og:type" content="article" />
   <meta property="og:title" content={article.metaTitle} />
   <meta property="og:description" content={article.description} />
