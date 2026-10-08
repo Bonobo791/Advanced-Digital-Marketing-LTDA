@@ -107,20 +107,29 @@ const CONTACT_ROUTES: Record<Locale, string> = {
   'pt-BR': '/pt-br/contato/',
 }
 
+/** Preserve only the validated service subject; never put contact details in a redirect URL. */
+function nativeContactLocation(payload: { locale?: unknown; subject?: unknown }, outcome: 'sent' | 'error', code: string): string {
+  const locale = payload.locale === 'pt-BR' ? 'pt-BR' : 'en-US'
+  const params = new URLSearchParams({ [outcome]: code })
+  const subject = typeof payload.subject === 'string' ? payload.subject.trim() : ''
+  if (subject && isValidSubject(subject)) params.set('subject', subject)
+  return `${CONTACT_ROUTES[locale]}?${params}`
+}
+
 async function submitOrError(payload: ValidPayload, native: boolean): Promise<Response> {
   try {
     const result = await submitContactRequest(payload)
     if (native) {
       // A no-JavaScript submission is a full-page flow: send the browser back
       // to the contact page with a success marker (never raw JSON).
-      throw redirect(303, `${CONTACT_ROUTES[payload.locale]}?sent=1`)
+      throw redirect(303, nativeContactLocation(payload, 'sent', '1'))
     }
     return json({ ok: true, expiresInHours: result.expiresInHours })
   } catch (error) {
     if (native && (error instanceof MailjetError || error instanceof ContactTokenError)) {
       const code = error instanceof MailjetError ? error.code : 'server_misconfigured'
       console.error(`[contact] MailJet send failed: ${code}`)
-      throw redirect(303, `${CONTACT_ROUTES[payload.locale]}?error=${code}`)
+      throw redirect(303, nativeContactLocation(payload, 'error', code))
     }
     if (error instanceof MailjetError) {
       return upstreamErrorResponse(error, 'contact', 'MailJet send')
@@ -151,30 +160,27 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 
   const parsed = await parseContactBody(request)
   if ('response' in parsed) {
-    if (native) throw redirect(303, `${CONTACT_ROUTES['en-US']}?error=invalid_json`)
+    if (native) throw redirect(303, nativeContactLocation({}, 'error', 'invalid_json'))
     return parsed.response
   }
 
   const validated = validatePayload(parsed.payload)
   if ('error' in validated) {
     if (native) {
-      // Literal per-locale route (no dynamic record index — the locale value
-      // is request-controlled and must never drive an object lookup).
-      const route = parsed.payload.locale === 'pt-BR' ? '/pt-br/contato/' : '/contact/'
-      throw redirect(303, `${route}?error=${validated.error}`)
+      throw redirect(303, nativeContactLocation(parsed.payload, 'error', validated.error))
     }
     return json({ error: validated.error }, { status: 400 })
   }
 
   const resolved = resolveClientAddress(getClientAddress, 'contact')
   if ('response' in resolved) {
-    if (native) throw redirect(303, `${CONTACT_ROUTES[validated.payload.locale]}?error=client_address_unavailable`)
+    if (native) throw redirect(303, nativeContactLocation(validated.payload, 'error', 'client_address_unavailable'))
     return resolved.response
   }
 
   const rateLimited = rateLimitOrError('contactSubmit', resolved.address, 'contact', 'contact submission')
   if ('response' in rateLimited) {
-    if (native) throw redirect(303, `${CONTACT_ROUTES[validated.payload.locale]}?error=rate_limited`)
+    if (native) throw redirect(303, nativeContactLocation(validated.payload, 'error', 'rate_limited'))
     return rateLimited.response
   }
 
