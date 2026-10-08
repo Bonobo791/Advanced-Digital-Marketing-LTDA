@@ -19,12 +19,26 @@ describe('analytics document isolation', () => {
     expect(html).not.toContain("gtag('config'")
   })
 
-  it.each(['/contact/', '/contact/verify/?token=synthetic.token', '/pt-br/contato/', '/pt-br/contato/verificar/?token=synthetic.token', '/about/?token=synthetic.token'])('suppresses outgoing referrers on %s', async (path) => {
+  it.each([
+    ['/contact/verify/?token=synthetic.token', 'no-referrer'],
+    ['/pt-br/contato/verificar/?token=synthetic.token', 'no-referrer'],
+    ['/about/?token=synthetic.token', 'no-referrer'],
+    ['/contact/?TOKEN=synthetic.token', 'no-referrer'],
+    ['/pt-br/contato/?%74oken=synthetic.token', 'no-referrer'],
+    ['/contact/', 'same-origin'],
+    ['/contact/?subject=synthetic-service', 'same-origin'],
+    ['/pt-br/contato/', 'same-origin'],
+    ['/pt-br/contato/?error=invalid_email&subject=synthetic-service', 'same-origin'],
+    ['/contact/verify/', 'no-referrer'],
+    ['/pt-br/contato/verificar/', 'no-referrer'],
+    ['/contact/future/', 'no-referrer'],
+    ['/%63ontact/', 'no-referrer'],
+  ])('sets the document referrer policy for %s to %s', async (path, policy) => {
     const response = await handle({
       event: eventFor(path),
       resolve: async () => new Response('<!doctype html>'),
     })
-    expect(response.headers.get('Referrer-Policy')).toBe('no-referrer')
+    expect(response.headers.get('Referrer-Policy')).toBe(policy)
   })
 
   it('keeps the policy on locale redirects carrying a token', async () => {

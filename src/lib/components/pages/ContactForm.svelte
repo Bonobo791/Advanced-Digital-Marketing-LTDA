@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { page } from '$app/state'
   import { PAGE_COPY } from '$lib/constants'
   import { submitContactForm } from '$lib/client/contact'
   import type { Locale } from '$lib/locale'
@@ -12,29 +12,22 @@
   let email = $state('')
   let consent = $state(false)
   let submitting = $state(false)
-  let errorMessage = $state<string | undefined>(undefined)
+  let attempted = $state(false)
+  let submissionError = $state<string | undefined>(undefined)
+  let queryError = $derived(page.url.searchParams.get('error'))
+  let errorMessage = $derived(attempted ? submissionError : queryError ? errorMessageFor(queryError) : undefined)
   // Success state: the visitor must check their inbox; the email is echoed
   // back so they know which address the link went to.
   let successEmail = $state<string | undefined>(undefined)
   let successHours = $state(72)
   // Native (no-JS) submission success: the server redirected back with
   // ?sent=1 (the address is not echoed in the URL, so the copy is generic).
-  let sent = $state(false)
+  let sent = $derived(page.url.searchParams.get('sent') === '1' && !queryError)
   // Optional subject carried from a service-option CTA (?subject=… on the
   // contact route): it travels through the verification token and lands in
   // the owner notification so the lead names the requested service. The
   // server re-validates it; this is only the prefill.
-  let subject = $state<string | undefined>(undefined)
-
-  onMount(() => {
-    const params = new URL(window.location.href).searchParams
-    const value = params.get('subject')?.trim()
-    if (value) subject = value.slice(0, 120)
-    // Native (no-JS) form flow: the server redirected back with the outcome.
-    if (params.get('sent') === '1') sent = true
-    const error = params.get('error')
-    if (error) errorMessage = errorMessageFor(error)
-  })
+  let subject = $derived(page.url.searchParams.get('subject')?.trim().slice(0, 120) || undefined)
 
   // Mirrors the server's linear shape check in $lib/server/checkout.ts.
   const EMAIL_RE = /^[^\s@]+@[^\s@.]+\.[^\s@]{2,}$/
@@ -74,18 +67,19 @@
 
   async function submit() {
     if (submitting) return
-    errorMessage = undefined
+    attempted = true
+    submissionError = undefined
 
     if (!isValidName(name)) {
-      errorMessage = content.invalidName
+      submissionError = content.invalidName
       return
     }
     if (!EMAIL_RE.test(email.trim())) {
-      errorMessage = content.invalidEmail
+      submissionError = content.invalidEmail
       return
     }
     if (!consent) {
-      errorMessage = content.consentRequired
+      submissionError = content.consentRequired
       return
     }
 
@@ -99,7 +93,7 @@
         ...(subject ? { subject } : {}),
       })
       if (!result.ok) {
-        errorMessage = errorMessageFor(result.errorCode)
+        submissionError = errorMessageFor(result.errorCode)
         return
       }
       successEmail = email.trim()
@@ -107,7 +101,7 @@
     } catch (error) {
       // Fail loudly on the client log; keep the generic message user-facing.
       console.error('[contact] form submission failed', error)
-      errorMessage = content.genericError
+      submissionError = content.genericError
     } finally {
       submitting = false
     }
@@ -144,6 +138,7 @@
     novalidate
   >
     <input type="hidden" name="locale" value={locale} />
+    {#if subject}<input type="hidden" name="subject" value={subject} />{/if}
     <label class="contact-form__field">
       <span>{content.nameLabel}</span>
       <input
@@ -156,6 +151,7 @@
         oninput={(e) => (name = (e.currentTarget as HTMLInputElement).value)}
         disabled={submitting}
         aria-invalid={errorMessage === content.invalidName}
+        aria-describedby={errorMessage === content.invalidName ? 'contact-form-error' : undefined}
       />
     </label>
 
@@ -171,6 +167,7 @@
         oninput={(e) => (email = (e.currentTarget as HTMLInputElement).value)}
         disabled={submitting}
         aria-invalid={errorMessage === content.invalidEmail}
+        aria-describedby={errorMessage === content.invalidEmail ? 'contact-form-error' : undefined}
       />
     </label>
 
@@ -181,12 +178,14 @@
         checked={consent}
         onchange={(e) => (consent = (e.currentTarget as HTMLInputElement).checked)}
         disabled={submitting}
+        aria-invalid={errorMessage === content.consentRequired}
+        aria-describedby={errorMessage === content.consentRequired ? 'contact-form-error' : undefined}
       />
       <span>{content.consentLabel}</span>
     </label>
 
     {#if errorMessage}
-      <p class="contact-form__error" role="alert">{errorMessage}</p>
+      <p id="contact-form-error" class="contact-form__error" role="alert">{errorMessage}</p>
     {/if}
 
     <button class="button button--solid" type="submit" disabled={submitting}>

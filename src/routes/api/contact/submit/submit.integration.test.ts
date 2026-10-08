@@ -28,6 +28,14 @@ const validBody = {
   locale: 'en-US',
 }
 
+const nativeEvent = (fields: Record<string, string>) => ({
+  request: new Request('http://localhost/api/contact/submit', {
+    method: 'POST',
+    body: new URLSearchParams(fields),
+  }),
+  getClientAddress: () => '127.0.0.1',
+}) as Parameters<typeof POST>[0]
+
 describe('POST /api/contact/submit', () => {
   beforeEach(() => {
     vi.stubEnv('CONTACT_FORM_TOKEN_SECRET', 'unit-test-secret-that-is-long-enough-32-bytes')
@@ -108,6 +116,68 @@ describe('POST /api/contact/submit', () => {
       } as Parameters<typeof POST>[0]),
     ).rejects.toMatchObject({ status: 303, location: '/pt-br/contato/?error=consent_required' })
     expect(mockSend).not.toHaveBeenCalled()
+  })
+
+  describe.each([
+    ['en-US', '/contact/'], ['pt-BR', '/pt-br/contato/'],
+  ])('native selected-service recovery (%s)', (locale, route) => {
+    const subject = 'Account audit & review'
+    const fields = () => ({ name: validBody.name, email: validBody.email, consent: 'on', locale, subject })
+    const location = (outcome: string) => `${route}?${outcome}&subject=Account+audit+%26+review`
+
+    it.each([
+      ['name', '', 'invalid_name'], ['email', 'invalid', 'invalid_email'],
+      ['consent', undefined, 'consent_required'],
+    ])('preserves the subject after invalid %s without provider calls', async (field, value, code) => {
+      const form: Record<string, string> = fields()
+      if (value === undefined) delete form[field]
+      else form[field] = value
+      await expect(POST(nativeEvent(form))).rejects.toMatchObject({ status: 303, location: location(`error=${code}`) })
+      expect(mockSend).not.toHaveBeenCalled()
+    })
+
+    it('preserves the subject after provider failure and logs the error', async () => {
+      mockSend.mockRejectedValueOnce(new MailjetError('timeout', 'synthetic timeout'))
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      try {
+        await expect(POST(nativeEvent(fields()))).rejects.toMatchObject({ status: 303, location: location('error=timeout') })
+        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('timeout'))
+      } finally { errorSpy.mockRestore() }
+    })
+
+    it('preserves the subject on success and in the verification token', async () => {
+      await expect(POST(nativeEvent(fields()))).rejects.toMatchObject({ status: 303, location: location('sent=1') })
+      const { verifyContactToken } = await import('$lib/server/contact-token')
+      const match = mockSend.mock.calls[0][0].textPart.match(/\?token=(\S+)/)
+      expect(match).not.toBeNull()
+      const result = verifyContactToken(match![1], Date.now())
+      expect(result.status).toBe('verified')
+      if (result.status === 'verified') expect(result.payload.subject).toBe(subject)
+    })
+
+    it.each(['x'.repeat(121), 'bad\nsubject'])('rejects an invalid subject without reflecting it or calling the provider', async (invalidSubject) => {
+      await expect(POST(nativeEvent({ ...fields(), subject: invalidSubject }))).rejects.toMatchObject({ status: 303, location: `${route}?error=invalid_subject` })
+      expect(mockSend).not.toHaveBeenCalled()
+    })
+
+    it('preserves the subject when the client address is unavailable', async () => {
+      const event = nativeEvent(fields())
+      event.getClientAddress = () => { throw new Error('no fixture address') }
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      try {
+        await expect(POST(event)).rejects.toMatchObject({ status: 303, location: location('error=client_address_unavailable') })
+        expect(mockSend).not.toHaveBeenCalled()
+      } finally { errorSpy.mockRestore() }
+    })
+
+    it('preserves the subject when rate limited without another provider call', async () => {
+      for (let index = 0; index < 10; index += 1) {
+        await expect(POST(nativeEvent(fields()))).rejects.toMatchObject({ status: 303 })
+      }
+      mockSend.mockClear()
+      await expect(POST(nativeEvent(fields()))).rejects.toMatchObject({ status: 303, location: location('error=rate_limited') })
+      expect(mockSend).not.toHaveBeenCalled()
+    })
   })
 
   it('rejects invalid names without calling MailJet', async () => {
