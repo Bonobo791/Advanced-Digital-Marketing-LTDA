@@ -2,7 +2,7 @@ import { SITE_ORIGIN } from './locale'
 
 /** The public page URL, independent of request host, query parameters, or fragments. */
 export function canonicalUrl(pathname: string): string {
-  if (!pathname.startsWith('/') || pathname.startsWith('//') || pathname.includes('\\')) {
+  if (!pathname.startsWith('/') || pathname.startsWith('//') || /[\s\\]/.test(pathname)) {
     throw new Error('Canonical URLs require a root-relative page path')
   }
 
