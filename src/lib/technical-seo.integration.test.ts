@@ -10,6 +10,16 @@ const state = vi.hoisted(() => ({ url: new URL('https://example.test/services/te
 vi.mock('$app/state', () => ({ page: state }))
 vi.mock('$app/environment', () => ({ browser: false }))
 
+describe('technical SEO route slug validation', () => {
+  it.each(['en-US', 'pt-BR'] as const)('keeps unknown slugs out of the %s article and returns 404', (locale) => {
+    const params = { slug: 'technical-seo-unknown' }
+    const data = locale === 'en-US' ? serverLoad({ params }) : portugueseServerLoad({ params })
+    expect(data.technicalSeo).toBeNull()
+    const load = locale === 'en-US' ? pageLoad : portuguesePageLoad
+    expect(() => load({ params, data })).toThrow(expect.objectContaining({ status: 404 }))
+  })
+})
+
 function documentFor(query = '') {
   state.url = new URL(`/services/technical-seo/${query}`, 'https://example.test')
   return render(TechnicalSeoRouteFixture, {
@@ -32,7 +42,7 @@ function optionCard(body: string, preselect: string) {
 }
 
 function subscriptionLabel(body: string, name: string) {
-  return body.match(/<label class="sub-check">[\s\S]*?<\/label>/g)?.find((label) => label.includes(`<b>${name}</b>`))
+  return body.match(/<label class="sub-check">[\s\S]*?<\/label>/g)?.find((label) => label.includes('<b>' + name + '</b>'))
 }
 
 describe('English technical SEO page', () => {
@@ -152,7 +162,7 @@ describe('Portuguese technical SEO page', () => {
   ])('preserves selection and BRL total for $query', ({ query, names, total }) => {
     const { body } = portugueseDocument(query)
     expect(selectedServices(body)).toEqual(names)
-    expect(body).toContain(`<span>Total mensal</span> <b>${total}<small>/mês</small>`)
+    expect(body).toContain('<span>Total mensal</span> <b>' + total + '<small>/mês</small>')
   })
 
   it.each(['geo', 'web-development', 'paid-search', 'meta-ads', 'ai-automation'])('keeps %s on the generic Portuguese layout', (slug) => {

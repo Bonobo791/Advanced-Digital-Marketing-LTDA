@@ -4,6 +4,7 @@ import { marked } from 'marked'
 import markdown from '../content/technical-seo-en.md?raw'
 import portugueseMarkdown from '../content/technical-seo-pt-br.md?raw'
 import { L, resolveCopy } from '$lib/localized-copy'
+import { resolveServiceSlug } from '$lib/services'
 import type { Locale } from '$lib/locale'
 import type { CopySection, TechnicalSeoContent } from '$lib/technical-seo'
 
@@ -72,3 +73,9 @@ export const TECHNICAL_SEO_CONTENT_BY_LOCALE: Record<Locale, TechnicalSeoContent
 }
 
 export const TECHNICAL_SEO_CONTENT = TECHNICAL_SEO_CONTENT_BY_LOCALE['en-US']
+
+export function loadTechnicalSeoPage(locale: Locale, slug: string) {
+  return {
+    technicalSeo: resolveServiceSlug(slug) === 'technical-seo' ? TECHNICAL_SEO_CONTENT_BY_LOCALE[locale] : null,
+  }
+}
