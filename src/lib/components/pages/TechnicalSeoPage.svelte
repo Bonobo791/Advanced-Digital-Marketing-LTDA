@@ -3,51 +3,54 @@
   import { page } from '$app/state'
   import { setupReveals } from '$lib/client/reveal'
   import { resolveServicePreselect } from '$lib/services'
+  import { TECHNICAL_SEO_UI_COPY } from '$lib/constants'
+  import type { Locale } from '$lib/locale'
   import type { TechnicalSeoContent } from '$lib/technical-seo'
   import ServiceOptions from './ServiceOptions.svelte'
   import SubscribeSection from './SubscribeSection.svelte'
 
-  let { content }: { content: TechnicalSeoContent } = $props()
+  let { content, locale }: { content: TechnicalSeoContent; locale: Locale } = $props()
+  let text = $derived(TECHNICAL_SEO_UI_COPY[locale])
   let preselect = $derived(resolveServicePreselect('technical-seo', page.url.searchParams.get('preselect')))
 
   onMount(setupReveals)
 </script>
 
-<div class="index-home service-page seo-page">
+<div class="index-home service-page seo-page" class:portuguese={locale === 'pt-BR'}>
   <section class="seo-hero" aria-labelledby="seo-title">
     <div class="seo-hero__mark font-jp" aria-hidden="true">検索</div>
     <div class="seo-wrap seo-hero__grid">
       <div>
-        <p class="seo-eyebrow">Services / Technical SEO</p>
+        <p class="seo-eyebrow">{text.eyebrow}</p>
         <h1 id="seo-title">{content.title}</h1>
         <div class="seo-copy seo-hero__intro">{@html content.intro}</div>
-        <a class="seo-secondary" href="#options">See the options <span aria-hidden="true">↘</span></a>
+        <a class="seo-secondary" href="#options">{text.seeOptions} <span aria-hidden="true">↘</span></a>
       </div>
-      <aside class="seo-workflow" aria-label="Engagement workflow">
-        <p class="seo-eyebrow">From diagnosis to validation</p>
+      <aside class="seo-workflow" aria-label={text.workflowLabel}>
+        <p class="seo-eyebrow">{text.workflowHeading}</p>
         <ol>
-          <li><span>01</span><div><b>Diagnose the issue</b><p>Start with the page and the evidence.</p></div></li>
-          <li><span>02</span><div><b>Agree on the work</b><p>Name the scope, owner, and approver.</p></div></li>
-          <li><span>03</span><div><b>Verify the change</b><p>Set a check for the expected result.</p></div></li>
+          <li><span>01</span><div><b>{text.diagnose}</b><p>{text.diagnoseDetail}</p></div></li>
+          <li><span>02</span><div><b>{text.agree}</b><p>{text.agreeDetail}</p></div></li>
+          <li><span>03</span><div><b>{text.verify}</b><p>{text.verifyDetail}</p></div></li>
         </ol>
       </aside>
     </div>
   </section>
 
-  <nav class="seo-jumps" aria-label="On this page">
+  <nav class="seo-jumps" aria-label={text.onPage}>
     <div class="seo-wrap">
-      <span>On this page</span>
-      <a href="#scope">Scope</a>
-      <a href="#example">Example</a>
-      <a href="#deliverables">Deliverables</a>
-      <a href="#options">Options & pricing</a>
-      <a href="#faq">FAQs</a>
+      <span>{text.onPage}</span>
+      <a href="#scope">{text.scope}</a>
+      <a href="#example">{text.example}</a>
+      <a href="#deliverables">{text.deliverables}</a>
+      <a href="#options">{text.pricing}</a>
+      <a href="#faq">{text.faqs}</a>
     </div>
   </nav>
 
   <section class="seo-section seo-symptoms" aria-labelledby="symptoms-title">
     <div class="seo-wrap">
-      <p class="seo-eyebrow">Start with a real problem</p>
+      <p class="seo-eyebrow">{text.symptoms}</p>
       <h2 id="symptoms-title">{content.symptoms.heading}</h2>
       <div class="seo-copy">{@html content.symptoms.html}</div>
     </div>
@@ -55,7 +58,7 @@
 
   <section class="seo-section" id="scope" aria-labelledby="scope-title">
     <div class="seo-wrap">
-      <p class="seo-eyebrow">Scope</p>
+      <p class="seo-eyebrow">{text.scope}</p>
       <h2 id="scope-title">{content.scopeHeading}</h2>
       <div class="seo-scope">
         {#each content.scope as item, index (item.heading)}
@@ -73,7 +76,7 @@
 
   <section class="seo-section seo-example" id="example" aria-labelledby="example-title">
     <div class="seo-wrap">
-      <p class="seo-eyebrow">Synthetic demonstration</p>
+      <p class="seo-eyebrow">{text.synthetic}</p>
       <h2 id="example-title">{content.example.heading}</h2>
       <div class="seo-copy">{@html content.example.html}</div>
     </div>
@@ -82,20 +85,20 @@
   <section class="seo-section seo-deliverables" id="deliverables" aria-labelledby="deliverables-title">
     <div class="seo-wrap seo-split">
       <div>
-        <p class="seo-eyebrow">Make the work inspectable</p>
+        <p class="seo-eyebrow">{text.inspectable}</p>
         <h2 id="deliverables-title">{content.deliverables.heading}</h2>
       </div>
       <div class="seo-copy">{@html content.deliverables.html}</div>
     </div>
   </section>
 
-  <ServiceOptions locale="en-US" service="technical-seo" />
-  <SubscribeSection locale="en-US" {preselect} />
+  <ServiceOptions {locale} service="technical-seo" />
+  <SubscribeSection {locale} {preselect} />
 
   <section class="seo-section seo-access" id="scope-and-fees" aria-labelledby="access-title">
     <div class="seo-wrap seo-split">
       <div>
-        <p class="seo-eyebrow">Before work begins</p>
+        <p class="seo-eyebrow">{text.beforeWork}</p>
         <h2 id="access-title">{content.access.heading}</h2>
       </div>
       <div class="seo-copy">{@html content.access.html}</div>
@@ -105,7 +108,7 @@
   <section class="seo-section seo-faq" id="faq" aria-labelledby="faq-title">
     <div class="seo-wrap seo-split">
       <div>
-        <p class="seo-eyebrow">Questions</p>
+        <p class="seo-eyebrow">{text.questions}</p>
         <h2 id="faq-title">{content.faqHeading}</h2>
       </div>
       <div>
@@ -152,6 +155,10 @@
   .seo-copy :global(li) { padding-left: 4px; margin: 12px 0; }
   .seo-copy :global(strong) { color: inherit; font-family: 'ADM Semi', sans-serif; }
   .seo-copy :global(code) { overflow-wrap: anywhere; font-family: ui-monospace, monospace; font-size: .85em; }
+  .seo-copy :global(h4) { margin: 28px 0 16px; font-family: 'ADM Semi', sans-serif; font-size: 18px; line-height: 1.4; }
+  .seo-copy :global(table) { width: 100%; table-layout: fixed; border-collapse: collapse; margin-block: 28px; font-size: 14px; line-height: 1.6; }
+  .seo-copy :global(th), .seo-copy :global(td) { padding: 14px 12px; border: 1px solid var(--seo-table-border, var(--ink-faint)); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+  .seo-copy :global(th) { font-family: 'ADM Semi', sans-serif; }
   .seo-hero__intro { margin-top: 30px; color: #d8d4cd; max-width: 57ch; font-size: 18px; line-height: 1.65; }
   .seo-hero__intro :global(p:last-child) { margin-top: 30px; }
   .seo-hero__intro :global(p:last-child a), .seo-contact .seo-copy :global(p:last-child a) { display: inline-flex; justify-content: center; align-items: center; min-height: 48px; padding: 14px 20px; background: var(--verm-deep); color: var(--paper); font-family: 'ADM Semi', sans-serif; font-size: 14px; line-height: 1.5; text-decoration: none; transition: background 180ms; }
@@ -179,7 +186,7 @@
   .seo-scope__row:last-child { padding-bottom: 0; }
   .seo-scope__heading { display: flex; gap: 22px; align-items: baseline; }
   .seo-number { flex-shrink: 0; color: var(--verm-deep); font-family: ui-monospace, monospace; font-size: 13px; }
-  .seo-example { color: var(--paper); background: var(--ink); }
+  .seo-example { color: var(--paper); background: var(--ink); --seo-table-border: var(--paper-faint); }
   .seo-example h2 { max-width: 25ch; }
   .seo-example .seo-copy { max-width: 88ch; color: #d8d4cd; }
   .seo-example .seo-copy :global(a) { color: #ff8272; }
@@ -228,6 +235,7 @@
     .seo-scope { margin-top: 32px; }
     .seo-example .seo-copy :global(pre) { padding: 18px; font-size: 12px; }
     .seo-example .seo-copy :global(pre code) { font-size: 12px; }
+    .seo-copy :global(th), .seo-copy :global(td) { padding: 10px 8px; }
     .seo-split h2 { margin-bottom: 0; }
     .seo-page :global(#options), .seo-page :global(#subscribe) { padding-block: 56px; }
     .seo-page :global(#subscribe) { padding-top: 0; }

@@ -9,7 +9,7 @@
 
 <LocalizedHead locale="en-US" service={data.service} />
 {#if data.technicalSeo}
-  <TechnicalSeoPage content={data.technicalSeo} />
+  <TechnicalSeoPage locale="en-US" content={data.technicalSeo} />
 {:else}
   <ServicePage locale="en-US" service={data.service} />
 {/if}

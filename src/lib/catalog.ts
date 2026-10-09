@@ -68,9 +68,9 @@ export const SERVICES: Record<CatalogServiceId, CatalogService> = {
     name: { 'en-US': 'SEO Content', 'pt-BR': 'Conteúdo SEO' },
     description: {
       'en-US':
-        'Answer-first pages, articles and service copy written to get you quoted by search engines and AI answers.',
+        'Four articles each month, planned around your buyers’ questions, with writing, on-page editing, and internal links. No minimum term.',
       'pt-BR':
-        'Páginas, artigos e copy orientados a respostas, escritos para você ser citado por buscadores e respostas de IA.',
+        'Quatro artigos por mês, planejados para responder às dúvidas dos seus compradores, com redação, edição on-page e links internos. Sem prazo mínimo.',
     },
     pricing: { kind: 'fixed', monthlyBRL: 2000, monthlyUSD: 400 },
     active: true,
