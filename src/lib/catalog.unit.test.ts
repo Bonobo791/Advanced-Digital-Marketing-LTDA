@@ -132,6 +132,14 @@ describe('formatOptionPrice', () => {
 })
 
 describe('option-card pricing stays in sync with the catalog', () => {
+  it.each(['en-US', 'pt-BR'] as const)('advertises the same content offer that %s checkout charges', (locale) => {
+    const option = SERVICE_CONTENT[locale]['technical-seo'].options.find((item) => item.preselect === 'seo-content')
+    expect(option?.priceBRL).toBe(2000)
+    expect(SERVICES['seo-content'].pricing).toEqual({ kind: 'fixed', monthlyBRL: 2000, monthlyUSD: 400 })
+    expect(option?.per).toBe(locale === 'en-US' ? 'Per month · no minimum term' : 'Por mês · sem prazo mínimo')
+    expect(option?.items).toContain(locale === 'en-US' ? '4 articles per month' : '4 artigos por mês')
+  })
+
   it('keeps the Backlinks option card at the catalog price (one product, one price)', () => {
     // Codex P1 (3762692710): the Backlinks option card and the Backlinks
     // subscription are the same product — if they ever diverge again this

@@ -496,3 +496,34 @@ export const PAGE_COPY: Record<Locale, PageCopy> = {
   'en-US': resolveCopy<PageCopy>(PAGE_COPY_SOURCE, 'en-US'),
   'pt-BR': resolveCopy<PageCopy>(PAGE_COPY_SOURCE, 'pt-BR'),
 }
+
+const TECHNICAL_SEO_UI_SOURCE = {
+  eyebrow: L('Services / Technical SEO', 'Serviços / SEO técnico'),
+  seeOptions: L('See the options', 'Ver as opções'),
+  workflowLabel: L('Engagement workflow', 'Etapas do trabalho'),
+  workflowHeading: L('From diagnosis to validation', 'Do diagnóstico à validação'),
+  diagnose: L('Diagnose the issue', 'Diagnosticar o problema'),
+  diagnoseDetail: L('Start with the page and the evidence.', 'Comece pela página e pelas evidências.'),
+  agree: L('Agree on the work', 'Combinar o trabalho'),
+  agreeDetail: L('Name the scope, owner, and approver.', 'Defina o escopo, o responsável e quem aprova.'),
+  verify: L('Verify the change', 'Verificar a mudança'),
+  verifyDetail: L('Set a check for the expected result.', 'Defina como verificar o resultado esperado.'),
+  onPage: L('On this page', 'Nesta página'),
+  scope: L('Scope', 'Escopo'),
+  example: L('Example', 'Exemplo'),
+  deliverables: L('Deliverables', 'Entregáveis'),
+  pricing: L('Options & pricing', 'Opções e valores'),
+  faqs: L('FAQs', 'Perguntas frequentes'),
+  symptoms: L('Start with a real problem', 'Comece por um problema real'),
+  synthetic: L('Synthetic demonstration', 'Demonstração sintética'),
+  inspectable: L('Make the work inspectable', 'Torne o trabalho verificável'),
+  beforeWork: L('Before work begins', 'Antes de começar'),
+  questions: L('Questions', 'Perguntas'),
+}
+
+type TechnicalSeoUiCopy = { [K in keyof typeof TECHNICAL_SEO_UI_SOURCE]: string }
+
+export const TECHNICAL_SEO_UI_COPY: Record<Locale, TechnicalSeoUiCopy> = {
+  'en-US': resolveCopy<TechnicalSeoUiCopy>(TECHNICAL_SEO_UI_SOURCE, 'en-US'),
+  'pt-BR': resolveCopy<TechnicalSeoUiCopy>(TECHNICAL_SEO_UI_SOURCE, 'pt-BR'),
+}

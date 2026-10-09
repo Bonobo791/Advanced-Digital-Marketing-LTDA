@@ -139,10 +139,10 @@ type ServiceMeta = { title: string; description: string }
 
 const SERVICE_META_SOURCE: CopySource<Record<ServiceId, ServiceMeta>> = {
   'technical-seo': {
-    title: L('Technical SEO Services | Implementation and QA | ADM', 'Advanced Digital Marketing LTDA | SEO técnico e local'),
+    title: L('Technical SEO Services | Implementation and QA | ADM', 'SEO técnico e local | Diagnóstico e implementação | ADM'),
     description: L(
       'Identify crawl, rendering, indexing, template, and content-planning issues. Get a scoped path from diagnosis to implementation and validation.',
-      'SEO técnico e local pela Advanced Digital Marketing: arquitetura de rastreamento, Core Web Vitals, dados estruturados e controle de indexação, corrigidos onde o problema realmente está: no código.',
+      'Investigue rastreamento, renderização, indexação e URLs canônicas. Defina o escopo, os responsáveis e como validar mudanças de SEO técnico.',
     ),
   },
   geo: {
@@ -312,13 +312,14 @@ const TECHNICAL_SEO_OPTIONS: CopySource<ServiceOption[]> = [
     flag: SHARED.flagMostChosen,
     jp: C('設計'),
     name: L('Content Development', 'Desenvolvimento de Conteúdo'),
-    priceBRL: 3500,
-    per: L('Per month · 3-month minimum', 'Por mês · mínimo de 3 meses'),
+    priceBRL: 2000,
+    per: L('Per month · no minimum term', 'Por mês · sem prazo mínimo'),
     desc: L(
-      'Pages, articles and service copy written to answer the questions your buyers actually ask, structured so crawlers and AI engines both get it.',
-      'Páginas, artigos e textos de serviço escritos para responder às perguntas que seus compradores realmente fazem, estruturados para crawlers e motores de IA entenderem.',
+      'Four articles each month, planned around your buyers’ questions, with writing, on-page editing, and internal links. No minimum term.',
+      'Quatro artigos por mês, planejados para responder às dúvidas dos seus compradores, com redação, edição on-page e links internos. Sem prazo mínimo.',
     ),
     items: [
+      L('4 articles per month', '4 artigos por mês'),
       L('Answer-first page briefs', 'Briefings de página answer-first'),
       L('On-page content written and edited', 'Conteúdo escrito e editado'),
       L('Internal linking built in', 'Linkagem interna embutida'),
@@ -746,8 +747,8 @@ const TECHNICAL_SEO_ENTRY: CopySource<ServiceContent> = {
   optionsLabel: SHARED.optionsLabel,
   optionsHeading: L('Choose how we start.', 'Escolha como começar.'),
   optionsLead: L(
-    'Three ways to engage, one standard of work. Every option ends with fixes you can verify yourself, not a PDF of recommendations.',
-    'Três formas de começar, um padrão de trabalho. Toda opção termina com correções que você mesmo consegue verificar, não um PDF de recomendações.',
+    'Start with a technical diagnosis, a content subscription, or backlink work. Confirm the deliverables and implementation responsibilities for the option you choose.',
+    'Comece com um diagnóstico técnico, uma assinatura de conteúdo ou trabalho de backlinks. Confirme as entregas e as responsabilidades de implementação da opção escolhida.',
   ),
   options: TECHNICAL_SEO_OPTIONS,
   optionsNote: SHARED.optionsNote,
