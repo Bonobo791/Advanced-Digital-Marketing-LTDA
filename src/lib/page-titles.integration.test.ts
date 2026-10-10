@@ -63,7 +63,12 @@ beforeAll(async () => {
   server = spawn(
     process.execPath,
     ['node_modules/vite/bin/vite.js', 'dev', '--host', host, '--port', String(port), '--strictPort'],
-    { cwd: process.cwd(), stdio: 'pipe' },
+    {
+      cwd: process.cwd(),
+      stdio: 'pipe',
+      // Reproduce forced-color CI output while keeping Vite's ready URL parseable.
+      env: { ...process.env, CI: 'true', FORCE_COLOR: '1', NO_COLOR: '1' },
+    },
   )
   server.stdout.on('data', (chunk: Buffer) => { serverOutput += chunk.toString() })
   server.stderr.on('data', (chunk: Buffer) => { serverOutput += chunk.toString() })
