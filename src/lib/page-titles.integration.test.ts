@@ -1,12 +1,12 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import { createServer } from 'node:net'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { PAGE_META, LOCALE_ROUTES, SERVICES_INDEX_META, SERVICES_INDEX_ROUTES, SITE_ORIGIN } from './locale'
 import { SERVICE_META, SERVICE_ROUTES } from './services'
 import { CHATGPT_ADS_ARTICLE } from './server/blog'
 
 const host = '127.0.0.1'
-const port = 4179
-const origin = process.env.PAGE_TITLES_BASE_URL ?? `http://${host}:${port}`
+let origin: string = process.env.PAGE_TITLES_BASE_URL ?? ''
 const routes = [
   ...Object.entries(LOCALE_ROUTES).flatMap(([page, localized]) =>
     Object.entries(localized).map(([locale, path]) => ({
@@ -38,8 +38,28 @@ const routes = [
 let server: ChildProcessWithoutNullStreams
 let serverOutput = ''
 
+async function ephemeralPort(): Promise<number> {
+  const reservation = createServer()
+  await new Promise<void>((resolve, reject) => {
+    reservation.once('error', reject)
+    reservation.listen(0, host, resolve)
+  })
+
+  const address = reservation.address()
+  if (!address || typeof address === 'string') {
+    throw new Error('Could not determine the reserved Vite port')
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    reservation.close((error) => error ? reject(error) : resolve())
+  })
+  return address.port
+}
+
 beforeAll(async () => {
   if (process.env.PAGE_TITLES_BASE_URL) return
+  const port = await ephemeralPort()
+  origin = `http://${host}:${port}`
   server = spawn(
     process.execPath,
     ['node_modules/vite/bin/vite.js', 'dev', '--host', host, '--port', String(port), '--strictPort'],
@@ -48,17 +68,16 @@ beforeAll(async () => {
   server.stdout.on('data', (chunk: Buffer) => { serverOutput += chunk.toString() })
   server.stderr.on('data', (chunk: Buffer) => { serverOutput += chunk.toString() })
 
-  for (let attempt = 0; attempt < 100; attempt++) {
+  for (let attempt = 0; attempt < 200; attempt++) {
     if (server.exitCode !== null) throw new Error(`Vite stopped before startup:\n${serverOutput}`)
-    try {
-      await fetch(origin)
+    // Only this child process can produce the Vite ready line for its assigned URL.
+    if (serverOutput.includes('ready in') && serverOutput.includes(`${origin}/`)) {
       return
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, 100))
     }
+    await new Promise((resolve) => setTimeout(resolve, 100))
   }
   throw new Error(`Vite did not become ready:\n${serverOutput}`)
-}, 15_000)
+}, 30_000)
 
 afterAll(() => {
   server?.kill('SIGTERM')
@@ -81,6 +100,17 @@ function documentHead(html: string): string {
   return match[1]
 }
 
+function canonicalHref(head: string): string {
+  const canonical = [...head.matchAll(/<link\b[^>]*>/gi)]
+    .map(([element]) => element)
+    .find((element) => /\brel="canonical"/i.test(element))
+  if (!canonical) throw new Error('Rendered document has no canonical link')
+
+  const href = /\bhref="([^"]*)"/i.exec(canonical)
+  if (!href) throw new Error('Canonical link has no href')
+  return href[1]
+}
+
 describe('rendered page titles', () => {
   it.each(routes)('renders one appropriate title and preserves the canonical for $path', async ({ path, title }) => {
     const { response, html } = await page(path)
@@ -88,8 +118,8 @@ describe('rendered page titles', () => {
     expect(response.status).toBe(200)
     expect(titles(head)).toEqual([title])
     expect(head.match(/rel="canonical"/g)).toHaveLength(1)
-    expect(head).toContain(`href="${SITE_ORIGIN}${path}"`)
-  })
+    expect(canonicalHref(head)).toBe(`${SITE_ORIGIN}${path}`)
+  }, 15_000)
 
   it('renders one error title without a canonical for an unknown route', async () => {
     const { response, html } = await page('/missing-title-regression/')
